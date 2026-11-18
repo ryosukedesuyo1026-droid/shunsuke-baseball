@@ -497,5 +497,858 @@ function init(){
 }
 init();
 </script>
+ 
+
+<!-- BASEBALL JOURNEY 称号・特殊能力 追加パック -->
+
+<style>
+
+#bjAwards{
+
+ margin:16px 0;
+
+ font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+
+}
+
+#bjAwards *{box-sizing:border-box}
+
+.bj-head{
+
+ background:linear-gradient(135deg,#09244f,#1766b2);
+
+ border:3px solid #ffd14b;
+
+ border-radius:16px;
+
+ color:white;
+
+ padding:16px;
+
+ margin-bottom:12px;
+
+}
+
+.bj-head h2{
+
+ background:none!important;
+
+ color:#ffe17c!important;
+
+ padding:0!important;
+
+ margin:0 0 12px;
+
+}
+
+.bj-summary{
+
+ display:grid;
+
+ grid-template-columns:repeat(2,1fr);
+
+ gap:10px;
+
+}
+
+.bj-summary div{
+
+ background:#ffffff1b;
+
+ border-radius:12px;
+
+ padding:12px;
+
+ text-align:center;
+
+}
+
+.bj-summary b{
+
+ display:block;
+
+ font-size:25px;
+
+ color:#ffe17c;
+
+}
+
+.bj-panel{
+
+ background:white;
+
+ border:2px solid #bdd3eb;
+
+ border-radius:14px;
+
+ padding:14px;
+
+ margin:12px 0;
+
+}
+
+.bj-panel h3{
+
+ color:#104b91;
+
+ margin:0 0 12px;
+
+}
+
+.bj-grid{
+
+ display:grid;
+
+ grid-template-columns:repeat(2,minmax(0,1fr));
+
+ gap:10px;
+
+}
+
+.bj-item{
+
+ border:2px solid #c8d8ea;
+
+ border-radius:12px;
+
+ background:#f7faff;
+
+ padding:11px;
+
+ min-width:0;
+
+}
+
+.bj-item.earned{
+
+ border-color:#e5ad22;
+
+ background:linear-gradient(135deg,#fff8d8,#ffedac);
+
+}
+
+.bj-item .bj-icon{
+
+ font-size:30px;
+
+ margin-bottom:5px;
+
+}
+
+.bj-item strong{
+
+ display:block;
+
+ color:#143e71;
+
+ font-size:14px;
+
+ overflow-wrap:anywhere;
+
+}
+
+.bj-item small{
+
+ display:block;
+
+ font-size:11px;
+
+ color:#51677d;
+
+ margin:6px 0;
+
+ line-height:1.5;
+
+}
+
+.bj-progress{
+
+ background:#dce5f0;
+
+ height:9px;
+
+ border-radius:10px;
+
+ overflow:hidden;
+
+ margin:8px 0;
+
+}
+
+.bj-progress div{
+
+ height:100%;
+
+ background:linear-gradient(90deg,#1b81d2,#ffbd32);
+
+ border-radius:10px;
+
+ transition:width .3s;
+
+}
+
+.bj-tag{
+
+ display:inline-block;
+
+ padding:3px 7px;
+
+ border-radius:8px;
+
+ background:#f0c33b;
+
+ color:#513600;
+
+ font-weight:bold;
+
+ font-size:11px;
+
+}
+
+.bj-muted{opacity:.72}
+
+.bj-next{
+
+ background:#edf5ff;
+
+ padding:10px;
+
+ border-radius:10px;
+
+ margin:8px 0;
+
+}
+
+.bj-next strong{color:#134a87}
+
+.bj-next small{color:#536c85}
+
+#bjAwardsToggle{
+
+ width:100%;
+
+ background:linear-gradient(100deg,#0a448d,#1879c9);
+
+ color:white;
+
+ border:2px solid #ffd14b;
+
+ border-radius:12px;
+
+ padding:14px;
+
+ font-weight:bold;
+
+ font-size:16px;
+
+ margin:10px 0;
+
+}
+
+#bjAwardModal{
+
+ position:fixed;
+
+ inset:0;
+
+ z-index:99999;
+
+ background:rgba(3,17,44,.88);
+
+ display:none;
+
+ align-items:center;
+
+ justify-content:center;
+
+ padding:18px;
+
+}
+
+#bjAwardModal.show{display:flex}
+
+.bj-popup{
+
+ width:100%;
+
+ max-width:390px;
+
+ background:linear-gradient(145deg,#fffce5,#ffd35e);
+
+ border:5px solid white;
+
+ border-radius:22px;
+
+ padding:25px 18px;
+
+ text-align:center;
+
+ color:#703d00;
+
+ box-shadow:0 0 45px #ffc83d88;
+
+ animation:bjPop .35s ease-out;
+
+}
+
+@keyframes bjPop{
+
+ from{transform:scale(.75);opacity:0}
+
+ to{transform:scale(1);opacity:1}
+
+}
+
+.bj-popup .bj-big{font-size:60px}
+
+.bj-popup h2{
+
+ background:none!important;
+
+ color:#a04c00!important;
+
+ font-size:23px;
+
+ padding:0!important;
+
+}
+
+.bj-popup button{
+
+ background:#11559d;
+
+ color:white;
+
+ border:0;
+
+ border-radius:12px;
+
+ padding:13px 25px;
+
+ font-weight:bold;
+
+}
+
+@media(max-width:360px){
+
+ .bj-grid{grid-template-columns:1fr}
+
+}
+
+</style>
+
+<div id="bjAwardModal" role="dialog" aria-modal="true"
+
+ aria-label="新しい称号または特殊能力を獲得">
+
+ <div class="bj-popup">
+
+  <div class="bj-big" id="bjPopIcon">🏆</div>
+
+  <h2 id="bjPopHeading">新称号獲得！</h2>
+
+  <h3 id="bjPopName"></h3>
+
+  <p id="bjPopText"></p>
+
+  <p>昨日の自分を超えた証だ！</p>
+
+  <button type="button" id="bjPopClose">
+
+   次の挑戦へ！ ⚾
+
+  </button>
+
+ </div>
+
+</div>
+
+<script>
+
+(function(){
+
+"use strict";
+
+/*
+
+  現在の公開版に対応
+
+  data.practice : 練習記録
+
+  data.games    : 試合記録
+
+  既存の保存データは変更しない
+
+*/
+
+const titles=[
+
+ {id:"start",icon:"🌱",name:"努力のルーキー",
+
+  desc:"初めて練習を記録する",goal:1,
+
+  count:d=>d.practice.length},
+
+ {id:"p5",icon:"🔥",name:"努力の挑戦者",
+
+  desc:"練習した日が5日になる",goal:5,
+
+  count:d=>days(d.practice)},
+
+ {id:"p10",icon:"⭐",name:"継続の達人",
+
+  desc:"練習した日が10日になる",goal:10,
+
+  count:d=>days(d.practice)},
+
+ {id:"p30",icon:"👑",name:"不屈の挑戦者",
+
+  desc:"練習した日が30日になる",goal:30,
+
+  count:d=>days(d.practice)},
+
+ {id:"p100",icon:"🏆",name:"努力の鉄人",
+
+  desc:"練習した日が100日になる",goal:100,
+
+  count:d=>days(d.practice)},
+
+ {id:"g1",icon:"🏟️",name:"試合デビュー",
+
+  desc:"試合を初めて記録する",goal:1,
+
+  count:d=>d.games.length},
+
+ {id:"g10",icon:"⚾",name:"実戦経験者",
+
+  desc:"試合を10件記録する",goal:10,
+
+  count:d=>d.games.length},
+
+ {id:"h10",icon:"🎯",name:"安打製造機",
+
+  desc:"通算10安打を達成する",goal:10,
+
+  count:d=>total(d.games,"hit")},
+
+ {id:"hr3",icon:"💥",name:"ホームランアーティスト",
+
+  desc:"通算3本塁打を達成する",goal:3,
+
+  count:d=>total(d.games,"hr")},
+
+ {id:"note10",icon:"📖",name:"野球研究家",
+
+  desc:"振り返りを10日記録する",goal:10,
+
+  count:d=>days(d.practice.filter(r=>
+
+    String(r.note||"").trim().length>=8))}
+
+];
+
+const skills=[
+
+ {id:"hit5",icon:"🎯",name:"ミート○",
+
+  desc:"通算5安打",goal:5,
+
+  count:d=>total(d.games,"hit")},
+
+ {id:"hit20",icon:"🌟",name:"アベレージヒッター",
+
+  desc:"通算20安打",goal:20,
+
+  count:d=>total(d.games,"hit")},
+
+ {id:"double3",icon:"🚀",name:"長打力○",
+
+  desc:"二塁打以上を通算3本",goal:3,
+
+  count:d=>extraHits(d.games)},
+
+ {id:"double10",icon:"💪",name:"パワーヒッター",
+
+  desc:"二塁打以上を通算10本",goal:10,
+
+  count:d=>extraHits(d.games)},
+
+ {id:"hr1",icon:"💥",name:"一発",
+
+  desc:"本塁打を1本記録する",goal:1,
+
+  count:d=>total(d.games,"hr")},
+
+ {id:"hr5",icon:"👑",name:"スラッガー",
+
+  desc:"通算5本塁打",goal:5,
+
+  count:d=>total(d.games,"hr")},
+
+ {id:"mind5",icon:"🧠",name:"集中力○",
+
+  desc:"振り返りを5日記録",goal:5,
+
+  count:d=>days(d.practice.filter(r=>
+
+    String(r.note||"").trim().length>=8))},
+
+ {id:"mind20",icon:"📘",name:"野球博士",
+
+  desc:"振り返りを20日記録",goal:20,
+
+  count:d=>days(d.practice.filter(r=>
+
+    String(r.note||"").trim().length>=8))}
+
+];
+
+function total(rows,key){
+
+ return rows.reduce((sum,r)=>{
+
+  const n=Number(r[key]);
+
+  return sum+(Number.isFinite(n)&&n>0?n:0);
+
+ },0);
+
+}
+
+function days(rows){
+
+ return new Set(rows.map(r=>r.date)
+
+  .filter(Boolean)).size;
+
+}
+
+function extraHits(rows){
+
+ return total(rows,"d2")+
+
+        total(rows,"d3")+
+
+        total(rows,"hr");
+
+}
+
+function progress(item,d){
+
+ const n=Math.max(0,Number(item.count(d))||0);
+
+ return {
+
+  n,
+
+  done:n>=item.goal,
+
+  pct:Math.min(100,n/item.goal*100)
+
+ };
+
+}
+
+function awardCard(item,d){
+
+ const p=progress(item,d);
+
+ const percent=Math.round(p.pct);
+
+ return `
+
+ <div class="bj-item ${p.done?"earned":"bj-muted"}">
+
+  <div class="bj-icon">${item.icon}</div>
+
+  <strong>${item.name}</strong>
+
+  <small>${item.desc}</small>
+
+  <div class="bj-progress">
+
+   <div style="width:${percent}%"></div>
+
+  </div>
+
+  <small>${Math.min(p.n,item.goal)} /
+
+    ${item.goal}</small>
+
+  ${p.done
+
+   ?'<span class="bj-tag">✨ 獲得済み</span>'
+
+   :'<span class="bj-tag" style="background:#dbe4ed">🔒 未獲得</span>'}
+
+ </div>`;
+
+}
+
+const main=document.querySelector("main");
+
+if(!main)return;
+
+/* ホームに図鑑を追加 */
+
+const home=document.getElementById("home");
+
+const host=home||main;
+
+const wrapper=document.createElement("div");
+
+wrapper.id="bjAwards";
+
+wrapper.innerHTML=`
+
+ <button type="button" id="bjAwardsToggle">
+
+  🏆 称号・特殊能力図鑑を開く ▼
+
+ </button>
+
+ <div id="bjAwardsContent" hidden>
+
+  <div class="bj-head">
+
+   <h2>⚾ サクセス育成図鑑</h2>
+
+   <div class="bj-summary">
+
+    <div>🏅 称号<b id="bjTitleNum">0</b></div>
+
+    <div>✨ 特殊能力<b id="bjSkillNum">0</b></div>
+
+   </div>
+
+   <p style="font-size:12px">
+
+    記録を積み重ねて能力を解放しよう！
+
+   </p>
+
+  </div>
+
+  <div class="bj-panel">
+
+   <h3>🎯 次に狙う目標</h3>
+
+   <div id="bjNextList"></div>
+
+  </div>
+
+  <div class="bj-panel">
+
+   <h3>🏅 称号コレクション</h3>
+
+   <div class="bj-grid" id="bjTitleList"></div>
+
+  </div>
+
+  <div class="bj-panel">
+
+   <h3>✨ 特殊能力コレクション</h3>
+
+   <div class="bj-grid" id="bjSkillList"></div>
+
+  </div>
+
+ </div>`;
+
+host.appendChild(wrapper);
+
+const toggle=document.getElementById("bjAwardsToggle");
+
+const content=document.getElementById("bjAwardsContent");
+
+toggle.addEventListener("click",()=>{
+
+ const opening=content.hidden;
+
+ content.hidden=!opening;
+
+ toggle.textContent=opening
+
+  ?"🏆 称号・特殊能力図鑑を閉じる ▲"
+
+  :"🏆 称号・特殊能力図鑑を開く ▼";
+
+ if(opening)refreshAwards();
+
+});
+
+const modal=document.getElementById("bjAwardModal");
+
+const close=document.getElementById("bjPopClose");
+
+let previous=null;
+
+let queue=[];
+
+close.addEventListener("click",()=>{
+
+ modal.classList.remove("show");
+
+ if(queue.length)showAward();
+
+});
+
+function showAward(){
+
+ const item=queue.shift();
+
+ if(!item)return;
+
+ document.getElementById("bjPopIcon").textContent=
+
+  item.icon;
+
+ document.getElementById("bjPopHeading").textContent=
+
+  titles.includes(item)
+
+  ?"🏆 新称号獲得！"
+
+  :"✨ 特殊能力解放！";
+
+ document.getElementById("bjPopName").textContent=
+
+  item.name;
+
+ document.getElementById("bjPopText").textContent=
+
+  item.desc+" 達成！";
+
+ modal.classList.add("show");
+
+}
+
+function refreshAwards(){
+
+ if(typeof data==="undefined"||!data)return;
+
+ if(!Array.isArray(data.practice)||
+
+    !Array.isArray(data.games))return;
+
+ const t=titles.filter(x=>progress(x,data).done);
+
+ const s=skills.filter(x=>progress(x,data).done);
+
+ document.getElementById("bjTitleNum").textContent=
+
+  t.length+" / "+titles.length;
+
+ document.getElementById("bjSkillNum").textContent=
+
+  s.length+" / "+skills.length;
+
+ document.getElementById("bjTitleList").innerHTML=
+
+  titles.map(x=>awardCard(x,data)).join("");
+
+ document.getElementById("bjSkillList").innerHTML=
+
+  skills.map(x=>awardCard(x,data)).join("");
+
+ const remaining=[...titles,...skills]
+
+  .filter(x=>!progress(x,data).done)
+
+  .sort((a,b)=>
+
+   progress(b,data).pct-progress(a,data).pct)
+
+  .slice(0,3);
+
+ document.getElementById("bjNextList").innerHTML=
+
+  remaining.length
+
+  ?remaining.map(x=>{
+
+    const p=progress(x,data);
+
+    return `<div class="bj-next">
+
+      <strong>${x.icon} ${x.name}</strong>
+
+      <div><small>${x.desc}</small></div>
+
+      <div class="bj-progress">
+
+       <div style="width:${p.pct}%"></div>
+
+      </div>
+
+      <small>あと ${Math.max(0,x.goal-p.n)}</small>
+
+     </div>`;
+
+   }).join("")
+
+  :"<p>🏆 全目標達成！素晴らしい！</p>";
+
+ const current=new Set([...t,...s].map(x=>x.id));
+
+ if(previous!==null){
+
+  const newItems=[...t,...s].filter(x=>
+
+   !previous.has(x.id));
+
+  queue.push(...newItems);
+
+  if(queue.length&&!modal.classList.contains("show")){
+
+   showAward();
+
+  }
+
+ }
+
+ previous=current;
+
+}
+
+/* 既存のrenderと連動 */
+
+if(typeof render==="function"){
+
+ const originalRender=render;
+
+ render=function(...args){
+
+  const result=originalRender.apply(this,args);
+
+  refreshAwards();
+
+  return result;
+
+ };
+
+}
+
+/* 保存・修正・削除の後にも再計算 */
+
+document.addEventListener("click",()=>{
+
+ setTimeout(refreshAwards,150);
+
+});
+
+document.addEventListener("change",()=>{
+
+ setTimeout(refreshAwards,150);
+
+});
+
+refreshAwards();
+
+})();
+
+</script>
+
+<!-- 称号・特殊能力 追加パックここまで -->
 </body>
 </html>
