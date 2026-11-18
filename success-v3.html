@@ -1,0 +1,1229 @@
+
+
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta name="theme-color" content="#10294a">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<title>駿介 BASEBALL SUCCESS 3</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{margin:0;background:#08172b;color:#edf6ff;font-family:-apple-system,"Hiragino Kaku Gothic ProN",sans-serif}
+
+button,input,select,textarea{font:inherit}
+
+button{cursor:pointer}
+
+header{padding:20px 15px;background:linear-gradient(130deg,#124f87,#09254b);border-bottom:5px solid #ffca45}
+
+.wrap{max-width:850px;margin:auto}
+
+h1{font-size:25px;margin:8px 0}
+
+h2{font-size:19px;margin:0 0 13px;color:#ffe17d}
+
+h3{margin:8px 0}
+
+small,.muted{color:#a8c5df}
+
+.top{font-size:12px;letter-spacing:2px;color:#83e5ff;font-weight:bold}
+
+.level{font-size:26px;font-weight:900;color:#ffe17d}
+
+.bar{height:13px;background:#071528;border-radius:20px;overflow:hidden;border:1px solid #42658b;margin:9px 0}
+
+.fill{height:100%;background:linear-gradient(90deg,#24c4e6,#ffcd4c)}
+
+nav{display:flex;gap:7px;padding:10px;overflow-x:auto;background:#102b48;position:sticky;top:0;z-index:5}
+
+nav button{white-space:nowrap;background:#214568;color:white;border:1px solid #527ba0;border-radius:10px;padding:11px;font-weight:bold}
+
+nav button.on{background:#ffcb48;color:#142b43}
+
+main{padding:15px}
+
+.page{display:none}
+
+.page.on{display:block}
+
+.panel{background:linear-gradient(140deg,#193b5c,#10283f);border:1px solid #45749b;border-radius:17px;padding:16px;margin-bottom:14px;box-shadow:0 5px 18px #0004}
+
+.gold{border-color:#e5b84d}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+
+.stat{background:#0a2037;border:1px solid #426b91;border-radius:12px;padding:13px}
+
+.stat strong{display:block;font-size:28px;color:white}
+
+.stat small{font-size:12px}
+
+.player{display:flex;align-items:center;gap:14px}
+
+.avatar{width:90px;height:100px;flex-shrink:0;background:linear-gradient(140deg,#277db2,#12304e);border:3px solid #ffcf56;border-radius:17px;display:grid;place-items:center;font-size:56px}
+
+.ability{display:grid;grid-template-columns:65px 40px 1fr 30px;align-items:center;gap:8px;margin:13px 0}
+
+.rank{background:#80c8e8;color:#09243c;border-radius:7px;text-align:center;padding:5px;font-weight:900}
+
+.rank.high{background:#ffcc52}
+
+.ability .bar{margin:0}
+
+.btn{background:#ffcc4d;color:#142b43;border:0;border-radius:11px;padding:12px 16px;font-weight:900;margin:5px 5px 5px 0}
+
+.btn.alt{background:#286b9e;color:white}
+
+.btn.danger{background:#923d52;color:white}
+
+.training{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+
+.train{background:#153958;border:1px solid #5386aa;border-radius:14px;padding:13px}
+
+.train .emoji{font-size:31px}
+
+.train p{font-size:12px;color:#b9d0e3;min-height:48px}
+
+.train button{width:100%;font-size:13px}
+
+label{display:block;font-size:13px;font-weight:bold;margin:12px 0 4px}
+
+input,select,textarea{width:100%;background:#081e34;border:1px solid #6489aa;border-radius:9px;padding:11px;color:white}
+
+textarea{min-height:75px}
+
+.badge{display:inline-block;border-radius:20px;background:#294a65;border:1px solid #52718e;padding:7px 10px;margin:4px;font-size:13px}
+
+.badge.on{background:#765b20;border-color:#ffd15b;color:#fff2b5}
+
+.history{padding:11px 0;border-bottom:1px solid #35546d}
+
+.coach{background:linear-gradient(120deg,#164e78,#1a3854);border-left:5px solid #ffcc4d;border-radius:10px;padding:15px;line-height:1.8}
+
+.weekday{padding:10px 0;border-bottom:1px solid #35546d}
+
+.modal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+
+.modal.show{display:flex}
+
+.popup{background:linear-gradient(140deg,#1c6e9f,#132d53);border:4px solid #ffcc4d;border-radius:23px;text-align:center;padding:28px 18px;width:min(430px,100%);box-shadow:0 0 50px #ffc94d55;animation:pop .3s}
+
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+.popup .emoji{font-size:65px}
+
+.note{font-size:12px;color:#b3cce0;line-height:1.7}
+
+@media(max-width:360px){.training{grid-template-columns:1fr}.avatar{width:75px}}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<div class="wrap">
+
+<div class="top">⚾ BASEBALL JOURNEY / SUCCESS MODE 3</div>
+
+<h1>駿介の野球育成プロジェクト</h1>
+
+<small>昨日の自分より成長。昨日より今日、今日より明日。</small>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:15px">
+
+<div class="level" id="headLevel">Lv.1</div>
+
+<strong id="headXP">0 XP</strong>
+
+</div>
+
+<div class="bar"><div class="fill" id="headBar" style="width:0%"></div></div>
+
+<small id="headNext">次のレベルまで 100 XP</small>
+
+</div>
+
+</header>
+
+<nav id="nav"></nav>
+
+<main class="wrap" id="app"></main>
+
+<div class="modal" id="modal">
+
+<div class="popup">
+
+<div class="emoji" id="popIcon">🏆</div>
+
+<h1 id="popTitle"></h1>
+
+<p id="popText"></p>
+
+<button class="btn" onclick="closePop()">よし、次へ！</button>
+
+</div>
+
+</div>
+
+<script>
+
+"use strict";
+
+const KEY="shunsuke_success_v3_new";
+
+const AB=["ミート","パワー","走力","肩力","守備力","捕球"];
+
+const $=id=>document.getElementById(id);
+
+const today=()=>new Date().toLocaleDateString("sv-SE");
+
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({
+
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+
+}[c]));
+
+const TASKS=[
+
+["🎯","ミート練習","ミート",25,"打撃フォーム・芯で捉える感覚の研究"],
+
+["💥","パワー研究","パワー",25,"打球や体の使い方を研究"],
+
+["👟","走塁研究","走力",25,"スタート・走塁判断を研究"],
+
+["⚾","送球研究","肩力",25,"送球フォーム・正確性を研究"],
+
+["🧤","守備練習","守備力",25,"守備位置・足運び・基本動作"],
+
+["🥎","捕球練習","捕球",25,"グラブ操作・捕球の基本"],
+
+["📖","野球ノート","研究",20,"試合分析・ルール・作戦を学ぶ"],
+
+["🌙","休養・ケア","休養",30,"睡眠・休息・許可されたケア"]
+
+];
+
+const TITLE_RULES=[
+
+["努力のルーキー",d=>d.practice.length>=1],
+
+["三日坊主突破",d=>d.practice.length>=3],
+
+["継続の達人",d=>d.practice.length>=10],
+
+["努力の鉄人",d=>d.practice.length>=30],
+
+["初陣の勇者",d=>d.games.length>=1],
+
+["ヒットメーカー",d=>sum("hits")>=10],
+
+["ホームランアーティスト",d=>sum("hr")>=3],
+
+["野球博士",d=>count("研究")>=10],
+
+["回復の達人",d=>count("休養")>=10],
+
+["未来の主役",d=>level(d.xp)>=10]
+
+];
+
+const SKILL_RULES=[
+
+["安打製造機の芽",d=>sum("hits")>=5],
+
+["長打力の芽",d=>sum("hr")>=1],
+
+["継続力○",d=>d.practice.length>=10],
+
+["野球脳○",d=>count("研究")>=5],
+
+["守備職人の芽",d=>count("守備力")>=10],
+
+["走塁意識○",d=>count("走力")>=10],
+
+["回復上手",d=>count("休養")>=5],
+
+["挑戦者",d=>d.games.length>=5]
+
+];
+
+const QUOTES=[
+
+"昨日より一歩でも成長できたなら、それは勝利だ！",
+
+"強い選手ほど、休む勇気を持っている！",
+
+"失敗は挑戦の証。次の一球で何を変える？",
+
+"量より質。考えて取り組む練習が未来を変える！",
+
+"夢は大きく、今日の一歩は確実に！",
+
+"仲間を大切にできる選手が、本当に強い選手だ！"
+
+];
+
+const fresh=()=>({
+
+version:3,xp:0,energy:100,
+
+abilities:Object.fromEntries(AB.map(x=>[x,20])),
+
+practice:[],games:[],growth:[],
+
+week:Array(7).fill("休養"),
+
+goal:"",
+
+father:"駿介へ。昨日の自分を超える一歩を、一緒に積み重ねよう！"
+
+});
+
+let data;
+
+try{
+
+data=JSON.parse(localStorage.getItem(KEY))||fresh();
+
+if(data.version!==3)data=fresh();
+
+}catch(e){data=fresh()}
+
+let tab="home";
+
+let queue=[];
+
+function save(){
+
+localStorage.setItem(KEY,JSON.stringify(data));
+
+}
+
+function level(x){
+
+return Math.floor(Math.sqrt(x/100))+1;
+
+}
+
+function nextXP(l){
+
+return 100*l*l;
+
+}
+
+function rank(n){
+
+if(n>=90)return "S";
+
+if(n>=80)return "A";
+
+if(n>=65)return "B";
+
+if(n>=50)return "C";
+
+if(n>=35)return "D";
+
+if(n>=20)return "E";
+
+return "F";
+
+}
+
+function count(kind){
+
+return data.practice.filter(x=>x.kind===kind).length;
+
+}
+
+function sum(key){
+
+return data.games.reduce((s,g)=>s+Number(g[key]||0),0);
+
+}
+
+function earned(rules){
+
+return rules.filter(x=>x[1](data)).map(x=>x[0]);
+
+}
+
+function popup(icon,title,msg){
+
+queue.push({icon,title,msg});
+
+if(!$("modal").classList.contains("show"))showNext();
+
+}
+
+function showNext(){
+
+const p=queue.shift();
+
+if(!p)return;
+
+$("popIcon").textContent=p.icon;
+
+$("popTitle").textContent=p.title;
+
+$("popText").textContent=p.msg;
+
+$("modal").classList.add("show");
+
+}
+
+function closePop(){
+
+$("modal").classList.remove("show");
+
+showNext();
+
+}
+
+function change(fn){
+
+const oldLevel=level(data.xp);
+
+const oldTitles=earned(TITLE_RULES);
+
+const oldSkills=earned(SKILL_RULES);
+
+fn();
+
+save();
+
+render();
+
+if(level(data.xp)>oldLevel){
+
+popup("🌟","LEVEL UP！","レベル"+level(data.xp)+"に到達！");
+
+}
+
+earned(TITLE_RULES).forEach(x=>{
+
+if(!oldTitles.includes(x))popup("🏆","新称号獲得！",x);
+
+});
+
+earned(SKILL_RULES).forEach(x=>{
+
+if(!oldSkills.includes(x))popup("✨","特殊能力解放！",x);
+
+});
+
+}
+
+const NAV=[
+
+["home","🏠 ホーム"],
+
+["train","⚾ 練習"],
+
+["ability","⭐ 能力"],
+
+["titles","🏆 称号"],
+
+["games","🏟️ 試合"],
+
+["growth","📏 成長"],
+
+["week","📅 週間"],
+
+["support","💌 応援"],
+
+["settings","⚙️ 設定"]
+
+];
+
+function go(id){
+
+tab=id;
+
+render();
+
+window.scrollTo(0,0);
+
+}
+
+function abilityRows(){
+
+return AB.map(name=>{
+
+const n=data.abilities[name];
+
+const r=rank(n);
+
+return `<div class="ability">
+
+<strong>${name}</strong>
+
+<span class="rank ${n>=65?"high":""}">${r}</span>
+
+<div class="bar"><div class="fill" style="width:${n}%"></div></div>
+
+<strong>${n}</strong>
+
+</div>`;
+
+}).join("");
+
+}
+
+function render(){
+
+$("nav").innerHTML=NAV.map(([id,name])=>
+
+`<button class="${tab===id?"on":""}" onclick="go('${id}')">${name}</button>`
+
+).join("");
+
+const lv=level(data.xp);
+
+$("headLevel").textContent="Lv."+lv;
+
+$("headXP").textContent=data.xp+" XP";
+
+$("headBar").style.width=
+
+((data.xp-100*(lv-1)*(lv-1))/
+
+(nextXP(lv)-100*(lv-1)*(lv-1))*100)+"%";
+
+$("headNext").textContent=
+
+"次のレベルまで "+(nextXP(lv)-data.xp)+" XP";
+
+const pages={
+
+home,train,ability,titles,games,growth,week,support,settings
+
+};
+
+$("app").innerHTML=pages[tab]();
+
+}
+
+function home(){
+
+const ab=sum("ab"),hits=sum("hits");
+
+return `
+
+<div class="panel gold">
+
+<div class="player">
+
+<div class="avatar">⚾</div>
+
+<div>
+
+<span class="badge on">SUCCESS PLAYER</span>
+
+<h2 style="margin-top:10px">駿介</h2>
+
+<div class="level">Lv.${level(data.xp)}</div>
+
+<small>目指せ、未来のプロ野球選手！</small>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="grid" style="margin-bottom:14px">
+
+<div class="stat"><small>総経験値</small><strong>${data.xp}</strong></div>
+
+<div class="stat"><small>体力</small><strong>${data.energy}</strong></div>
+
+<div class="stat"><small>称号</small><strong>${earned(TITLE_RULES).length}/10</strong></div>
+
+<div class="stat"><small>特殊能力</small><strong>${earned(SKILL_RULES).length}/8</strong></div>
+
+</div>
+
+<div class="panel">
+
+<h2>🔥 熱血監督</h2>
+
+<div class="coach">${QUOTES[data.practice.length%QUOTES.length]}</div>
+
+</div>
+
+<div class="panel">
+
+<h2>⭐ 選手能力</h2>
+
+${abilityRows()}
+
+<button class="btn alt" onclick="go('ability')">能力を詳しく見る</button>
+
+</div>
+
+<div class="panel">
+
+<h2>🏟️ 通算成績</h2>
+
+<div class="grid">
+
+<div class="stat"><small>試合</small><strong>${data.games.length}</strong></div>
+
+<div class="stat"><small>打率</small><strong>${ab?(hits/ab).toFixed(3):".---"}</strong></div>
+
+<div class="stat"><small>安打</small><strong>${hits}</strong></div>
+
+<div class="stat"><small>本塁打</small><strong>${sum("hr")}</strong></div>
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<h2>🎯 今日の一歩</h2>
+
+<p>練習も研究も休養も、未来につながる大切な一歩。</p>
+
+<button class="btn" onclick="go('train')">サクセス練習へ！</button>
+
+</div>`;
+
+}
+
+function train(){
+
+return `
+
+<div class="panel gold">
+
+<h2>⚾ 今日のサクセス練習</h2>
+
+<p>現在の体力：<strong>${data.energy}/100</strong></p>
+
+<div class="bar"><div class="fill" style="width:${data.energy}%"></div></div>
+
+<p class="note">実施した内容だけ記録しましょう。腰などに痛みがある場合は運動を中止し、医師の指示を優先してください。休養も評価されます。</p>
+
+</div>
+
+<div class="training">
+
+${TASKS.map((t,i)=>`
+
+<div class="train">
+
+<div class="emoji">${t[0]}</div>
+
+<h3>${t[1]}</h3>
+
+<p>${t[4]}</p>
+
+<strong>+${t[3]} XP</strong>
+
+<button class="btn" onclick="recordTrain(${i})">記録する</button>
+
+</div>`).join("")}
+
+</div>
+
+<div class="panel" style="margin-top:14px">
+
+<h2>📒 最近の練習</h2>
+
+${data.practice.length?
+
+data.practice.slice(-10).reverse().map(p=>`
+
+<div class="history">
+
+<strong>${esc(p.name)}</strong>
+
+<div class="muted">${esc(p.date)}　+${p.xp} XP</div>
+
+</div>`).join(""):
+
+"<p>まだ記録はありません。</p>"}
+
+</div>`;
+
+}
+
+function recordTrain(i){
+
+const t=TASKS[i];
+
+const rest=t[2]==="休養";
+
+if(!confirm(t[1]+"を実施しましたか？"))return;
+
+if(!rest&&data.energy<10){
+
+alert("体力が少ないので休養しましょう。");
+
+return;
+
+}
+
+change(()=>{
+
+data.practice.push({
+
+date:today(),name:t[1],kind:t[2],xp:t[3]
+
+});
+
+data.xp+=t[3];
+
+if(rest){
+
+data.energy=Math.min(100,data.energy+30);
+
+}else{
+
+data.energy=Math.max(0,data.energy-10);
+
+if(AB.includes(t[2])){
+
+data.abilities[t[2]]=Math.min(100,data.abilities[t[2]]+1);
+
+}
+
+}
+
+});
+
+}
+
+function ability(){
+
+return `
+
+<div class="panel gold">
+
+<h2>⭐ 選手能力</h2>
+
+<p class="note">能力値はゲーム内の育成指標です。実際の運動能力の測定結果ではありません。</p>
+
+${abilityRows()}
+
+</div>
+
+<div class="panel">
+
+<h2>✨ 特殊能力図鑑</h2>
+
+${SKILL_RULES.map(([name,test])=>`
+
+<div class="history">
+
+<span class="badge ${test(data)?"on":""}">
+
+${test(data)?"✨":"🔒"} ${name}
+
+</span>
+
+</div>`).join("")}
+
+</div>`;
+
+}
+
+function titles(){
+
+return `
+
+<div class="panel">
+
+<h2>🏆 称号コレクション</h2>
+
+<p>獲得：${earned(TITLE_RULES).length}/10</p>
+
+${TITLE_RULES.map(([name,test])=>`
+
+<div class="history">
+
+<span class="badge ${test(data)?"on":""}">
+
+${test(data)?"🏆":"🔒"} ${name}
+
+</span>
+
+</div>`).join("")}
+
+</div>`;
+
+}
+
+function games(){
+
+const ab=sum("ab"),hits=sum("hits");
+
+return `
+
+<div class="panel gold">
+
+<h2>🏟️ 試合結果を入力</h2>
+
+<p class="note">すべて0から入力できます。保存するまで通算成績には反映されません。</p>
+
+<form onsubmit="recordGame(event)">
+
+<label>試合日</label>
+
+<input name="date" type="date" value="${today()}" required>
+
+<label>対戦相手</label>
+
+<input name="opponent" placeholder="対戦チーム">
+
+<div class="grid">
+
+<div><label>打数</label><input name="ab" type="number" min="0" value="0" required></div>
+
+<div><label>安打</label><input name="hits" type="number" min="0" value="0" required></div>
+
+<div><label>本塁打</label><input name="hr" type="number" min="0" value="0" required></div>
+
+<div><label>打点</label><input name="rbi" type="number" min="0" value="0" required></div>
+
+</div>
+
+<label>試合の振り返り</label>
+
+<textarea name="note" placeholder="良かったこと・次の課題"></textarea>
+
+<button class="btn" type="submit">試合結果を保存</button>
+
+</form>
+
+</div>
+
+<div class="panel">
+
+<h2>📊 通算成績</h2>
+
+<div class="grid">
+
+<div class="stat"><small>試合数</small><strong>${data.games.length}</strong></div>
+
+<div class="stat"><small>打率</small><strong>${ab?(hits/ab).toFixed(3):".---"}</strong></div>
+
+<div class="stat"><small>安打</small><strong>${hits}</strong></div>
+
+<div class="stat"><small>本塁打</small><strong>${sum("hr")}</strong></div>
+
+<div class="stat"><small>打点</small><strong>${sum("rbi")}</strong></div>
+
+<div class="stat"><small>打数</small><strong>${ab}</strong></div>
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<h2>📖 試合履歴</h2>
+
+${data.games.length?
+
+data.games.slice().reverse().map(g=>`
+
+<div class="history">
+
+<strong>${esc(g.date)}　${esc(g.opponent)}</strong>
+
+<div>${g.ab}打数 ${g.hits}安打 ${g.hr}本塁打 ${g.rbi}打点</div>
+
+<small>${esc(g.note)}</small>
+
+</div>`).join(""):
+
+"<p>まだ試合記録はありません。</p>"}
+
+</div>`;
+
+}
+
+function recordGame(e){
+
+e.preventDefault();
+
+const f=new FormData(e.target);
+
+const ab=Number(f.get("ab"));
+
+const hits=Number(f.get("hits"));
+
+const hr=Number(f.get("hr"));
+
+const rbi=Number(f.get("rbi"));
+
+if([ab,hits,hr,rbi].some(n=>!Number.isInteger(n)||n<0)||hits>ab||hr>hits){
+
+alert("打数・安打・本塁打の関係を確認してください。");
+
+return;
+
+}
+
+if(!confirm("この試合結果を保存しますか？"))return;
+
+change(()=>{
+
+data.games.push({
+
+date:f.get("date"),
+
+opponent:String(f.get("opponent")),
+
+ab,hits,hr,rbi,
+
+note:String(f.get("note"))
+
+});
+
+data.xp+=20;
+
+if(hits>0)data.abilities["ミート"]=Math.min(100,data.abilities["ミート"]+1);
+
+if(hr>0)data.abilities["パワー"]=Math.min(100,data.abilities["パワー"]+1);
+
+});
+
+popup("🏟️","試合記録完了！","+20 XP獲得！");
+
+}
+
+function growth(){
+
+return `
+
+<div class="panel">
+
+<h2>📏 身体・生活の成長記録</h2>
+
+<form onsubmit="recordGrowth(event)">
+
+<label>測定日</label>
+
+<input name="date" type="date" value="${today()}" required>
+
+<div class="grid">
+
+<div><label>身長（cm）</label><input name="height" type="number" min="50" max="250" step="0.1" required></div>
+
+<div><label>体重（kg）</label><input name="weight" type="number" min="10" max="200" step="0.1" required></div>
+
+</div>
+
+<label>睡眠時間（時間）</label>
+
+<input name="sleep" type="number" min="0" max="24" step="0.5">
+
+<label>食事・体調メモ</label>
+
+<textarea name="note" placeholder="食事・水分・体調など"></textarea>
+
+<button class="btn">成長記録を保存</button>
+
+</form>
+
+</div>
+
+<div class="panel">
+
+<h2>📈 成長履歴</h2>
+
+${data.growth.length?
+
+data.growth.slice().reverse().map(g=>`
+
+<div class="history">
+
+<strong>${esc(g.date)}</strong>
+
+<div>身長 ${g.height}cm　体重 ${g.weight}kg</div>
+
+<small>睡眠 ${g.sleep??"未入力"}時間　${esc(g.note)}</small>
+
+</div>`).join(""):
+
+"<p>まだ記録はありません。</p>"}
+
+</div>`;
+
+}
+
+function recordGrowth(e){
+
+e.preventDefault();
+
+const f=new FormData(e.target);
+
+change(()=>{
+
+data.growth.push({
+
+date:f.get("date"),
+
+height:Number(f.get("height")),
+
+weight:Number(f.get("weight")),
+
+sleep:f.get("sleep")===""?null:Number(f.get("sleep")),
+
+note:String(f.get("note"))
+
+});
+
+});
+
+popup("📏","成長記録完了！","身体の成長を記録しました！");
+
+}
+
+const DAYS=["月","火","水","木","金","土","日"];
+
+const PLANS=["休養","野球ノート","打撃研究","守備研究","走塁研究","チーム練習","試合"];
+
+function week(){
+
+return `
+
+<div class="panel">
+
+<h2>📅 週間サクセス計画</h2>
+
+<p class="note">練習と休養のバランスを考えよう。予定を登録するだけではXPは増えません。</p>
+
+${DAYS.map((d,i)=>`
+
+<div class="weekday">
+
+<label>${d}曜日</label>
+
+<select id="week${i}">
+
+${PLANS.map(p=>`<option ${data.week[i]===p?"selected":""}>${p}</option>`).join("")}
+
+</select>
+
+</div>`).join("")}
+
+<label>今週の目標</label>
+
+<textarea id="weekGoal">${esc(data.goal)}</textarea>
+
+<button class="btn" onclick="saveWeek()">週間計画を保存</button>
+
+</div>`;
+
+}
+
+function saveWeek(){
+
+const days=DAYS.map((_,i)=>$("week"+i).value);
+
+const goal=$("weekGoal").value;
+
+change(()=>{
+
+data.week=days;
+
+data.goal=goal;
+
+});
+
+alert("週間計画を保存しました！");
+
+}
+
+function support(){
+
+return `
+
+<div class="panel gold">
+
+<h2>🔥 熱血監督</h2>
+
+<div class="coach" id="coachLine">${QUOTES[data.practice.length%QUOTES.length]}</div>
+
+<button class="btn alt" onclick="nextCoach()">監督の次の言葉</button>
+
+</div>
+
+<div class="panel">
+
+<h2>💌 お父さんからのエール</h2>
+
+<textarea id="fatherText">${esc(data.father)}</textarea>
+
+<button class="btn" onclick="saveFather()">応援メッセージを保存</button>
+
+</div>
+
+<div class="panel">
+
+<h2>🌱 大切な約束</h2>
+
+<p>痛みがある日は運動を中止。休養・睡眠・食事も野球の力。長く健康に続けることを大切にしよう。</p>
+
+</div>`;
+
+}
+
+function nextCoach(){
+
+$("coachLine").textContent=QUOTES[Math.floor(Math.random()*QUOTES.length)];
+
+}
+
+function saveFather(){
+
+const message=$("fatherText").value;
+
+change(()=>{data.father=message});
+
+alert("メッセージを保存しました！");
+
+}
+
+function settings(){
+
+return `
+
+<div class="panel">
+
+<h2>💾 データ管理</h2>
+
+<p class="note">データは端末のブラウザ内に保存されます。別の端末とは自動同期されません。</p>
+
+<button class="btn alt" onclick="backup()">バックアップを保存</button>
+
+<label>バックアップから復元</label>
+
+<input type="file" accept=".json,application/json" onchange="restore(event)">
+
+</div>
+
+<div class="panel">
+
+<h2>🔄 初期化</h2>
+
+<p class="note">V3の記録だけを初期化します。以前のアプリの保存データには触れません。</p>
+
+<button class="btn danger" onclick="resetAll()">V3を初期化</button>
+
+</div>`;
+
+}
+
+function backup(){
+
+const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+
+const url=URL.createObjectURL(blob);
+
+const a=document.createElement("a");
+
+a.href=url;
+
+a.download="shunsuke-v3-backup-"+today()+".json";
+
+document.body.appendChild(a);
+
+a.click();
+
+a.remove();
+
+setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+}
+
+function restore(e){
+
+const file=e.target.files[0];
+
+if(!file)return;
+
+const reader=new FileReader();
+
+reader.onload=()=>{
+
+try{
+
+const obj=JSON.parse(reader.result);
+
+if(obj.version!==3||!Array.isArray(obj.practice)||
+
+!Array.isArray(obj.games)||!Array.isArray(obj.growth)||
+
+!Array.isArray(obj.week)||!obj.abilities||
+
+AB.some(k=>!Number.isFinite(obj.abilities[k]))||
+
+!Number.isFinite(obj.xp)||!Number.isFinite(obj.energy)){
+
+throw Error("invalid");
+
+}
+
+if(!confirm("現在のV3記録をバックアップで置き換えますか？"))return;
+
+data=obj;
+
+save();
+
+render();
+
+alert("復元しました！");
+
+}catch(err){
+
+alert("有効なV3バックアップではありません。");
+
+}
+
+};
+
+reader.readAsText(file);
+
+}
+
+function resetAll(){
+
+if(!confirm("V3の記録をすべて消しますか？"))return;
+
+if(!confirm("最終確認：この操作は取り消せません。"))return;
+
+data=fresh();
+
+save();
+
+go("home");
+
+}
+
+render();
+
+</script>
+
+</body>
+
+</html>
