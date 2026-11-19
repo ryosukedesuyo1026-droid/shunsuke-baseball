@@ -1,0 +1,2750 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#092e62">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>駿介の野球サクセス COMPLETE</title>
+<style>
+:root{
+  --navy:#082954;
+  --blue:#1764b6;
+  --sky:#d9efff;
+  --gold:#ffd44e;
+  --ink:#153354;
+  --border:#9dbfdf;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,
+  "Hiragino Kaku Gothic ProN",sans-serif;
+  background:linear-gradient(#0a366a,#83c4ee);
+  color:var(--ink);
+  min-height:100vh;
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+header{
+  background:linear-gradient(120deg,#071e42,#15549b);
+  color:white;
+  padding:13px;
+  border-bottom:4px solid var(--gold);
+}
+.logo{
+  color:var(--gold);
+  font-size:clamp(19px,4vw,29px);
+  font-weight:900;
+}
+.subtitle{font-size:10px;letter-spacing:2px}
+.wrap{max-width:1100px;margin:auto;padding:10px 10px 90px}
+nav{
+  display:flex;
+  gap:5px;
+  overflow-x:auto;
+  padding:9px 0;
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:#0b376d;
+}
+nav button{
+  white-space:nowrap;
+  border:1px solid #6ea7df;
+  border-radius:22px;
+  background:#174d8a;
+  color:white;
+  padding:10px 12px;
+  font-size:12px;
+  font-weight:800;
+}
+nav button.active{
+  background:linear-gradient(#ffe994,#ffc631);
+  color:#16345a;
+}
+.panel{
+  background:linear-gradient(#fff,#edf7ff);
+  border:2px solid var(--border);
+  border-radius:14px;
+  padding:13px;
+  margin:10px 0;
+  box-shadow:0 4px 0 #15416e;
+}
+.panel h2{
+  margin:0 0 12px;
+  padding:7px 10px;
+  border-radius:8px;
+  background:linear-gradient(90deg,#0753a5,#75baf0);
+  color:white;
+  font-size:16px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.cards{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.tile,.card{
+  background:#eaf5ff;
+  border:1px solid #bbd6f0;
+  border-radius:10px;
+  padding:11px;
+  min-width:0;
+}
+.tile strong{
+  display:block;
+  font-size:23px;
+  color:#1255a3;
+}
+.card b{display:block}
+.card p{font-size:12px;color:#516b86}
+.row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+}
+.btn{
+  background:linear-gradient(#ffe885,#ffbb2d);
+  color:#17375a;
+  border:1px solid #d99b15;
+  border-radius:10px;
+  padding:12px;
+  font-weight:900;
+}
+.btn.blue{
+  background:linear-gradient(#65bbff,#1260ba);
+  color:white;
+  border-color:#0a4b99;
+}
+.btn.ghost{background:#e4effa;color:#174b82}
+.full{width:100%}
+input,select,textarea{
+  width:100%;
+  padding:11px;
+  border:1px solid #aac7e4;
+  border-radius:9px;
+  background:white;
+  color:#173354;
+  margin:5px 0 11px;
+}
+textarea{min-height:75px}
+label{display:block;font-size:13px;font-weight:700}
+.bar{
+  height:10px;
+  background:#cddff0;
+  border-radius:20px;
+  overflow:hidden;
+  margin:6px 0;
+}
+.bar span{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#279aff,#ffd34c);
+}
+.pill{
+  display:inline-block;
+  background:linear-gradient(#ffe994,#f5bc35);
+  color:#263b55;
+  border-radius:20px;
+  padding:5px 10px;
+  font-size:12px;
+  font-weight:900;
+  margin:3px;
+}
+.hero{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:230px;
+  background:linear-gradient(120deg,#0754a2,#9bd6fa);
+  border-radius:12px;
+  padding:10px;
+  overflow:hidden;
+}
+.avatar{width:46%;max-width:230px;flex:none}
+.avatar svg{width:100%;height:auto}
+.hero-info{
+  flex:1;
+  min-width:0;
+  color:white;
+}
+.hero-info h1{
+  margin:0;
+  font-size:30px;
+  text-shadow:2px 2px #174778;
+}
+.hero-info p{font-size:12px}
+.notice{
+  background:#fff3d4;
+  border-left:4px solid #e8aa28;
+  border-radius:7px;
+  padding:10px;
+  font-size:12px;
+  line-height:1.7;
+}
+.stat{margin:11px 0}
+.stat .row{font-size:13px;font-weight:800}
+.listitem{
+  padding:11px 0;
+  border-bottom:1px solid #d2e2f1;
+  font-size:13px;
+}
+small,.muted{font-size:12px;color:#637b95}
+footer{
+  text-align:center;
+  color:white;
+  font-size:11px;
+  padding:20px;
+}
+@media(min-width:750px){
+  .cards{grid-template-columns:repeat(3,1fr)}
+  .grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⚾ 駿介の野球サクセス COMPLETE</div>
+  <div class="subtitle">SHUNSUKE BASEBALL SUCCESS</div>
+</header>
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="view"></main>
+  <footer>
+    自分で考え、自分で決め、自分で行動する。<br>
+    昨日の自分より成長！
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ==========================================
+   SHUNSUKE BASEBALL SUCCESS
+   COMPLETE EDITION
+   第2回：基本データ・保存・キャラクター
+========================================== */
+
+const K4 = "shunsuke_success_v4";
+const K3 = "shunsuke_success_v3_new";
+
+const AB = [
+  "ミート","パワー","走力",
+  "肩力","守備力","捕球"
+];
+
+const PB = [
+  "球威","制球力","スタミナ",
+  "投球術","投手守備","メンタル"
+];
+
+const MENU = [
+  ["素振り","打撃","ミート",15,"回数"],
+  ["羽打ち","打撃","ミート",18,"回数"],
+  ["置きティー","打撃","ミート",20,"回数"],
+  ["フリーバッティング","打撃","パワー",20,"球数"],
+
+  ["シャドーピッチング","投手","投球術",20,"回数"],
+  ["キャッチボール","投手","制球力",20,"球数"],
+  ["制球練習","投手","制球力",20,"球数"],
+  ["配球研究","投手","投球術",20,"分"],
+  ["投手フィールディング","投手","投手守備",20,"分"],
+
+  ["ノック","守備","守備力",20,"分"],
+  ["捕球練習","守備","捕球",15,"分"],
+  ["送球研究","守備","肩力",15,"分"],
+
+  ["ラダートレーニング","走塁","走力",18,"分"],
+  ["ベースランニング","走塁","走力",18,"分"],
+  ["走塁判断の研究","走塁","走力",18,"分"],
+
+  ["ストレッチ","身体ケア","ケア",25,"分"],
+  ["体幹・姿勢ケア","身体ケア","ケア",25,"分"],
+  ["睡眠・休養","身体ケア","ケア",25,"時間"],
+
+  ["野球ノート","自主学習","投球術",20,"分"],
+  ["試合動画の研究","自主学習","投球術",20,"分"]
+];
+
+const today = () => {
+  const d = new Date();
+  return d.getFullYear() + "-" +
+    String(d.getMonth()+1).padStart(2,"0") + "-" +
+    String(d.getDate()).padStart(2,"0");
+};
+
+const esc = s => String(s ?? "").replace(
+  /[&<>"']/g,
+  c => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[c])
+);
+
+const num = (v,d=0) =>
+  Number.isFinite(Number(v)) ? Number(v) : d;
+
+const cap = (v,a=0,b=100) =>
+  Math.max(a,Math.min(b,num(v)));
+
+function fresh(){
+  return {
+    version:4,
+    name:"駿介",
+    hand:"右投右打",
+    positions:["投手","一塁手","三塁手"],
+    xp:0,
+    energy:100,
+
+    abilities:Object.fromEntries(
+      AB.map(x=>[x,20])
+    ),
+
+    pitch:Object.fromEntries(
+      PB.map(x=>[x,20])
+    ),
+
+    practice:[],
+    games:[],
+    growth:[],
+    pitchlog:[],
+    plans:[],
+    reflections:[],
+    missionClaims:[],
+
+    week:Array(7).fill("休養"),
+
+    goal:"",
+    longGoal:"プロ野球選手を目指す",
+    father:"自分で考え、自分で挑戦しよう！",
+
+    pain:false,
+    created:today()
+  };
+}
+
+let db;
+
+function normalizeData(data){
+  const base = fresh();
+
+  const merged = Object.assign(
+    base,
+    data || {}
+  );
+
+  merged.version = 4;
+
+  for(const key of [
+    "practice","games","growth",
+    "pitchlog","plans","reflections",
+    "missionClaims"
+  ]){
+    if(!Array.isArray(merged[key])){
+      merged[key] = [];
+    }
+  }
+
+  merged.abilities = Object.assign(
+    {},
+    base.abilities,
+    merged.abilities || {}
+  );
+
+  merged.pitch = Object.assign(
+    {},
+    base.pitch,
+    merged.pitch || {}
+  );
+
+  if(!Array.isArray(merged.positions)){
+    merged.positions = base.positions;
+  }
+
+  if(!Array.isArray(merged.week)){
+    merged.week = base.week;
+  }
+
+  return merged;
+}
+
+function load(){
+  try{
+    const old = JSON.parse(
+      localStorage.getItem(K4)
+    );
+
+    if(old && old.version === 4){
+      return normalizeData(old);
+    }
+
+    const v3 = JSON.parse(
+      localStorage.getItem(K3)
+    );
+
+    if(v3 && v3.version === 3){
+      const migrated = fresh();
+
+      [
+        "xp","energy","abilities",
+        "practice","games","growth",
+        "week","goal","father"
+      ].forEach(key=>{
+        if(v3[key] !== undefined){
+          migrated[key] = v3[key];
+        }
+      });
+
+      migrated.migrated = true;
+
+      return normalizeData(migrated);
+    }
+
+  }catch(e){
+    console.error("読み込みエラー",e);
+  }
+
+  return fresh();
+}
+
+db = load();
+
+/*
+  既存のV4.2データを上書きしないよう、
+  初期表示時には自動保存しません。
+  実際に記録を変更したときだけ保存します。
+*/
+
+function save(){
+  try{
+    localStorage.setItem(
+      K4,
+      JSON.stringify(db)
+    );
+    return true;
+  }catch(e){
+    alert("データを保存できませんでした。");
+    return false;
+  }
+}
+
+/* ===== レベル・能力 ===== */
+
+function level(){
+  return Math.floor(
+    Math.sqrt(Math.max(0,num(db.xp))/100)
+  )+1;
+}
+
+function xpRate(){
+  const l = level();
+  const start = 100*(l-1)*(l-1);
+  const end = 100*l*l;
+
+  return cap(
+    (num(db.xp)-start)/(end-start)*100
+  );
+}
+
+function rank(v){
+  const n = cap(v);
+
+  if(n>=90)return "S";
+  if(n>=80)return "A";
+  if(n>=65)return "B";
+  if(n>=50)return "C";
+  if(n>=35)return "D";
+  return "E";
+}
+
+function totalAbility(){
+  const values = [
+    ...AB.map(x=>num(db.abilities[x],20)),
+    ...PB.map(x=>num(db.pitch[x],20))
+  ];
+
+  return Math.round(
+    values.reduce((a,b)=>a+b,0) /
+    values.length
+  );
+}
+
+function lastGrowth(){
+  return [...db.growth]
+    .sort((a,b)=>
+      String(b.date).localeCompare(
+        String(a.date)
+      )
+    )[0] || {};
+}
+
+function count(name){
+  return db.practice.filter(
+    x=>x.name===name
+  ).length;
+}
+
+function statBar(name,value){
+  const v = cap(value);
+
+  return `
+    <div class="stat">
+      <div class="row">
+        <span>${esc(name)}</span>
+        <strong>${rank(v)} ${v}</strong>
+      </div>
+      <div class="bar">
+        <span style="width:${v}%"></span>
+      </div>
+    </div>
+  `;
+}
+
+/* ===== オリジナル野球キャラクター =====
+   右投げの投球フォーム
+   青い帽子・白いユニフォーム
+   漫画風の少年選手
+====================================== */
+
+function avatar(){
+  return `
+  <div class="avatar">
+  <svg viewBox="0 0 260 300"
+       xmlns="http://www.w3.org/2000/svg"
+       role="img"
+       aria-label="右投げの野球少年">
+
+    <defs>
+      <linearGradient id="capGrad"
+        x1="0" y1="0" x2="0.8" y2="1">
+        <stop stop-color="#2495ed"/>
+        <stop offset="1" stop-color="#073474"/>
+      </linearGradient>
+
+      <linearGradient id="shirtGrad"
+        x1="0" y1="0" x2="1" y2="1">
+        <stop stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#b6d7f5"/>
+      </linearGradient>
+    </defs>
+
+    <!-- 背景 -->
+    <circle cx="130" cy="146" r="110"
+      fill="#d7f4ff" opacity=".18"/>
+
+    <!-- 左足・右足 -->
+    <path d="M100 217 L79 266"
+      stroke="#f7faff"
+      stroke-width="32"
+      stroke-linecap="round"/>
+
+    <path d="M149 215 L169 263"
+      stroke="#f7faff"
+      stroke-width="32"
+      stroke-linecap="round"/>
+
+    <path d="M59 269 L101 269"
+      stroke="#092e68"
+      stroke-width="16"
+      stroke-linecap="round"/>
+
+    <path d="M150 268 L192 268"
+      stroke="#092e68"
+      stroke-width="16"
+      stroke-linecap="round"/>
+
+    <!-- 右腕：ボールを持つ -->
+    <path d="M171 156
+             Q209 135 221 79"
+      stroke="#edb58d"
+      stroke-width="26"
+      stroke-linecap="round"
+      fill="none"/>
+
+    <circle cx="223" cy="75" r="18"
+      fill="#efb88f"
+      stroke="#9d6245"
+      stroke-width="2"/>
+
+    <!-- 野球ボール -->
+    <circle cx="225" cy="54" r="18"
+      fill="white"
+      stroke="#c6d3df"
+      stroke-width="2"/>
+
+    <path d="M214 42 Q226 54 214 66
+             M236 42 Q224 54 236 66"
+      stroke="#d73746"
+      stroke-width="2"
+      stroke-dasharray="3 2"
+      fill="none"/>
+
+    <!-- 胴体 -->
+    <path d="M72 160
+             Q126 139 171 159
+             L185 222
+             Q129 244 65 219Z"
+      fill="url(#shirtGrad)"
+      stroke="#0b4188"
+      stroke-width="5"/>
+
+    <path d="M107 155 L126 191 L143 155"
+      stroke="#216cb7"
+      stroke-width="10"
+      fill="none"/>
+
+    <text x="126" y="214"
+      font-size="31"
+      font-weight="900"
+      text-anchor="middle"
+      fill="#1757a2">S</text>
+
+    <!-- 左腕：グラブ -->
+    <path d="M73 178
+             Q46 197 33 161"
+      stroke="#edb58d"
+      stroke-width="24"
+      stroke-linecap="round"
+      fill="none"/>
+
+    <path d="M20 127
+             Q0 146 19 173
+             Q47 183 57 155
+             L48 125Z"
+      fill="#75462c"
+      stroke="#382114"
+      stroke-width="5"/>
+
+    <path d="M25 137 L42 163"
+      stroke="#bd885b"
+      stroke-width="4"/>
+
+    <!-- 顔 -->
+    <ellipse cx="125" cy="110"
+      rx="64" ry="67"
+      fill="#f2bf97"
+      stroke="#9a6549"
+      stroke-width="2.5"/>
+
+    <!-- 髪 -->
+    <path d="M63 108
+             Q56 55 120 45
+             Q183 48 188 109
+             L169 89
+             L149 101
+             L126 85
+             L105 102
+             L82 87Z"
+      fill="#202330"/>
+
+    <!-- 眉 -->
+    <path d="M85 107 L107 102
+             M142 102 L163 108"
+      stroke="#29242b"
+      stroke-width="5"
+      stroke-linecap="round"/>
+
+    <!-- 目 -->
+    <ellipse cx="99" cy="123"
+      rx="7" ry="12"
+      fill="#18253d"/>
+
+    <ellipse cx="150" cy="123"
+      rx="7" ry="12"
+      fill="#18253d"/>
+
+    <circle cx="101" cy="119" r="2.5"
+      fill="white"/>
+
+    <circle cx="152" cy="119" r="2.5"
+      fill="white"/>
+
+    <!-- 鼻・口 -->
+    <path d="M121 139 L128 141"
+      stroke="#a66c50"
+      stroke-width="2"/>
+
+    <path d="M114 155 Q127 151 139 155"
+      stroke="#804c46"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"/>
+
+    <!-- 帽子 -->
+    <path d="M58 91
+             Q47 22 123 20
+             Q195 20 191 89
+             L168 86
+             Q121 72 75 93Z"
+      fill="url(#capGrad)"
+      stroke="#082657"
+      stroke-width="5"/>
+
+    <path d="M59 89
+             Q126 71 198 91
+             Q192 107 125 108
+             Q54 106 59 89Z"
+      fill="#0a397b"
+      stroke="#082657"
+      stroke-width="3"/>
+
+    <text x="126" y="69"
+      text-anchor="middle"
+      font-size="39"
+      font-weight="900"
+      fill="white">S</text>
+
+    <!-- 動きの演出 -->
+    <path d="M193 174 L235 153
+             M195 187 L246 179
+             M55 234 L18 253"
+      stroke="#ffe05a"
+      stroke-width="5"
+      stroke-linecap="round"/>
+  </svg>
+  </div>`;
+}
+</script>
+
+<script>
+/* ==========================================
+   SHUNSUKE BASEBALL SUCCESS
+   第3回：ホーム・プロフィール・称号
+========================================== */
+
+const tabs = [
+  ["home","🏠 ホーム"],
+  ["profile","📋 プロフィール"],
+  ["training","💪 練習"],
+  ["pitcher","🔥 投手"],
+  ["game","🏆 試合"],
+  ["growth","📈 成長"],
+  ["plan","📝 自主計画"],
+  ["awards","⭐ 称号"],
+  ["settings","⚙️ 設定"]
+];
+
+let tab = "home";
+
+function go(t){
+  tab = t;
+  render();
+  window.scrollTo(0,0);
+}
+
+function render(){
+  document.getElementById("nav").innerHTML =
+    tabs.map(([id,name])=>`
+      <button
+        class="${tab===id?"active":""}"
+        onclick="go('${id}')">
+        ${name}
+      </button>
+    `).join("");
+
+  const screens = {
+    home,profile,training,pitcher,
+    game,growth,plan,awards,settings
+  };
+
+  document.getElementById("view").innerHTML =
+    screens[tab]();
+
+  if(tab==="training" &&
+     typeof fillMenu==="function"){
+    fillMenu();
+  }
+}
+
+function box(title,content){
+  return `
+    <section class="panel">
+      <h2>${title}</h2>
+      ${content}
+    </section>
+  `;
+}
+
+/* ===== 特殊能力・称号 ===== */
+
+const TITLE_RULES = [
+  ["努力のルーキー",()=>db.practice.length>=1,
+   "初めて練習を記録する"],
+
+  ["練習の継続者",()=>db.practice.length>=10,
+   "練習を10回記録する"],
+
+  ["努力の鉄人",()=>db.practice.length>=30,
+   "練習を30回記録する"],
+
+  ["初陣の勇者",()=>db.games.length>=1,
+   "初めて試合を記録する"],
+
+  ["ヒットメーカー",()=>
+    db.games.reduce((s,x)=>s+num(x.hits),0)>=10,
+   "通算10安打"],
+
+  ["マウンドへの第一歩",()=>db.pitchlog.length>=1,
+   "投球データを記録する"],
+
+  ["投手研究家",()=>db.pitchlog.length>=5,
+   "投球記録を5回つける"],
+
+  ["野球脳○",()=>count("配球研究")>=5,
+   "配球研究を5回記録する"],
+
+  ["考える選手",()=>db.reflections.length>=5,
+   "振り返りを5回記録する"],
+
+  ["回復の達人",()=>
+    db.practice.filter(x=>x.kind==="身体ケア").length>=5,
+   "身体ケアを5回記録する"],
+
+  ["未来の主役",()=>level()>=10,
+   "レベル10に到達する"]
+];
+
+const PITCH_SKILLS = [
+  ["🎯 制球力○",3,
+   "ストライク率60%以上の記録を3回"],
+
+  ["🧠 投球術○",5,
+   "配球研究を5回"],
+
+  ["🧤 投手守備○",5,
+   "投手フィールディングを5回"],
+
+  ["🔥 マウンド経験○",5,
+   "投球記録を5回"],
+
+  ["📖 研究熱心",10,
+   "野球ノート・配球研究を合計10回"],
+
+  ["💪 回復上手",10,
+   "身体ケアを10回"],
+
+  ["⭐ 自主性○",5,
+   "自主計画を5回"],
+
+  ["🏆 振り返り上手",10,
+   "振り返りを10回"]
+];
+
+function pitchSkillProgress(){
+  const valid = db.pitchlog.filter(x=>
+    num(x.pitches)>0 &&
+    num(x.strikes)>=0 &&
+    num(x.strikes)<=num(x.pitches)
+  );
+
+  return [
+    valid.filter(x=>
+      num(x.strikes)/num(x.pitches)>=0.6
+    ).length,
+    count("配球研究"),
+    count("投手フィールディング"),
+    db.pitchlog.length,
+    count("野球ノート")+count("配球研究"),
+    db.practice.filter(x=>x.kind==="身体ケア").length,
+    db.plans.length,
+    db.reflections.length
+  ];
+}
+
+function badges(){
+  return TITLE_RULES
+    .filter(x=>x[1]())
+    .map(x=>x[0]);
+}
+
+function skillCards(){
+  const progress = pitchSkillProgress();
+
+  return `
+    <div class="cards">
+      ${PITCH_SKILLS.map((x,i)=>{
+        const done = progress[i]>=x[1];
+        const pct = Math.min(
+          100,
+          progress[i]/x[1]*100
+        );
+
+        return `
+          <div class="card"
+               style="opacity:${done?1:0.7}">
+            <b>${done?"🌟":"🔒"} ${x[0]}</b>
+            <p>${x[2]}</p>
+            <div class="bar">
+              <span style="width:${pct}%"></span>
+            </div>
+            <small>
+              ${progress[i]} / ${x[1]}
+            </small>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+/* ===== 週間ミッション ===== */
+
+const MISSION_LIST = [
+  ["📖 野球ノート",
+   "自分の考えをノートに記録する",
+   "野球ノート"],
+
+  ["🧠 配球研究",
+   "配球について考える",
+   "配球研究"],
+
+  ["💪 身体ケア",
+   "休養や身体のケアを記録する",
+   "身体ケア"],
+
+  ["🎯 自主計画",
+   "自分で練習計画を立てる",
+   "自主計画"],
+
+  ["✍️ 振り返り",
+   "今日の成長を言葉にする",
+   "振り返り"]
+];
+
+function weekStart(){
+  const d = new Date();
+  const day = (d.getDay()+6)%7;
+  d.setDate(d.getDate()-day);
+
+  return d.getFullYear()+"-"+
+    String(d.getMonth()+1).padStart(2,"0")+"-"+
+    String(d.getDate()).padStart(2,"0");
+}
+
+function missionProgress(i){
+  const start = weekStart();
+
+  if(i===0){
+    return db.practice.some(x=>
+      x.date>=start &&
+      x.name==="野球ノート"
+    );
+  }
+
+  if(i===1){
+    return db.practice.some(x=>
+      x.date>=start &&
+      x.name==="配球研究"
+    );
+  }
+
+  if(i===2){
+    return db.practice.some(x=>
+      x.date>=start &&
+      x.kind==="身体ケア"
+    );
+  }
+
+  if(i===3){
+    return db.plans.some(x=>
+      x.date>=start
+    );
+  }
+
+  return db.reflections.some(x=>
+    x.date>=start
+  );
+}
+
+function missionHTML(){
+  const claims = db.missionClaims || [];
+  const start = weekStart();
+
+  return MISSION_LIST.map((m,i)=>{
+    const achieved = missionProgress(i);
+    const claimed = claims.some(x=>
+      x.week===start && x.id===i
+    );
+
+    return `
+      <div class="listitem">
+        <div class="row">
+          <div>
+            <b>${m[0]}</b>
+            <small>${m[1]}</small>
+          </div>
+          <button
+            class="btn ${claimed?"ghost":"blue"}"
+            ${!achieved||claimed?"disabled":""}
+            onclick="claimMission(${i})">
+            ${claimed?"達成済み":
+              achieved?"報酬獲得":"未達成"}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function claimMission(i){
+  if(!Number.isInteger(i) ||
+     i<0 || i>=MISSION_LIST.length)return;
+
+  if(!missionProgress(i)){
+    alert("まだミッションを達成していません。");
+    return;
+  }
+
+  const start = weekStart();
+
+  if(db.missionClaims.some(x=>
+    x.week===start && x.id===i
+  )){
+    alert("今週の報酬は獲得済みです。");
+    return;
+  }
+
+  db.missionClaims.push({
+    week:start,
+    id:i,
+    date:today()
+  });
+
+  db.xp += 10;
+  save();
+
+  alert("ミッション達成！ +10 XP");
+  render();
+}
+
+/* ===== 選手カード ===== */
+
+function playerCard(){
+  const g = lastGrowth();
+
+  return `
+    <div class="hero">
+      ${avatar()}
+
+      <div class="hero-info">
+        <span class="pill">Lv.${level()}</span>
+        <h1>${esc(db.name)}</h1>
+
+        <p>
+          ${esc(db.hand)}<br>
+          ${db.positions.map(esc).join(" / ")}
+        </p>
+
+        <span class="pill">
+          総合力 ${rank(totalAbility())}
+          ${totalAbility()}
+        </span>
+
+        <p>
+          身長 ${esc(g.height??"未記録")} cm<br>
+          体重 ${esc(g.weight??"未記録")} kg
+        </p>
+
+        <div class="bar">
+          <span style="width:${xpRate()}%"></span>
+        </div>
+
+        <small style="color:white">
+          ${db.xp} XP
+        </small>
+      </div>
+    </div>
+  `;
+}
+
+/* ===== ホーム画面 ===== */
+
+function home(){
+  const g = lastGrowth();
+  const won = badges();
+
+  const recent = db.practice.slice(-4)
+    .reverse()
+    .map(x=>`
+      <div class="listitem">
+        <b>${esc(x.name)}</b>
+        <small>
+          ${esc(x.date)}　
+          +${num(x.xp)} XP
+        </small>
+      </div>
+    `).join("") ||
+    "<p>最初の練習を記録しよう！</p>";
+
+  return `
+    ${box("⚾ 選手プロフィール",playerCard())}
+
+    ${box("📊 選手ステータス",`
+      <div class="grid">
+        <div class="tile">
+          練習記録
+          <strong>${db.practice.length}</strong>
+          回
+        </div>
+
+        <div class="tile">
+          投球記録
+          <strong>${db.pitchlog.length}</strong>
+          回
+        </div>
+
+        <div class="tile">
+          獲得称号
+          <strong>${won.length}</strong>
+          個
+        </div>
+
+        <div class="tile">
+          身長
+          <strong>${esc(g.height??"—")}</strong>
+          cm
+        </div>
+
+        <div class="tile">
+          体重
+          <strong>${esc(g.weight??"—")}</strong>
+          kg
+        </div>
+
+        <div class="tile">
+          元気度
+          <strong>${cap(db.energy)}</strong>
+          /100
+        </div>
+      </div>
+    `)}
+
+    ${box("🏏 野手能力",
+      AB.map(x=>
+        statBar(x,db.abilities[x])
+      ).join("")
+    )}
+
+    ${box("🔥 投手能力",
+      PB.map(x=>
+        statBar(x,db.pitch[x])
+      ).join("")
+    )}
+
+    ${box("⭐ 特殊能力",
+      skillCards()
+    )}
+
+    ${box("🏆 称号",`
+      ${won.length?
+        won.map(x=>`
+          <span class="pill">${esc(x)}</span>
+        `).join(""):
+        "<p>これから称号を獲得しよう！</p>"
+      }
+    `)}
+
+    ${box("🎯 今週のミッション",`
+      ${missionHTML()}
+    `)}
+
+    ${box("📝 今日の目標",`
+      <p>
+        ${esc(db.goal || "今日の目標を設定しよう！")}
+      </p>
+      <button class="btn blue full"
+        onclick="go('plan')">
+        自分で計画を立てる
+      </button>
+    `)}
+
+    ${box("📖 最近の練習",recent)}
+
+    ${box("💬 お父さんからのメッセージ",`
+      <p>${esc(db.father)}</p>
+    `)}
+  `;
+}
+
+/* ===== プロフィール ===== */
+
+function profile(){
+  return `
+    ${box("⚾ 選手プロフィール",
+      playerCard()
+    )}
+
+    ${box("🏏 野手能力",
+      AB.map(x=>
+        statBar(x,db.abilities[x])
+      ).join("")
+    )}
+
+    ${box("🔥 投手能力",
+      PB.map(x=>
+        statBar(x,db.pitch[x])
+      ).join("")
+    )}
+
+    ${box("⭐ 特殊能力",
+      skillCards()
+    )}
+
+    ${box("🏆 獲得称号",`
+      ${badges().map(x=>`
+        <span class="pill">${esc(x)}</span>
+      `).join("") || "まだ獲得していません。"}
+    `)}
+
+    ${box("🎯 長期目標",`
+      <p>
+        ${esc(db.longGoal ||
+          "プロ野球選手を目指す")}
+      </p>
+    `)}
+  `;
+}
+
+/* ===== 称号一覧 ===== */
+
+function awards(){
+  const won = badges();
+
+  return `
+    ${box("🏆 称号コレクション",`
+      <div class="cards">
+        ${TITLE_RULES.map(x=>{
+          const unlocked = won.includes(x[0]);
+
+          return `
+            <div class="card"
+              style="opacity:${unlocked?1:0.55}">
+              <b>
+                ${unlocked?"🏅":"🔒"}
+                ${x[0]}
+              </b>
+              <p>${x[2]}</p>
+              <small>
+                ${unlocked?
+                  "獲得済み！":
+                  "まだ獲得していません"}
+              </small>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `)}
+
+    ${box("🔥 投手特殊能力",
+      skillCards()
+    )}
+  `;
+}
+</script>
+
+<script>
+/* ==========================================
+   SHUNSUKE BASEBALL SUCCESS
+   第4回：練習・投球・体調管理
+========================================== */
+
+/* ===== 練習メニュー ===== */
+
+const TRAINING_MENU = [
+  ["素振り","打撃","ミート",15,"回"],
+  ["羽打ち","打撃","ミート",18,"回"],
+  ["置きティー","打撃","ミート",20,"回"],
+  ["フリーバッティング","打撃","パワー",20,"球"],
+  ["打撃フォーム研究","打撃","ミート",18,"分"],
+
+  ["シャドーピッチング","投手","投球術",20,"回"],
+  ["キャッチボール","投手","制球力",20,"球"],
+  ["制球練習","投手","制球力",20,"球"],
+  ["配球研究","投手","投球術",20,"分"],
+  ["投手フィールディング","投手","投手守備",20,"分"],
+
+  ["ノック","守備","守備力",20,"分"],
+  ["捕球練習","守備","捕球",15,"分"],
+  ["送球研究","守備","肩力",15,"分"],
+
+  ["ラダートレーニング","走塁","走力",18,"分"],
+  ["ベースランニング","走塁","走力",18,"分"],
+  ["走塁判断の研究","走塁","走力",18,"分"],
+
+  ["ストレッチ","身体ケア","ケア",25,"分"],
+  ["体幹・姿勢ケア","身体ケア","ケア",25,"分"],
+  ["睡眠・休養","身体ケア","ケア",25,"時間"],
+
+  ["野球ノート","自主学習","投球術",20,"分"],
+  ["試合動画の研究","自主学習","投球術",20,"分"]
+];
+
+/* ===== 練習画面 ===== */
+
+function training(){
+  const categories = [
+    ...new Set(TRAINING_MENU.map(x=>x[1]))
+  ];
+
+  const recent = db.practice.slice(-10)
+    .reverse()
+    .map(x=>`
+      <div class="listitem">
+        <b>${esc(x.name)}</b>
+        <p>
+          ${esc(x.date)}　
+          ${num(x.amount)} ${esc(x.unit || "")}
+        </p>
+        <small>
+          +${num(x.xp)} XP
+          ${x.note?" / "+esc(x.note):""}
+        </small>
+      </div>
+    `).join("") ||
+    "<p>まだ練習記録はありません。</p>";
+
+  return `
+    ${box("💪 今日の練習を記録",`
+      <div class="notice">
+        練習量を増やすことが目的ではありません。
+        痛みがある場合は運動を中止し、
+        医師の指示を優先してください。
+      </div>
+
+      <label>練習日</label>
+      <input id="trainingDate"
+             type="date"
+             value="${today()}">
+
+      <label>今日のコンディション</label>
+      <select id="trainingPain">
+        <option value="no"
+          ${!db.pain?"selected":""}>
+          痛みなし
+        </option>
+        <option value="yes"
+          ${db.pain?"selected":""}>
+          痛みあり
+        </option>
+      </select>
+
+      <label>練習カテゴリー</label>
+      <select id="trainingCategory"
+              onchange="fillMenu()">
+        ${categories.map(x=>`
+          <option value="${esc(x)}">
+            ${esc(x)}
+          </option>
+        `).join("")}
+      </select>
+
+      <label>練習メニュー</label>
+      <select id="trainingMenu"
+              onchange="updateTrainingUnit()">
+      </select>
+
+      <label id="trainingUnitLabel">
+        実施量
+      </label>
+      <input id="trainingAmount"
+             type="number"
+             min="0"
+             step="0.5"
+             placeholder="実施した量を入力">
+
+      <label>今日意識したこと</label>
+      <textarea id="trainingNote"
+        placeholder="例：ボールを最後まで見る">
+      </textarea>
+
+      <button class="btn full"
+              onclick="addPractice()">
+        ⚾ 練習を記録する
+      </button>
+    `)}
+
+    ${box("⚡ 現在の元気度",`
+      <h2>${cap(db.energy)} / 100</h2>
+      <div class="bar">
+        <span style="width:${cap(db.energy)}%">
+        </span>
+      </div>
+
+      <p class="muted">
+        元気度はゲーム内の目安です。
+        実際の疲労やケガの回復を
+        判定するものではありません。
+      </p>
+    `)}
+
+    ${box("📚 練習メニュー一覧",`
+      ${categories.map(category=>`
+        <h3>${esc(category)}</h3>
+
+        <div class="cards">
+          ${TRAINING_MENU
+            .filter(x=>x[1]===category)
+            .map(x=>`
+              <div class="card">
+                <b>${esc(x[0])}</b>
+                <p>
+                  成長する能力：
+                  ${esc(x[2])}
+                </p>
+                <span class="chip">
+                  +${x[3]} XP
+                </span>
+              </div>
+            `).join("")}
+        </div>
+      `).join("")}
+    `)}
+
+    ${box("📖 最近の練習記録",recent)}
+  `;
+}
+
+function fillMenu(){
+  const category =
+    document.getElementById("trainingCategory");
+
+  const menu =
+    document.getElementById("trainingMenu");
+
+  if(!category || !menu)return;
+
+  menu.innerHTML = TRAINING_MENU
+    .filter(x=>x[1]===category.value)
+    .map(x=>`
+      <option value="${esc(x[0])}">
+        ${esc(x[0])}
+      </option>
+    `).join("");
+
+  updateTrainingUnit();
+}
+
+function updateTrainingUnit(){
+  const el = document.getElementById("trainingMenu");
+  if(!el)return;
+
+  const item = TRAINING_MENU.find(x=>
+    x[0]===el.value
+  );
+
+  const label =
+    document.getElementById("trainingUnitLabel");
+
+  if(label){
+    label.textContent =
+      "実施量（"+(item?item[4]:"回")+"）";
+  }
+}
+
+/* ===== 練習保存 ===== */
+
+function addPractice(){
+  const name =
+    document.getElementById("trainingMenu").value;
+
+  const item = TRAINING_MENU.find(x=>
+    x[0]===name
+  );
+
+  if(!item)return;
+
+  const date =
+    document.getElementById("trainingDate").value;
+
+  const pain =
+    document.getElementById("trainingPain").value
+    ==="yes";
+
+  const rawAmount =
+    document.getElementById("trainingAmount").value;
+
+  const amount = rawAmount===""?
+    null:Number(rawAmount);
+
+  const note =
+    document.getElementById("trainingNote")
+      .value.trim();
+
+  if(!date){
+    alert("練習日を入力してください。");
+    return;
+  }
+
+  if(amount!==null &&
+     (!Number.isFinite(amount)||amount<0)){
+    alert("実施量を確認してください。");
+    return;
+  }
+
+  const restOrStudy =
+    item[0]==="睡眠・休養" ||
+    item[1]==="自主学習";
+
+  if(pain && !restOrStudy){
+    db.pain = true;
+    save();
+
+    alert(
+      "痛みがある場合、運動は記録せず、"+
+      "医師の指示を優先してください。"+
+      "休養や野球ノートを選びましょう。"
+    );
+    return;
+  }
+
+  const already = db.practice.filter(x=>
+    x.date===date
+  ).length;
+
+  // 同じ日に何度も記録して
+  // 経験値を増やしすぎない仕組み
+  const xp = already>=3?5:item[3];
+
+  db.practice.push({
+    date:date,
+    name:item[0],
+    kind:item[1],
+    xp:xp,
+    amount:amount,
+    unit:item[4],
+    note:note
+  });
+
+  db.xp += xp;
+  db.pain = pain;
+
+  if(item[2]==="ケア"){
+    db.energy = cap(db.energy+10);
+  }else if(!pain){
+    db.energy = cap(db.energy-5);
+
+    const target = PB.includes(item[2])?
+      db.pitch:db.abilities;
+
+    if(target[item[2]]!==undefined){
+      target[item[2]] = cap(
+        num(target[item[2]],20)+1
+      );
+    }
+  }
+
+  save();
+
+  alert(
+    "練習記録完了！\n"+
+    "+"+xp+" XP 獲得！"
+  );
+
+  render();
+}
+
+/* ===== 投球分析 ===== */
+
+function pitcherSummary(){
+  const records = db.pitchlog.filter(x=>
+    num(x.pitches)>0 &&
+    num(x.strikes)>=0 &&
+    num(x.strikes)<=num(x.pitches)
+  );
+
+  const totalPitches = records.reduce(
+    (s,x)=>s+num(x.pitches),0
+  );
+
+  const totalStrikes = records.reduce(
+    (s,x)=>s+num(x.strikes),0
+  );
+
+  const strikeRate = totalPitches?
+    (totalStrikes/totalPitches*100).toFixed(1):
+    "—";
+
+  const speeds = db.pitchlog
+    .map(x=>num(x.speed))
+    .filter(x=>x>0);
+
+  const maxSpeed = speeds.length?
+    Math.max(...speeds):"—";
+
+  return `
+    <div class="grid">
+      <div class="tile">
+        投球記録
+        <strong>${db.pitchlog.length}</strong>
+        回
+      </div>
+
+      <div class="tile">
+        記録球数
+        <strong>${totalPitches}</strong>
+        球
+      </div>
+
+      <div class="tile">
+        ストライク率
+        <strong>${strikeRate}</strong>
+        ${totalPitches?"%":""}
+      </div>
+
+      <div class="tile">
+        実測最高球速
+        <strong>${maxSpeed}</strong>
+        km/h
+      </div>
+    </div>
+  `;
+}
+
+/* ===== ストライク率グラフ ===== */
+
+function pitcherGraph(){
+  const rows = db.pitchlog.filter(x=>
+    num(x.pitches)>0 &&
+    num(x.strikes)>=0 &&
+    num(x.strikes)<=num(x.pitches)
+  ).slice(-10);
+
+  if(!rows.length){
+    return `
+      <p>
+        投球記録を追加すると
+        グラフが表示されます。
+      </p>
+    `;
+  }
+
+  const points = rows.map((x,i)=>{
+    const rate =
+      num(x.strikes)/num(x.pitches)*100;
+
+    const px =
+      25+i*270/Math.max(1,rows.length-1);
+
+    const py = 110-rate*0.9;
+
+    return [px,py];
+  });
+
+  const path = points.map((p,i)=>
+    (i?"L":"M")+p[0]+" "+p[1]
+  ).join(" ");
+
+  return `
+    <svg viewBox="0 0 320 145"
+      style="
+        width:100%;
+        background:#eff6ff;
+        border-radius:12px
+      "
+      role="img"
+      aria-label="ストライク率の推移">
+
+      <path d="M25 20 V110 H300"
+        fill="none"
+        stroke="#b8cce9"
+        stroke-width="2"/>
+
+      <path d="${path}"
+        fill="none"
+        stroke="#1669c9"
+        stroke-width="4"/>
+
+      ${points.map(p=>`
+        <circle
+          cx="${p[0]}"
+          cy="${p[1]}"
+          r="5"
+          fill="#f2b72c"/>
+      `).join("")}
+
+      <text x="3" y="23"
+        font-size="10"
+        fill="#405b7d">100%</text>
+
+      <text x="8" y="110"
+        font-size="10"
+        fill="#405b7d">0%</text>
+
+      <text x="25" y="132"
+        font-size="10"
+        fill="#405b7d">
+        ${esc(rows[0].date)}
+      </text>
+
+      <text x="300" y="132"
+        font-size="10"
+        text-anchor="end"
+        fill="#405b7d">
+        ${esc(rows[rows.length-1].date)}
+      </text>
+    </svg>
+  `;
+}
+
+/* ===== 投手画面 ===== */
+
+function pitcher(){
+  const history = db.pitchlog.slice(-10)
+    .reverse()
+    .map(x=>`
+      <div class="listitem">
+        <b>${esc(x.date)}</b>
+        <p>
+          ${num(x.pitches)}球 /
+          ${num(x.strikes)}ストライク
+        </p>
+
+        ${x.speed?
+          `<small>
+            最高球速 ${esc(x.speed)} km/h
+          </small>`:""
+        }
+
+        ${x.pain?
+          `<p style="color:#d43c46">
+            ⚠️ 痛みの記録あり
+          </p>`:""
+        }
+
+        ${x.note?
+          `<p>${esc(x.note)}</p>`:""
+        }
+      </div>
+    `).join("") ||
+    "<p>まだ投球記録はありません。</p>";
+
+  return `
+    ${box("🔥 PITCHER SUCCESS",`
+      <p>投手としての成長を記録しよう！</p>
+
+      ${PB.map(x=>
+        statBar(x,db.pitch[x])
+      ).join("")}
+    `)}
+
+    ${box("📊 投球データ分析",`
+      ${pitcherSummary()}
+
+      <h3>ストライク率の推移</h3>
+      ${pitcherGraph()}
+
+      <p class="muted">
+        記録したデータのみを集計しています。
+        球速は実測値のみを使用します。
+      </p>
+    `)}
+
+    ${box("⭐ 投手特殊能力",
+      skillCards()
+    )}
+
+    ${box("⚾ 投球記録",`
+      <div class="notice">
+        投球数は安全管理のために記録します。
+        多く投げても経験値は増えません。
+        腰・肩・肘に痛みがある日は
+        投球を中止してください。
+      </div>
+
+      <label>投球日</label>
+      <input id="pitchDate"
+        type="date"
+        value="${today()}">
+
+      <label>投球数</label>
+      <input id="pitches"
+        type="number"
+        min="0"
+        value="0">
+
+      <label>ストライク数</label>
+      <input id="strikes"
+        type="number"
+        min="0"
+        value="0">
+
+      <label>実測最高球速（km/h）</label>
+      <input id="speed"
+        type="number"
+        min="0"
+        step="0.1"
+        placeholder="未測定なら空欄">
+
+      <label>肩・肘・腰の痛み</label>
+      <select id="pitchPain">
+        <option value="no">
+          なし
+        </option>
+        <option value="yes">
+          あり
+        </option>
+      </select>
+
+      <label>投球の振り返り</label>
+      <textarea id="pitchNote"
+        placeholder="フォーム・配球・気づいたこと">
+      </textarea>
+
+      <button class="btn full"
+        onclick="addPitch()">
+        ⚾ 投球データを保存
+      </button>
+    `)}
+
+    ${box("📋 投球履歴",history)}
+
+    ${box("🧠 投げない日の成長",`
+      <p>
+        配球研究、試合動画の分析、
+        野球ノート、相手打者の研究など、
+        ボールを投げない日も
+        投手として学ぶことができます。
+      </p>
+    `)}
+  `;
+}
+
+/* ===== 投球記録保存 ===== */
+
+function addPitch(){
+  const date =
+    document.getElementById("pitchDate").value;
+
+  const p = Number(
+    document.getElementById("pitches").value
+  );
+
+  const s = Number(
+    document.getElementById("strikes").value
+  );
+
+  const rawSpeed =
+    document.getElementById("speed").value;
+
+  const speed = rawSpeed===""?
+    null:Number(rawSpeed);
+
+  const pain =
+    document.getElementById("pitchPain").value
+    ==="yes";
+
+  const note =
+    document.getElementById("pitchNote")
+      .value.trim();
+
+  if(!date){
+    alert("投球日を入力してください。");
+    return;
+  }
+
+  if(!Number.isInteger(p) ||
+     !Number.isInteger(s) ||
+     p<0 || s<0 || s>p){
+    alert("投球数とストライク数を確認してください。");
+    return;
+  }
+
+  if(speed!==null &&
+     (!Number.isFinite(speed)||speed<=0)){
+    alert("球速を確認してください。");
+    return;
+  }
+
+  if(pain){
+    db.pain = true;
+  }
+
+  db.pitchlog.push({
+    date:date,
+    pitches:p,
+    strikes:s,
+    speed:speed,
+    pain:pain,
+    note:note
+  });
+
+  save();
+
+  if(pain){
+    alert(
+      "記録を保存しました。\n"+
+      "痛みがある場合は投球を中止し、"+
+      "医療者に相談してください。"
+    );
+  }else{
+    alert("投球データを保存しました！");
+  }
+
+  render();
+}
+</script>
+
+<script>
+/* ==========================================
+   第5回：試合・身体成長・週間計画
+========================================== */
+
+/* ===== 試合成績 ===== */
+
+function gameTotals(){
+  const sum = key => db.games.reduce(
+    (s,x)=>s+num(x[key]),0
+  );
+
+  const pa=sum("pa"),ab=sum("ab"),h=sum("hits");
+  const bb=sum("walks"),hbp=sum("hbp"),sf=sum("sf");
+  const doubles=sum("doubles"),triples=sum("triples");
+  const hr=sum("hr");
+  const singles=Math.max(0,h-doubles-triples-hr);
+  const tb=singles+2*doubles+3*triples+4*hr;
+
+  return {
+    games:db.games.length,
+    pa,ab,h,hr,
+    rbi:sum("rbi"),
+    steals:sum("steals"),
+    avg:ab?(h/ab).toFixed(3).replace(/^0/,""):"---",
+    obp:(ab+bb+hbp+sf)?
+      ((h+bb+hbp)/(ab+bb+hbp+sf)).toFixed(3).replace(/^0/,""):"---",
+    slg:ab?(tb/ab).toFixed(3).replace(/^0/,""):"---"
+  };
+}
+
+function game(){
+  const t=gameTotals();
+
+  return `
+    ${box("🏆 通算打撃成績",`
+      <div class="grid">
+        ${[
+          ["試合",t.games],
+          ["打率",t.avg],
+          ["出塁率",t.obp],
+          ["長打率",t.slg],
+          ["安打",t.h],
+          ["本塁打",t.hr],
+          ["打点",t.rbi],
+          ["盗塁",t.steals]
+        ].map(x=>`
+          <div class="tile">
+            ${x[0]}
+            <strong>${x[1]}</strong>
+          </div>
+        `).join("")}
+      </div>
+    `)}
+
+    ${box("⚾ 試合を記録",`
+      <label>試合日</label>
+      <input id="gameDate" type="date" value="${today()}">
+
+      <label>対戦相手</label>
+      <input id="gameOpponent" placeholder="対戦チーム">
+
+      <div class="grid">
+        ${[
+          ["pa","打席数"],
+          ["ab","打数"],
+          ["hits","安打"],
+          ["doubles","二塁打"],
+          ["triples","三塁打"],
+          ["hr","本塁打"],
+          ["walks","四球"],
+          ["hbp","死球"],
+          ["sf","犠飛"],
+          ["rbi","打点"],
+          ["steals","盗塁"]
+        ].map(x=>`
+          <div>
+            <label>${x[1]}</label>
+            <input id="g_${x[0]}"
+              type="number" min="0" step="1" value="0">
+          </div>
+        `).join("")}
+      </div>
+
+      <label>今日の良かったプレー・課題</label>
+      <textarea id="gameNote"></textarea>
+
+      <button class="btn full" onclick="addGame()">
+        🏆 試合成績を保存
+      </button>
+    `)}
+
+    ${box("📋 試合履歴",`
+      ${db.games.slice(-15).reverse().map(x=>`
+        <div class="listitem">
+          <b>${esc(x.date)} ${esc(x.opponent||"試合")}</b>
+          <p>
+            ${num(x.hits)}安打 /
+            ${num(x.ab)}打数　
+            ${num(x.hr)}本塁打　
+            ${num(x.rbi)}打点
+          </p>
+          ${x.note?`<small>${esc(x.note)}</small>`:""}
+        </div>
+      `).join("")||"まだ試合記録はありません。"}
+    `)}
+  `;
+}
+
+function addGame(){
+  const keys=[
+    "pa","ab","hits","doubles","triples",
+    "hr","walks","hbp","sf","rbi","steals"
+  ];
+
+  const x={
+    date:document.getElementById("gameDate").value,
+    opponent:document.getElementById("gameOpponent").value.trim(),
+    note:document.getElementById("gameNote").value.trim()
+  };
+
+  for(const k of keys){
+    const raw=document.getElementById("g_"+k).value;
+    x[k]=Number(raw);
+
+    if(raw===""||!Number.isInteger(x[k])||x[k]<0){
+      alert("試合成績は0以上の整数で入力してください。");
+      return;
+    }
+  }
+
+  if(!x.date){
+    alert("試合日を入力してください。");
+    return;
+  }
+
+  if(x.hits>x.ab ||
+     x.doubles+x.triples+x.hr>x.hits ||
+     x.ab+x.walks+x.hbp+x.sf>x.pa){
+    alert("打席数・打数・安打・長打の内訳を確認してください。");
+    return;
+  }
+
+  db.games.push(x);
+  db.xp+=20;
+  save();
+  alert("試合を記録しました！ +20 XP");
+  render();
+}
+
+/* ===== 成長記録 ===== */
+
+function growthGraph(key,unit){
+  const rows=db.growth
+    .filter(x=>Number.isFinite(Number(x[key])) &&
+      x[key]!=="" && x[key]!==null && Number(x[key])>0)
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date)))
+    .slice(-15);
+
+  if(!rows.length)return "<p>まだ記録がありません。</p>";
+
+  const vals=rows.map(x=>Number(x[key]));
+  const min=Math.min(...vals);
+  const max=Math.max(...vals);
+  const span=Math.max(1,max-min);
+
+  const points=vals.map((v,i)=>[
+    35+i*260/Math.max(1,vals.length-1),
+    112-(v-min)/span*78
+  ]);
+
+  const path=points.map((p,i)=>
+    (i?"L":"M")+p[0]+" "+p[1]
+  ).join(" ");
+
+  return `
+    <svg viewBox="0 0 330 155"
+      style="width:100%;background:#f0f7ff;border-radius:10px"
+      role="img" aria-label="${esc(key)}の推移">
+      <path d="M35 22 V112 H300"
+        stroke="#b4cbe4" stroke-width="2" fill="none"/>
+      <path d="${path}" stroke="#176cc7"
+        stroke-width="4" fill="none"/>
+      ${points.map(p=>`
+        <circle cx="${p[0]}" cy="${p[1]}"
+          r="4" fill="#ffca37"/>
+      `).join("")}
+      <text x="5" y="28" font-size="10">${max}${unit}</text>
+      <text x="5" y="112" font-size="10">${min}${unit}</text>
+      <text x="35" y="140" font-size="10">
+        ${esc(rows[0].date)}
+      </text>
+      <text x="300" y="140" font-size="10" text-anchor="end">
+        ${esc(rows[rows.length-1].date)}
+      </text>
+    </svg>
+  `;
+}
+
+function growth(){
+  const latest=lastGrowth();
+
+  return `
+    ${box("📈 駿介の成長記録",`
+      <div class="grid">
+        ${[
+          ["身長",latest.height,"cm"],
+          ["体重",latest.weight,"kg"],
+          ["睡眠",latest.sleep,"時間"]
+        ].map(x=>`
+          <div class="tile">
+            ${x[0]}
+            <strong>${x[1]??"—"}</strong>
+            ${x[2]}
+          </div>
+        `).join("")}
+      </div>
+    `)}
+
+    ${box("📏 身長の推移",
+      growthGraph("height","cm")
+    )}
+
+    ${box("⚖️ 体重の推移",
+      growthGraph("weight","kg")
+    )}
+
+    ${box("🌙 睡眠時間の推移",
+      growthGraph("sleep","時間")
+    )}
+
+    ${box("🍚 身体と生活を記録",`
+      <label>記録日</label>
+      <input id="growthDate" type="date" value="${today()}">
+
+      <label>身長（cm）</label>
+      <input id="height" type="number" step="0.1"
+        min="0" placeholder="例：145.5">
+
+      <label>体重（kg）</label>
+      <input id="weight" type="number" step="0.1"
+        min="0" placeholder="例：55.0">
+
+      <label>昨夜の睡眠時間</label>
+      <input id="sleep" type="number" step="0.5"
+        min="0" max="24" placeholder="例：9">
+
+      <label>食事のバランス</label>
+      <select id="food">
+        <option value="良好">主食・主菜・副菜を食べた</option>
+        <option value="普通">おおむね食べた</option>
+        <option value="不足">食事量や内容に偏りがあった</option>
+      </select>
+
+      <label>体調</label>
+      <select id="condition">
+        <option value="良好">元気</option>
+        <option value="疲労">疲れている</option>
+        <option value="痛みあり">痛みがある</option>
+        <option value="体調不良">体調不良</option>
+      </select>
+
+      <label>今日の気づき</label>
+      <textarea id="growthNote"
+        placeholder="食事・睡眠・体調など"></textarea>
+
+      <button class="btn full" onclick="addGrowth()">
+        📈 成長・生活記録を保存
+      </button>
+    `)}
+
+    ${box("📚 成長記録の履歴",`
+      ${db.growth.slice(-15).reverse().map(x=>`
+        <div class="listitem">
+          <b>${esc(x.date)}</b>
+          <p>
+            身長 ${esc(x.height??"—")} cm /
+            体重 ${esc(x.weight??"—")} kg /
+            睡眠 ${esc(x.sleep??"—")} 時間
+          </p>
+          <small>
+            食事：${esc(x.food||"未記録")}　
+            体調：${esc(x.condition||"未記録")}
+          </small>
+        </div>
+      `).join("")||"まだ記録がありません。"}
+    `)}
+  `;
+}
+
+function addGrowth(){
+  const read=id=>{
+    const raw=document.getElementById(id).value;
+    return raw===""?null:Number(raw);
+  };
+
+  const x={
+    date:document.getElementById("growthDate").value,
+    height:read("height"),
+    weight:read("weight"),
+    sleep:read("sleep"),
+    food:document.getElementById("food").value,
+    condition:document.getElementById("condition").value,
+    note:document.getElementById("growthNote").value.trim()
+  };
+
+  if(!x.date){
+    alert("日付を入力してください。");
+    return;
+  }
+
+  if([
+    x.height,x.weight,x.sleep
+  ].some(v=>v!==null&&(!Number.isFinite(v)||v<0)) ||
+    (x.sleep!==null&&x.sleep>24)){
+    alert("数値を確認してください。");
+    return;
+  }
+
+  db.growth.push(x);
+
+  if(x.condition==="痛みあり"){
+    db.pain=true;
+  }
+
+  save();
+  alert("成長・生活記録を保存しました！");
+  render();
+}
+
+/* ===== 自主計画・週間予定 ===== */
+
+const WEEKDAYS=["月","火","水","木","金","土","日"];
+const WEEK_OPTIONS=[
+  "休養","自主練習","チーム練習",
+  "試合","身体ケア","野球研究","その他"
+];
+
+function plan(){
+  return `
+    ${box("🎯 目標設定",`
+      <label>長期目標</label>
+      <textarea id="longGoal">${esc(db.longGoal)}</textarea>
+
+      <label>今の目標</label>
+      <textarea id="goal">${esc(db.goal)}</textarea>
+
+      <button class="btn full" onclick="saveGoals()">
+        目標を保存
+      </button>
+    `)}
+
+    ${box("📅 1週間の予定",`
+      <div class="grid">
+        ${WEEKDAYS.map((d,i)=>`
+          <div class="card">
+            <b>${d}曜日</b>
+            <select id="week${i}">
+              ${WEEK_OPTIONS.map(o=>`
+                <option value="${o}"
+                  ${db.week[i]===o?"selected":""}>
+                  ${o}
+                </option>
+              `).join("")}
+            </select>
+          </div>
+        `).join("")}
+      </div>
+
+      <p class="muted">
+        休養も成長のための大切な予定です。
+        医師から運動制限がある場合は
+        その指示を優先してください。
+      </p>
+
+      <button class="btn blue full"
+        onclick="saveWeek()">
+        週間予定を保存
+      </button>
+    `)}
+
+    ${box("📝 自分で考える練習計画",`
+      <label>日付</label>
+      <input id="planDate" type="date" value="${today()}">
+
+      <label>何をする？</label>
+      <textarea id="planText"
+        placeholder="自分で決めた取り組み"></textarea>
+
+      <label>なぜ取り組む？</label>
+      <textarea id="planWhy"
+        placeholder="その練習を選んだ理由"></textarea>
+
+      <button class="btn full" onclick="addPlan()">
+        計画を記録する
+      </button>
+    `)}
+
+    ${box("✍️ 今日の振り返り",`
+      <label>日付</label>
+      <input id="reflectionDate" type="date" value="${today()}">
+
+      <label>できたこと・次に改善すること</label>
+      <textarea id="reflectionText"></textarea>
+
+      <button class="btn full" onclick="addReflection()">
+        振り返りを保存
+      </button>
+    `)}
+
+    ${box("📖 自主計画の履歴",`
+      ${db.plans.slice(-10).reverse().map(x=>`
+        <div class="listitem">
+          <b>${esc(x.date)}</b>
+          <p>${esc(x.text||"")}</p>
+          <small>${esc(x.why||"")}</small>
+        </div>
+      `).join("")||"まだ計画がありません。"}
+    `)}
+
+    ${box("🌟 振り返りの履歴",`
+      ${db.reflections.slice(-10).reverse().map(x=>`
+        <div class="listitem">
+          <b>${esc(x.date)}</b>
+          <p>${esc(x.text||"")}</p>
+        </div>
+      `).join("")||"まだ振り返りがありません。"}
+    `)}
+  `;
+}
+
+function saveGoals(){
+  db.longGoal=document.getElementById("longGoal").value.trim();
+  db.goal=document.getElementById("goal").value.trim();
+  save();
+  alert("目標を保存しました！");
+  render();
+}
+
+function saveWeek(){
+  db.week=WEEKDAYS.map((_,i)=>
+    document.getElementById("week"+i).value
+  );
+  save();
+  alert("週間予定を保存しました！");
+  render();
+}
+
+function addPlan(){
+  const date=document.getElementById("planDate").value;
+  const text=document.getElementById("planText").value.trim();
+  const why=document.getElementById("planWhy").value.trim();
+
+  if(!date||!text){
+    alert("日付と計画を入力してください。");
+    return;
+  }
+
+  db.plans.push({date,text,why});
+  db.xp+=10;
+  save();
+  alert("自分で計画できた！ +10 XP");
+  render();
+}
+
+function addReflection(){
+  const date=document.getElementById("reflectionDate").value;
+  const text=document.getElementById("reflectionText").value.trim();
+
+  if(!date||!text){
+    alert("日付と振り返りを入力してください。");
+    return;
+  }
+
+  db.reflections.push({date,text});
+  db.xp+=10;
+  save();
+  alert("振り返り完了！ +10 XP");
+  render();
+}
+</script>
+
+<script>
+/* ==========================================
+   SHUNSUKE BASEBALL SUCCESS
+   第6回：設定・バックアップ・起動
+========================================== */
+
+/* ===== 設定画面 ===== */
+
+function settings(){
+  return `
+    ${box("⚙️ 選手設定",`
+      <label>選手名</label>
+      <input id="settingName"
+        value="${esc(db.name)}">
+
+      <label>投打</label>
+      <select id="settingHand">
+        ${[
+          "右投右打",
+          "右投左打",
+          "左投左打",
+          "左投右打"
+        ].map(x=>`
+          <option value="${x}"
+            ${db.hand===x?"selected":""}>
+            ${x}
+          </option>
+        `).join("")}
+      </select>
+
+      <label>守備位置</label>
+      <input id="settingPositions"
+        value="${esc(db.positions.join("、"))}"
+        placeholder="投手、一塁手、三塁手">
+
+      <button class="btn blue full"
+        onclick="saveProfileSettings()">
+        選手設定を保存
+      </button>
+    `)}
+
+    ${box("💬 お父さんからのメッセージ",`
+      <p>
+        頑張ったこと、成長したこと、
+        次の挑戦への応援を伝えよう！
+      </p>
+
+      <textarea id="fatherMessage"
+        placeholder="駿介へのメッセージ">${esc(db.father)}</textarea>
+
+      <button class="btn full"
+        onclick="saveFatherMessage()">
+        メッセージを保存
+      </button>
+    `)}
+
+    ${box("🩺 コンディション設定",`
+      <div class="notice">
+        痛みがある場合は、練習の継続や
+        負荷の増加を勧めません。
+        運動再開は医師の指示に従ってください。
+      </div>
+
+      <label>現在の痛み</label>
+      <select id="settingPain">
+        <option value="no"
+          ${!db.pain?"selected":""}>
+          痛みなし
+        </option>
+        <option value="yes"
+          ${db.pain?"selected":""}>
+          痛みあり
+        </option>
+      </select>
+
+      <button class="btn blue full"
+        onclick="saveCondition()">
+        コンディションを保存
+      </button>
+    `)}
+
+    ${box("💾 データのバックアップ",`
+      <p>
+        練習・試合・身長体重・目標・称号など、
+        すべての記録をJSONファイルとして
+        保存できます。
+      </p>
+
+      <button class="btn full"
+        onclick="backup()">
+        📦 バックアップを作成
+      </button>
+
+      <p class="muted">
+        定期的なバックアップをおすすめします。
+        バックアップにはお子さんの記録が
+        含まれるため、第三者に公開しないでください。
+      </p>
+    `)}
+
+    ${box("📂 バックアップから復元",`
+      <div class="notice">
+        復元すると、現在のアプリ内データが
+        バックアップの内容に置き換わります。
+        復元前に現在のデータも
+        バックアップしてください。
+      </div>
+
+      <label>JSONバックアップファイル</label>
+      <input id="restoreFile"
+        type="file"
+        accept=".json,application/json">
+
+      <button class="btn blue full"
+        onclick="restoreData()">
+        📂 バックアップを復元
+      </button>
+    `)}
+
+    ${box("📊 現在の保存状況",`
+      <div class="grid">
+        <div class="tile">
+          経験値
+          <strong>${num(db.xp)}</strong>
+          XP
+        </div>
+
+        <div class="tile">
+          練習
+          <strong>${db.practice.length}</strong>
+          件
+        </div>
+
+        <div class="tile">
+          試合
+          <strong>${db.games.length}</strong>
+          件
+        </div>
+
+        <div class="tile">
+          投球
+          <strong>${db.pitchlog.length}</strong>
+          件
+        </div>
+
+        <div class="tile">
+          成長
+          <strong>${db.growth.length}</strong>
+          件
+        </div>
+
+        <div class="tile">
+          計画
+          <strong>${db.plans.length}</strong>
+          件
+        </div>
+      </div>
+    `)}
+
+    ${box("ℹ️ アプリについて",`
+      <p>
+        <b>駿介の野球サクセス COMPLETE</b>
+      </p>
+
+      <p>
+        野球の技術だけでなく、
+        自分で考える力、継続する力、
+        身体を大切にする力を育てる
+        野球成長記録アプリです。
+      </p>
+
+      <p class="muted">
+        この版では記録を使用中のブラウザ内に
+        保存します。異なる端末間の自動同期には
+        クラウド連携が必要です。
+      </p>
+    `)}
+  `;
+}
+
+/* ===== 選手設定の保存 ===== */
+
+function saveProfileSettings(){
+  const name=document.getElementById(
+    "settingName"
+  ).value.trim();
+
+  const hand=document.getElementById(
+    "settingHand"
+  ).value;
+
+  const positions=document.getElementById(
+    "settingPositions"
+  ).value.split(/[、,，]/)
+    .map(x=>x.trim())
+    .filter(Boolean);
+
+  if(!name){
+    alert("選手名を入力してください。");
+    return;
+  }
+
+  db.name=name;
+  db.hand=hand;
+  db.positions=positions;
+
+  if(save()){
+    alert("選手設定を保存しました！");
+    render();
+  }
+}
+
+/* ===== 応援メッセージ ===== */
+
+function saveFatherMessage(){
+  db.father=document.getElementById(
+    "fatherMessage"
+  ).value.trim();
+
+  if(save()){
+    alert("応援メッセージを保存しました！");
+    render();
+  }
+}
+
+/* ===== コンディション ===== */
+
+function saveCondition(){
+  db.pain=document.getElementById(
+    "settingPain"
+  ).value==="yes";
+
+  if(save()){
+    alert("コンディションを保存しました！");
+    render();
+  }
+}
+
+/* ===== JSONバックアップ ===== */
+
+function backup(){
+  try{
+    const json=JSON.stringify(db,null,2);
+
+    const blob=new Blob(
+      [json],
+      {type:"application/json;charset=utf-8"}
+    );
+
+    const url=URL.createObjectURL(blob);
+
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=
+      "shunsuke-backup-"+today()+".json";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(()=>{
+      URL.revokeObjectURL(url);
+    },1000);
+
+  }catch(e){
+    console.error(e);
+    alert("バックアップを作成できませんでした。");
+  }
+}
+
+/* ===== JSONバックアップ復元 ===== */
+
+async function restoreData(){
+  const input=document.getElementById(
+    "restoreFile"
+  );
+
+  if(!input.files || !input.files[0]){
+    alert("JSONファイルを選択してください。");
+    return;
+  }
+
+  if(!confirm(
+    "現在の記録が置き換わります。\n"+
+    "バックアップを取ってから復元しますか？"
+  )){
+    return;
+  }
+
+  try{
+    const file=input.files[0];
+
+    const text=await file.text();
+    const restored=JSON.parse(text);
+
+    if(!restored ||
+       typeof restored!=="object" ||
+       Array.isArray(restored)){
+      throw new Error("データ形式が正しくありません");
+    }
+
+    if(restored.version!==3 &&
+       restored.version!==4){
+      throw new Error(
+        "対応していないバックアップです"
+      );
+    }
+
+    if(restored.version===3){
+      const migrated=fresh();
+
+      [
+        "name","xp","energy","abilities",
+        "practice","games","growth",
+        "week","goal","father"
+      ].forEach(key=>{
+        if(restored[key]!==undefined){
+          migrated[key]=restored[key];
+        }
+      });
+
+      db=normalizeData(migrated);
+
+    }else{
+      db=normalizeData(restored);
+    }
+
+    if(!save()){
+      throw new Error("保存に失敗しました");
+    }
+
+    alert(
+      "バックアップを復元しました！\n"+
+      "練習 "+db.practice.length+"件\n"+
+      "経験値 "+db.xp+" XP"
+    );
+
+    go("home");
+
+  }catch(e){
+    console.error(e);
+    alert(
+      "復元できませんでした。\n"+
+      e.message
+    );
+  }
+}
+
+/* ===== アプリ起動 ===== */
+
+try{
+  render();
+}catch(e){
+  console.error("起動エラー",e);
+
+  document.getElementById("view").innerHTML=`
+    <section class="panel">
+      <h2>起動時にエラーが発生しました</h2>
+      <p>
+        HTMLコードが第1回から第6回まで
+        正しい順番で貼り付けられているか
+        確認してください。
+      </p>
+      <p class="muted">
+        ${esc(e.message)}
+      </p>
+    </section>
+  `;
+}
+</script>
+</body>
+</html>
