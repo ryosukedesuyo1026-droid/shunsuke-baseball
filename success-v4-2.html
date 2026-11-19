@@ -1033,7 +1033,504 @@ render();
 })();
 
 </script>
-  
+
+
+<script>
+
+/* ===== V4.2 投手育成アップデート ===== */
+
+(function(){
+
+"use strict";
+
+const pitchSkills=[
+
+ ["🎯 制球力○","ストライク率60%以上の投球記録が3回","control"],
+
+ ["🧠 投球術○","配球研究を5回記録","strategy"],
+
+ ["🧤 牽制・守備意識○","投手フィールディングを5回記録","field"],
+
+ ["🔥 マウンド経験○","投球記録を5回保存","experience"],
+
+ ["📖 研究熱心","野球ノートまたは配球研究を合計10回","study"],
+
+ ["💪 回復上手","身体ケアを10回記録","care"],
+
+ ["⭐ 自主性○","自主計画を5回作成","plan"],
+
+ ["🏆 振り返り上手","振り返りを10回記録","reflect"]
+
+];
+
+function pitchRecords(){
+
+ return Array.isArray(db.pitchlog)?db.pitchlog:[];
+
+}
+
+function practices(){
+
+ return Array.isArray(db.practice)?db.practice:[];
+
+}
+
+function number(v){
+
+ const n=Number(v);
+
+ return Number.isFinite(n)?n:0;
+
+}
+
+function strikeRecords(){
+
+ return pitchRecords().filter(x=>
+
+  number(x.pitches)>0 &&
+
+  number(x.strikes)>=0 &&
+
+  number(x.strikes)<=number(x.pitches)
+
+ );
+
+}
+
+function skillProgress(){
+
+ const p=practices();
+
+ const r=strikeRecords();
+
+ const cnt=name=>p.filter(x=>x.name===name).length;
+
+ const study=cnt("野球ノート")+cnt("配球研究");
+
+ const care=p.filter(x=>x.kind==="身体ケア").length;
+
+ return [
+
+  r.filter(x=>number(x.strikes)/number(x.pitches)>=.6).length,
+
+  cnt("配球研究"),
+
+  cnt("投手フィールディング"),
+
+  pitchRecords().length,
+
+  study,
+
+  care,
+
+  (db.plans||[]).length,
+
+  (db.reflections||[]).length
+
+ ];
+
+}
+
+const targets=[3,5,5,5,10,10,5,10];
+
+function skillsHTML(){
+
+ const progress=skillProgress();
+
+ return pitchSkills.map((x,i)=>{
+
+  const unlocked=progress[i]>=targets[i];
+
+  const pct=Math.min(100,progress[i]/targets[i]*100);
+
+  return `
+
+   <div class="card" style="opacity:${unlocked?1:.78}">
+
+    <b>${unlocked?"🌟":"🔒"} ${x[0]}</b>
+
+    <p>${x[1]}</p>
+
+    <div class="bar">
+
+     <span style="width:${pct}%"></span>
+
+    </div>
+
+    <small>${progress[i]} / ${targets[i]}</small>
+
+    ${unlocked?'<p class="success">獲得済み！</p>':""}
+
+   </div>`;
+
+ }).join("");
+
+}
+
+function pitchSummary(){
+
+ const r=strikeRecords();
+
+ const total=r.reduce((s,x)=>s+number(x.pitches),0);
+
+ const strikes=r.reduce((s,x)=>s+number(x.strikes),0);
+
+ const rates=total?(strikes/total*100).toFixed(1):"—";
+
+ const speeds=pitchRecords()
+
+  .map(x=>number(x.speed))
+
+  .filter(x=>x>0);
+
+ const maxSpeed=speeds.length?Math.max(...speeds):null;
+
+ return `
+
+ <div class="grid">
+
+  <div class="tile">投球記録<strong>${pitchRecords().length}</strong>回</div>
+
+  <div class="tile">記録球数<strong>${total}</strong>球</div>
+
+  <div class="tile">ストライク率<strong>${rates}${total?"%":""}</strong></div>
+
+  <div class="tile">実測最高球速<strong>${maxSpeed??"—"}</strong>km/h</div>
+
+ </div>
+
+ <p class="muted" style="font-size:12px">
+
+  ※ストライク率は入力された記録から計算しています。
+
+  球速は実際に測定した数値だけを使用します。
+
+ </p>`;
+
+}
+
+function pitchGraph(){
+
+ const rows=strikeRecords().slice(-10);
+
+ if(!rows.length){
+
+  return "<p>投球記録を追加すると推移を確認できます。</p>";
+
+ }
+
+ const points=rows.map((x,i)=>{
+
+  const rate=number(x.strikes)/number(x.pitches)*100;
+
+  const px=25+i*270/Math.max(1,rows.length-1);
+
+  const py=110-rate*.9;
+
+  return [px,py];
+
+ });
+
+ const path=points.map((p,i)=>
+
+  (i?"L":"M")+p[0]+" "+p[1]
+
+ ).join(" ");
+
+ return `
+
+ <svg viewBox="0 0 320 145"
+
+  style="width:100%;background:#eff6ff;border-radius:12px"
+
+  role="img" aria-label="ストライク率の推移">
+
+  <path d="M25 20 V110 H300"
+
+   fill="none" stroke="#b8cce9" stroke-width="2"/>
+
+  <path d="${path}" fill="none"
+
+   stroke="#1669c9" stroke-width="4"/>
+
+  ${points.map(p=>`
+
+   <circle cx="${p[0]}" cy="${p[1]}"
+
+    r="5" fill="#f2b72c"/>`).join("")}
+
+  <text x="3" y="23" font-size="10" fill="#405b7d">100%</text>
+
+  <text x="8" y="110" font-size="10" fill="#405b7d">0%</text>
+
+  <text x="25" y="132" font-size="10" fill="#405b7d">
+
+   ${esc(rows[0].date)}
+
+  </text>
+
+  <text x="300" y="132" font-size="10"
+
+   text-anchor="end" fill="#405b7d">
+
+   ${esc(rows[rows.length-1].date)}
+
+  </text>
+
+ </svg>`;
+
+}
+
+const missionList=[
+
+ ["🧠 配球を研究する",
+
+  "配球研究を記録する",
+
+  ()=>count("配球研究")>=1],
+
+ ["📖 野球ノートを書く",
+
+  "野球ノートを記録する",
+
+  ()=>count("野球ノート")>=1],
+
+ ["💪 身体をケアする",
+
+  "ストレッチなどの身体ケアを記録する",
+
+  ()=>practices().some(x=>x.kind==="身体ケア")],
+
+ ["🎯 自分で計画を立てる",
+
+  "自主計画を作成する",
+
+  ()=>(db.plans||[]).length>=1],
+
+ ["✍️ 振り返りをする",
+
+  "自分の言葉で振り返る",
+
+  ()=>(db.reflections||[]).length>=1]
+
+];
+
+function weekStart(){
+
+ const d=new Date();
+
+ const day=(d.getDay()+6)%7;
+
+ d.setDate(d.getDate()-day);
+
+ return d.getFullYear()+"-"+
+
+  String(d.getMonth()+1).padStart(2,"0")+"-"+
+
+  String(d.getDate()).padStart(2,"0");
+
+}
+
+function missionsHTML(){
+
+ const start=weekStart();
+
+ const done=new Set(
+
+  (db.missionClaims||[])
+
+   .filter(x=>x.week===start)
+
+   .map(x=>x.id)
+
+ );
+
+ return missionList.map((m,i)=>`
+
+  <div class="listitem">
+
+   <b>${m[0]}</b>
+
+   <p>${m[1]}</p>
+
+   <button class="btn ${done.has(i)?"ghost":"blue"}"
+
+    ${done.has(i)?"disabled":""}
+
+    onclick="claimMission(${i})">
+
+    ${done.has(i)?"達成済み":"今週の達成を記録"}
+
+   </button>
+
+  </div>
+
+ `).join("");
+
+}
+
+window.claimMission=function(i){
+
+ if(!Number.isInteger(i)||i<0||i>=missionList.length)return;
+
+ const start=weekStart();
+
+ if(!Array.isArray(db.missionClaims))db.missionClaims=[];
+
+ if(db.missionClaims.some(x=>x.week===start&&x.id===i)){
+
+  alert("今週は達成済みです。");
+
+  return;
+
+ }
+
+ if(!confirm("このミッションを達成しましたか？"))return;
+
+ db.missionClaims.push({week:start,id:i,date:today()});
+
+ db.xp+=10;
+
+ save();
+
+ alert("ミッション達成！ +10 XP");
+
+ render();
+
+};
+
+window.pitcher=function(){
+
+ const oldForm=`
+
+ <div class="notice">
+
+  投球数は安全管理のために記録します。
+
+  球数が多いほど能力が上がる仕組みではありません。
+
+  腰・肩・肘に痛みがある場合は投球を中止してください。
+
+ </div>
+
+ <label>投球数</label>
+
+ <input id="pitches" type="number" min="0" value="0">
+
+ <label>ストライク数</label>
+
+ <input id="strikes" type="number" min="0" value="0">
+
+ <label>実測最高球速（km/h・任意）</label>
+
+ <input id="speed" type="number" min="0"
+
+  placeholder="測定していなければ空欄">
+
+ <label>肩・肘・腰の痛み</label>
+
+ <select id="ppain">
+
+  <option value="no">なし</option>
+
+  <option value="yes">あり</option>
+
+ </select>
+
+ <label>今日の投球の振り返り</label>
+
+ <textarea id="pnote"
+
+  placeholder="狙ったコース、配球、気づいたこと"></textarea>
+
+ <button class="btn full" onclick="addPitch()">
+
+  投球データを保存
+
+ </button>`;
+
+ const history=pitchRecords().slice(-8).reverse()
+
+  .map(x=>`
+
+   <div class="listitem">
+
+    <b>${esc(x.date)}</b>
+
+    ${number(x.pitches)}球 /
+
+    ${number(x.strikes)}ストライク
+
+    ${x.speed?"/ "+esc(x.speed)+"km/h":""}
+
+    ${x.pain?"<p>⚠️ 痛みの記録あり</p>":""}
+
+   </div>`).join("")||"まだ投球記録はありません。";
+
+ return box("🔥 PITCHER SUCCESS",
+
+  "<p>エースを目指す投手育成モード</p>"+
+
+  PB.map(x=>statBar(x,db.pitch[x]||20)).join("")
+
+ )+
+
+ box("📊 投球分析",pitchSummary()+
+
+  "<h3>ストライク率の推移</h3>"+pitchGraph())+
+
+ box("⭐ 投手特殊能力",`
+
+  <div class="cards">${skillsHTML()}</div>
+
+  <p class="muted">特殊能力はゲーム内の達成称号です。
+
+  実際の投球能力を保証するものではありません。</p>
+
+ `)+
+
+ box("🎯 自主ミッション",
+
+  "<p>自分で選び、達成したら記録しよう。</p>"+
+
+  missionsHTML())+
+
+ box("⚾ 投球記録",oldForm)+
+
+ box("📋 投球履歴",history);
+
+};
+
+const previousAwards=window.awards;
+
+window.awards=function(){
+
+ return previousAwards()+
+
+ box("🔥 投手特殊能力コレクション",
+
+  `<div class="cards">${skillsHTML()}</div>`);
+
+};
+
+const previousProfile=window.profile;
+
+window.profile=function(){
+
+ return previousProfile()+
+
+ box("⭐ 投手の特殊能力",
+
+  `<div class="cards">${skillsHTML()}</div>`);
+
+};
+
+render();
+
+})();
+
+</script>  
+ 
 </body>
 
 </html>
