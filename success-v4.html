@@ -680,6 +680,360 @@ observer.observe(document.getElementById("view"),{childList:true});
 
 </script>
 
+
+
+<script>
+
+/* V4 キャラクター＆選手カード強化 */
+
+(function(){
+
+const css=document.createElement("style");
+
+css.textContent=`
+
+.hero{
+
+ position:relative;
+
+ background:
+
+ radial-gradient(circle at 75% 20%,#397edc88,transparent 48%),
+
+ linear-gradient(135deg,#061b45,#1055a5 75%,#06224f);
+
+ border-radius:16px;
+
+ padding:14px 6px;
+
+ overflow:hidden;
+
+}
+
+.hero:before{
+
+ content:"★";
+
+ position:absolute;
+
+ right:10px;
+
+ top:0;
+
+ font-size:55px;
+
+ color:#ffd44c;
+
+ opacity:.25;
+
+}
+
+.hero h1{
+
+ color:#fff;
+
+ font-size:32px;
+
+ text-shadow:2px 3px #071638;
+
+}
+
+.hero .avatar{
+
+ width:46%;
+
+ max-width:225px;
+
+ margin-left:-8px;
+
+}
+
+.hero .avatar svg{
+
+ filter:drop-shadow(3px 8px 4px #00133099);
+
+}
+
+.hero .pill{
+
+ background:linear-gradient(#ffe781,#e7a71c);
+
+ box-shadow:0 3px 0 #9a6811;
+
+}
+
+.panel.dark{
+
+ background:linear-gradient(135deg,#082a66,#1769c5);
+
+ border:3px solid #7dd2ff;
+
+ box-shadow:0 5px 0 #001738,0 0 16px #28aaff55;
+
+}
+
+.logo{
+
+ font-size:clamp(21px,5vw,34px);
+
+ color:#ffda54;
+
+ text-shadow:2px 3px #001331;
+
+}
+
+`;
+
+document.head.appendChild(css);
+
+avatar=function(){
+
+return `
+
+<div class="avatar">
+
+<svg viewBox="0 0 240 290"
+
+ xmlns="http://www.w3.org/2000/svg"
+
+ role="img"
+
+ aria-label="駿介をイメージしたオリジナル右投げ投手">
+
+<defs>
+
+ <linearGradient id="uniform" x2="1" y2="1">
+
+  <stop stop-color="#ffffff"/>
+
+  <stop offset="1" stop-color="#b9d8ff"/>
+
+ </linearGradient>
+
+ <linearGradient id="helmet" x2="0" y2="1">
+
+  <stop stop-color="#2686e7"/>
+
+  <stop offset="1" stop-color="#072b73"/>
+
+ </linearGradient>
+
+</defs>
+
+<!-- Stadium glow -->
+
+<circle cx="115" cy="140" r="105"
+
+ fill="#48b9ff" opacity=".15"/>
+
+<path d="M0 245 L240 195"
+
+ stroke="#ffd653" stroke-width="4"
+
+ opacity=".5"/>
+
+<!-- Throwing arm, right side -->
+
+<path d="M168 154 Q202 127 211 75"
+
+ fill="none" stroke="#f0b58b"
+
+ stroke-width="27" stroke-linecap="round"/>
+
+<circle cx="213" cy="65" r="21"
+
+ fill="#f2be94" stroke="#a76846"
+
+ stroke-width="3"/>
+
+<!-- Baseball -->
+
+<circle cx="215" cy="52" r="18"
+
+ fill="white" stroke="#ced9ea"
+
+ stroke-width="2"/>
+
+<path d="M204 40 Q218 51 204 64
+
+ M225 40 Q211 51 225 64"
+
+ fill="none" stroke="#d83242"
+
+ stroke-width="2" stroke-dasharray="3 2"/>
+
+<!-- Legs -->
+
+<path d="M90 223 L75 264
+
+ M140 222 L158 264"
+
+ stroke="#f6f8ff" stroke-width="34"
+
+ stroke-linecap="round"/>
+
+<path d="M58 270 L93 270
+
+ M145 270 L179 270"
+
+ stroke="#082a68" stroke-width="17"
+
+ stroke-linecap="round"/>
+
+<!-- Uniform -->
+
+<path d="M65 165 Q114 143 163 162
+
+ L180 227 Q118 247 60 224Z"
+
+ fill="url(#uniform)"
+
+ stroke="#093a87" stroke-width="5"/>
+
+<path d="M100 158 L119 195 L137 157"
+
+ fill="none" stroke="#1263bd"
+
+ stroke-width="11"/>
+
+<text x="119" y="216" text-anchor="middle"
+
+ font-size="27" font-weight="900"
+
+ fill="#1653a1">S</text>
+
+<!-- Glove arm -->
+
+<path d="M70 181 Q43 198 29 159"
+
+ fill="none" stroke="#f0b58b"
+
+ stroke-width="24" stroke-linecap="round"/>
+
+<path d="M15 123 Q-3 147 21 170
+
+ Q48 181 54 153 L45 125Z"
+
+ fill="#693c24" stroke="#27190f"
+
+ stroke-width="5"/>
+
+<path d="M23 130 L37 160"
+
+ stroke="#c88b55" stroke-width="4"/>
+
+<!-- Face -->
+
+<ellipse cx="116" cy="113" rx="65" ry="66"
+
+ fill="#f4bf92" stroke="#8d5438"
+
+ stroke-width="3"/>
+
+<!-- Hair -->
+
+<path d="M53 106 Q45 54 112 46
+
+ Q180 45 177 107
+
+ L159 86 L141 99 L119 83
+
+ L97 103 L76 86Z"
+
+ fill="#1b202e"/>
+
+<path d="M55 116 L42 100 L53 85
+
+ M174 110 L189 96 L174 83"
+
+ fill="#1b202e"/>
+
+<!-- Eyes -->
+
+<path d="M75 110 L101 104
+
+ M132 104 L158 110"
+
+ stroke="#22202a" stroke-width="6"
+
+ stroke-linecap="round"/>
+
+<ellipse cx="91" cy="124" rx="8" ry="13"
+
+ fill="#17223b"/>
+
+<ellipse cx="146" cy="124" rx="8" ry="13"
+
+ fill="#17223b"/>
+
+<circle cx="94" cy="119" r="3" fill="white"/>
+
+<circle cx="149" cy="119" r="3" fill="white"/>
+
+<!-- Determined expression -->
+
+<path d="M111 137 L118 140"
+
+ stroke="#aa6a4b" stroke-width="2"/>
+
+<path d="M108 154 Q119 148 131 153"
+
+ fill="none" stroke="#733f3d"
+
+ stroke-width="3" stroke-linecap="round"/>
+
+<!-- Cap -->
+
+<path d="M49 89 Q41 22 112 19
+
+ Q183 18 182 87
+
+ L160 84 Q112 69 66 91Z"
+
+ fill="url(#helmet)" stroke="#051d51"
+
+ stroke-width="5"/>
+
+<path d="M50 86 Q120 68 187 88
+
+ Q184 105 112 106
+
+ Q45 105 50 86Z"
+
+ fill="#0b367b" stroke="#061d50"
+
+ stroke-width="4"/>
+
+<text x="115" y="67"
+
+ text-anchor="middle" font-size="40"
+
+ font-weight="900" fill="white">S</text>
+
+<!-- Motion effects -->
+
+<path d="M184 168 L222 147
+
+ M182 180 L231 173
+
+ M54 232 L17 252"
+
+ stroke="#ffd34e" stroke-width="5"
+
+ stroke-linecap="round"/>
+
+</svg>
+
+</div>`;
+
+};
+
+render();
+
+})();
+
+</script>
+  
 </body>
 
 </html>
