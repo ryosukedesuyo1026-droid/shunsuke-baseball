@@ -6485,6 +6485,701 @@ render();
 })();
 </script>
 <!-- ===== 第8弾 終了 ===== -->
+<!-- ===== SUCCESS 第9弾：休養・実練習時間・食事コーチ ===== -->
+<style>
+.s9-mode{background:linear-gradient(125deg,#092e62,#1769b8);color:white;border:2px solid #ffd44e;border-radius:14px;padding:15px;margin:10px 0}
+.s9-mode h2{color:#ffd44e;margin:0 0 9px}
+.s9-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.s9-switch button{padding:13px 5px;border-radius:10px;border:2px solid #91bce4;background:#e8f3ff;color:#143d70;font-weight:900}
+.s9-switch button.chosen{background:#ffd44e;border-color:#fff;color:#123456}
+.s9-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.s9-metric{background:#eaf4ff;border:1px solid #a6c6e6;border-radius:10px;padding:12px}
+.s9-metric strong{display:block;font-size:22px;color:#1457a0}
+.s9-tip{background:#fff6df;border-left:4px solid #e4ae30;padding:10px;border-radius:7px;margin:9px 0;line-height:1.7;font-size:13px}
+.s9-tip p{margin:6px 0}
+.s9-muted{font-size:12px;color:#657b90}
+</style>
+<script>
+(function(){
+'use strict';
 
+// 既存のK4、db、XP、能力値、履歴を維持する追加機能。
+const S9_STUDY=new Set([
+  '配球研究','走塁判断の研究','送球研究',
+  '打撃フォーム研究','野球ノート','試合動画の研究'
+]);
+const S9_CARE=new Set([
+  'ストレッチ','体幹・姿勢ケア','睡眠・休養'
+]);
+
+const s9IsNonPhysical=x=>x && (
+  x.kind==='身体ケア'||
+  x.kind==='自主学習'||
+  S9_STUDY.has(x.name)||
+  S9_CARE.has(x.name)
+);
+
+function s9Data(){
+  if(!db.success9 ||
+     typeof db.success9!=='object'||
+     Array.isArray(db.success9)){
+    db.success9={};
+  }
+  if(!db.success9.days||
+     typeof db.success9.days!=='object'||
+     Array.isArray(db.success9.days)){
+    db.success9.days={};
+  }
+  if(!Array.isArray(db.success9.choices)){
+    db.success9.choices=[];
+  }
+  return db.success9;
+}
+
+function s9Mode(date){
+  const stored=db.success9&&
+    db.success9.days&&
+    db.success9.days[date];
+  return stored==='rest'||stored==='train'
+    ?stored:null;
+}
+
+function s9DayOfWeek(date){
+  const p=date.split('-').map(Number);
+  return new Date(p[0],p[1]-1,p[2]).getDay();
+}
+
+function s9SetMode(mode){
+  if(!['rest','train'].includes(mode))return;
+
+  const date=today(),old=s9Mode(date);
+  if(old===mode)return;
+
+  if(old&&!confirm(
+    '今日の設定を「'+
+    (mode==='rest'?'休養日':'練習日')+
+    '」に変更しますか？\n過去の記録は変更されません。'
+  ))return;
+
+  const data=s9Data(),prev=old;
+  data.days[date]=mode;
+
+  if(!save()){
+    if(prev)data.days[date]=prev;
+    else delete data.days[date];
+    return;
+  }
+  render();
+}
+window.s9SetMode=s9SetMode;
+
+function s9Allow(name,kind,date){
+  if(s9IsNonPhysical({name,kind}))return true;
+
+  if(db.pain){
+    alert(
+      '痛みありの設定です。運動を中止し、'+
+      '医師の指示を優先してください。'
+    );
+    return false;
+  }
+
+  if(s9Mode(date)==='rest'){
+    alert(
+      'この日は休養モードです。運動系の記録はできません。\n'+
+      '休養・身体ケア・野球研究を選ぶか、'+
+      'ホーム画面で練習日に変更してください。'
+    );
+    return false;
+  }
+  return true;
+}
+
+function s9PhysicalMinutes(x){
+  if(s9IsNonPhysical(x))return 0;
+  const m=Number(x.minutes);
+  return Number.isFinite(m)&&m>0
+    ?Math.min(1440,m):0;
+}
+
+function s9Minutes(x){
+  const m=Number(x.minutes);
+  return Number.isFinite(m)&&m>0
+    ?Math.min(1440,m):0;
+}
+
+function s9Rows(){
+  return db.practice.concat(
+    (db.success2027&&
+     Array.isArray(db.success2027.quick))
+      ?db.success2027.quick:[]
+  );
+}
+
+function s9Totals(start,end){
+  const rows=s9Rows().filter(x=>
+    x.date>=start&&x.date<=end
+  );
+
+  const physical=rows.reduce(
+    (a,x)=>a+s9PhysicalMinutes(x),0
+  );
+
+  const care=rows.reduce(
+    (a,x)=>a+(s9IsNonPhysical(x)?s9Minutes(x):0),0
+  );
+
+  const days=new Set(
+    rows.filter(x=>!s9IsNonPhysical(x))
+      .map(x=>x.date)
+  ).size;
+
+  return {physical,care,days};
+}
+
+function s9Format(m){
+  m=Math.round(m);
+  return m>=60
+    ?Math.floor(m/60)+'時間'+
+      (m%60?m%60+'分':'')
+    :m+'分';
+}
+
+function s9Summary(){
+  const week=weekStart();
+  const end=s27dateOffset(week,6);
+  const w=s9Totals(week,end);
+  const a=s9Totals('2000-01-01','2999-12-31');
+
+  return box('⏱️ 運動とケアを分けて記録',`
+    <div class="s9-metrics">
+      <div class="s9-metric">
+        今週の実練習
+        <strong>${s9Format(w.physical)}</strong>
+      </div>
+      <div class="s9-metric">
+        累計実練習
+        <strong>${s9Format(a.physical)}</strong>
+      </div>
+      <div class="s9-metric">
+        今週のケア・研究
+        <strong>${s9Format(w.care)}</strong>
+      </div>
+      <div class="s9-metric">
+        今週の運動日
+        <strong>${w.days}日</strong>
+      </div>
+    </div>
+    <p class="s9-muted">
+      入力済み時間のみ集計。
+      睡眠・休養、身体ケア、野球研究は
+      実練習時間に含めません。
+      過去のXP・能力値は変更しません。
+    </p>
+  `);
+}
+
+function s9ModePanel(){
+  const mode=s9Mode(today());
+  const monday=s9DayOfWeek(today())===1;
+
+  return `
+    <section class="s9-mode">
+      <h2>🛡️ 今日のコンディションと休養</h2>
+      <p>
+        ${esc(today())}　
+        ${mode
+          ?(mode==='rest'?'🛌 休養日':'⚾ 練習日')
+          :'今日のモードを選ぼう'}
+        ${monday?'　（月曜日は休養がおすすめ）':''}
+      </p>
+
+      <div class="s9-switch">
+        <button
+          class="${mode==='rest'?'chosen':''}"
+          onclick="s9SetMode('rest')">
+          🛌 休養日
+        </button>
+
+        <button
+          class="${mode==='train'?'chosen':''}"
+          onclick="s9SetMode('train')">
+          ⚾ 練習日
+        </button>
+      </div>
+
+      <small style="color:#e5f1ff">
+        毎朝選択・当日変更できます。
+        休養日は身体ケアや野球研究を記録できます。
+        痛みがある場合は練習日でも運動を控えてください。
+      </small>
+    </section>
+  `;
+}
+
+function s9SaveNonPhysical(
+  item,date,rawAmount,note,h,m
+){
+  const amount=rawAmount===''?0:Number(rawAmount);
+  const hours=Number(h||0);
+  const mins=Number(m||0);
+
+  if(
+    !/^\d{4}-\d{2}-\d{2}$/.test(date)||
+    !Number.isFinite(amount)||
+    amount<0||amount>100000||
+    !Number.isInteger(hours)||
+    !Number.isInteger(mins)||
+    hours<0||hours>24||
+    mins<0||mins>59||
+    hours*60+mins>1440
+  ){
+    alert('入力内容を確認してください。');
+    return;
+  }
+
+  const minutes=hours*60+mins;
+
+  if(!amount&&!minutes){
+    alert('実施量または時間を入力してください。');
+    return;
+  }
+
+  const before=JSON.stringify(db);
+  const count=db.practice.filter(
+    x=>x.date===date
+  ).length;
+  const xp=count>=3?3:8;
+
+  db.practice.push({
+    date,
+    name:item[0],
+    kind:item[1],
+    xp,
+    amount,
+    unit:item[4],
+    minutes,
+    note:String(note||'').trim(),
+    source:'success9',
+    nonPhysical:true
+  });
+
+  db.xp=num(db.xp)+xp;
+
+  if(item[1]==='身体ケア'){
+    db.energy=cap(db.energy+5);
+  }
+
+  if(!save()){
+    db=JSON.parse(before);
+    return;
+  }
+
+  alert(
+    'ケア・研究を記録しました！ +'+xp+
+    ' XP\n運動能力値や実練習時間は増やしません。'
+  );
+  render();
+}
+
+// すべての既存の記録経路に休養ガードを適用する。
+const oldAddPractice=addPractice;
+
+addPractice=function(){
+  const menu=document.getElementById('trainingMenu');
+  const date=document.getElementById('trainingDate');
+
+  if(menu&&date){
+    const item=TRAINING_MENU.find(
+      x=>x[0]===menu.value
+    );
+
+    if(item&&!s9Allow(
+      item[0],item[1],date.value
+    ))return;
+  }
+
+  if(menu&&date){
+    const item=TRAINING_MENU.find(
+      x=>x[0]===menu.value
+    );
+
+    if(item&&s9IsNonPhysical({
+      name:item[0],
+      kind:item[1]
+    })){
+      return s9SaveNonPhysical(
+        item,
+        date.value,
+        document.getElementById('trainingAmount')?.value,
+        document.getElementById('trainingNote')?.value,
+        document.getElementById('st8TrainingHours')?.value,
+        document.getElementById('st8TrainingMinutes')?.value
+      );
+    }
+  }
+
+  return oldAddPractice();
+};
+
+const oldQuick=s27quick;
+
+s27quick=function(name,amount,unit,kind,minutes){
+  const item=TRAINING_MENU.find(
+    x=>x[0]===name
+  );
+
+  if(!s9Allow(
+    name,
+    item?item[1]:kind,
+    today()
+  ))return;
+
+  return oldQuick(
+    name,amount,unit,kind,minutes
+  );
+};
+
+const oldDetail=s27saveQuickDetail;
+
+s27saveQuickDetail=function(){
+  const name=document.getElementById('s27menu')?.value;
+  const date=document.getElementById('s27date')?.value;
+  const item=TRAINING_MENU.find(
+    x=>x[0]===name
+  );
+
+  if(name&&date&&!s9Allow(
+    name,item?item[1]:'',date
+  ))return;
+
+  if(item&&s9IsNonPhysical({
+    name:item[0],
+    kind:item[1]
+  })){
+    return s9SaveNonPhysical(
+      item,
+      date,
+      document.getElementById('s27amount')?.value,
+      document.getElementById('s27note')?.value,
+      '0',
+      document.getElementById('s27minutes')?.value
+    );
+  }
+
+  return oldDetail();
+};
+
+// SUCCESS 2027 / 4週間レポートの時間も実練習のみとする。
+const oldAll=s27allPractice;
+
+s27allPractice=function(){
+  return oldAll().map(x=>
+    Object.assign({},x,{
+      minutes:s9PhysicalMinutes(x)
+    })
+  );
+};
+
+// 第8弾の時間カードは実練習のみになる。
+// 別にケア時間を表示。
+const oldHome=home;
+
+home=function(){
+  return s9ModePanel()+
+    s9Summary()+
+    oldHome();
+};
+
+const oldTraining=training;
+
+training=function(){
+  return s9ModePanel()+
+    oldTraining();
+};
+
+// 栄養コーチ：数量不要、入力された食品名からの参考情報のみ。
+const FOOD_RULES=[
+  {
+    re:/ごはん|米|おにぎり|パン|うどん|そば|パスタ|麺|もち|じゃがいも|さつまいも/,
+    name:'主食',
+    detail:'ごはん・パン・麺・いも類は、練習や日常生活のエネルギー源になる炭水化物を補えます。',
+    next:'主食が少ない日は、ごはんやおにぎりを組み合わせよう。'
+  },
+  {
+    re:/鶏|豚|牛肉|肉|ハンバーグ|魚|鮭|さけ|さば|ツナ|卵|たまご|納豆|豆腐|大豆|きなこ/,
+    name:'たんぱく質',
+    detail:'肉・魚・卵・大豆食品は、筋肉や身体の組織をつくるたんぱく質の供給源です。',
+    next:'次の食事では卵・魚・納豆・豆腐などから一品選んでみよう。'
+  },
+  {
+    re:/牛乳|ヨーグルト|チーズ|乳製品/,
+    name:'カルシウム',
+    detail:'牛乳・ヨーグルト・チーズは、骨や歯の材料となるカルシウムを補いやすい食品です。',
+    next:'牛乳・ヨーグルト・チーズなどを食事や間食に取り入れてみよう。'
+  },
+  {
+    re:/野菜|サラダ|トマト|にんじん|人参|キャベツ|ブロッコリー|ほうれん草|小松菜|ピーマン|きゅうり|かぼちゃ|白菜|大根|レタス|きのこ|わかめ|海藻/,
+    name:'野菜・海藻',
+    detail:'野菜・海藻・きのこは、ビタミン・ミネラル・食物繊維をとる助けになります。',
+    next:'次の食事にサラダ・具だくさんみそ汁・温野菜を一品足そう。'
+  },
+  {
+    re:/バナナ|りんご|みかん|キウイ|いちご|ぶどう|オレンジ|果物|梨|桃/,
+    name:'果物',
+    detail:'果物はビタミンや水分などを補えます。バナナは炭水化物の補給にも役立ちます。',
+    next:'間食にバナナ・みかん・キウイなどを選んでみよう。'
+  },
+  {
+    re:/レバー|赤身|あさり|しじみ|小松菜|ほうれん草|納豆|大豆/,
+    name:'鉄を含む食品',
+    detail:'これらの食品には鉄が含まれ、赤血球の材料となる栄養素の補給に役立ちます。',
+    next:'鉄を含む肉・魚・大豆製品などを、野菜や果物と組み合わせよう。'
+  }
+];
+
+function s9MealAdvice(text,date){
+  const matched=FOOD_RULES.filter(
+    x=>x.re.test(text)
+  );
+
+  const has=new Set(
+    matched.map(x=>x.name)
+  );
+
+  const good=matched.length
+    ?matched.slice(0,3).map(x=>
+      '<p>✅ '+esc(x.detail)+'</p>'
+    ).join('')
+    :'<p>食べたものを記録できたね！ 食品名を具体的に書くと、さらに詳しく振り返れるよ。</p>';
+
+  const priorities=[
+    '主食','たんぱく質',
+    '野菜・海藻','カルシウム','果物'
+  ];
+
+  const missing=priorities.filter(
+    x=>!has.has(x)
+  );
+
+  const next=FOOD_RULES.find(
+    x=>x.name===missing[0]
+  );
+
+  const rest=s9Mode(date)==='rest';
+
+  return `
+    <div class="s9-tip">
+      <b>🍚 駿介の食事コーチ</b>
+      ${good}
+
+      <p>
+        🎯 <b>次に自分で選ぶなら：</b>
+        ${esc(next
+          ?next.next
+          :'いろいろな食品を組み合わせられたね。明日も自分で一品選んでみよう。')}
+      </p>
+
+      <p>
+        🧠
+        ${rest
+          ?'休養日も食事を抜かず、身体の回復に必要な栄養をとろう。'
+          :'練習日には主食・主菜・野菜などを組み合わせ、水分もこまめにとろう。'}
+      </p>
+
+      <small>
+        この判定は入力された食品名のみを見ています。
+        書かれていない食品を「食べていない」と断定せず、
+        栄養量や不足・健康状態を診断するものではありません。
+      </small>
+    </div>
+  `;
+}
+
+function s9FoodScreen(){
+  const rows=(
+    db.success2027&&
+    Array.isArray(db.success2027.meals)
+      ?db.success2027.meals:[]
+  ).slice(-12).reverse();
+
+  return box('🍚 食べ物の働きを知ろう',`
+    <p>
+      食べたものを自由に入力。
+      数量やカロリーの入力は不要です。
+      自分で食品を選ぶ力を育てよう！
+    </p>
+
+    <label>日付</label>
+    <input
+      type="date"
+      id="s9foodDate"
+      value="${today()}">
+
+    <label>食事</label>
+    <select id="s9foodType">
+      <option>朝食</option>
+      <option>昼食</option>
+      <option>夕食</option>
+      <option>間食</option>
+    </select>
+
+    <label>
+      食べたもの
+      （例：ごはん、納豆、卵、牛乳、バナナ）
+    </label>
+
+    <textarea
+      id="s9foodText"
+      placeholder="食品名を自由に書こう">
+    </textarea>
+
+    <label>自分で選んだ食品（任意）</label>
+    <input
+      id="s9foodChoice"
+      placeholder="例：自分からヨーグルトを選んだ">
+
+    <button
+      class="btn full"
+      onclick="s9SaveFood()">
+      🍚 記録してアドバイスを見る
+    </button>
+
+    ${rows.map(x=>`
+      <div class="s9-tip">
+        <b>${esc(x.date)} ${esc(x.type)}</b>
+        <p>${esc(x.text)}</p>
+        ${s9MealAdvice(
+          String(x.text||''),
+          String(x.date||today())
+        )}
+      </div>
+    `).join('')||
+    '<p>まだ食事の記録はありません。</p>'}
+  `);
+}
+
+window.s9SaveFood=function(){
+  const date=document.getElementById(
+    's9foodDate'
+  ).value;
+
+  const type=document.getElementById(
+    's9foodType'
+  ).value;
+
+  const text=document.getElementById(
+    's9foodText'
+  ).value.trim();
+
+  const choice=document.getElementById(
+    's9foodChoice'
+  ).value.trim();
+
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!text){
+    alert('日付と食べたものを入力してください。');
+    return;
+  }
+
+  const arr=s27data().meals;
+
+  const entry={
+    date,
+    type,
+    text,
+    groups:s27foodCheck(text),
+    selfChoice:choice
+  };
+
+  arr.push(entry);
+
+  if(choice){
+    s9Data().choices.push({
+      date,
+      text:choice
+    });
+  }
+
+  if(!save()){
+    arr.pop();
+    if(choice)s9Data().choices.pop();
+    return;
+  }
+
+  alert(
+    '食事を記録しました！ '+
+    '自分で考えて選ぶことが大切だね。'
+  );
+  render();
+};
+
+// 既存の食事画面でも保存後にコーチを表示する。
+const oldMeal=s27saveMeal;
+
+s27saveMeal=function(){
+  const date=document.getElementById(
+    's27mealDate'
+  )?.value;
+
+  const text=document.getElementById(
+    's27mealText'
+  )?.value.trim();
+
+  oldMeal();
+
+  if(date&&text&&tab==='review2027'){}
+};
+
+const oldReview=s27reviewScreen;
+
+s27reviewScreen=function(){
+  const d=s27data();
+  const recent=d.meals.slice(-3).reverse();
+
+  return s9Summary()+
+    box(
+      '🍚 最新の食事アドバイス',
+      recent.map(x=>s9MealAdvice(
+        String(x.text||''),
+        String(x.date||today())
+      )).join('')||
+      '<p>食事を記録するとアドバイスが表示されます。</p>'
+    )+
+    oldReview();
+};
+
+if(!tabs.some(x=>x[0]==='food9')){
+  tabs.push([
+    'food9',
+    '🍚 食事コーチ'
+  ]);
+}
+
+const oldRender=render;
+
+render=function(){
+  if(tab==='food9'){
+    document.getElementById('nav').innerHTML=
+      tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?'active':''}"
+          onclick="go('${id}')">
+          ${esc(name)}
+        </button>
+      `).join('');
+
+    document.getElementById('view').innerHTML=
+      s9FoodScreen();
+
+    return;
+  }
+
+  oldRender();
+};
+
+render();
+})();
+</script>
+<!-- ===== 第9弾 終了 ===== -->
 </body>
 </html>
