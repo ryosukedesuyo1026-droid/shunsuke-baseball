@@ -10047,5 +10047,966 @@ render();
 <!-- ===== 第12弾 終了 ===== -->
 
 
+<!-- ===== 第13弾：考える野球ノート・深掘りコーチ ===== -->
+<style>
+.s13-start{
+  width:100%;
+  margin-top:9px;
+  padding:13px;
+  border:2px solid #e5b638;
+  border-radius:11px;
+  background:linear-gradient(110deg,#fff0b5,#ffd65a);
+  color:#173a5c;
+  font-size:15px;
+  font-weight:900;
+  cursor:pointer;
+}
+.s13-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100001;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px;
+  background:rgba(0,19,43,.82);
+}
+.s13-dialog{
+  width:min(100%,600px);
+  max-height:92vh;
+  overflow-y:auto;
+  box-sizing:border-box;
+  padding:18px;
+  border-radius:17px;
+  background:#f4f9ff;
+  color:#173b60;
+}
+.s13-dialog h2{
+  margin:0 0 10px;
+  color:#125c9d;
+}
+.s13-dialog p{line-height:1.7}
+.s13-progress{
+  display:flex;
+  gap:7px;
+  margin:14px 0;
+}
+.s13-progress span{
+  flex:1;
+  height:9px;
+  border-radius:10px;
+  background:#cfdeed;
+}
+.s13-progress span.on{
+  background:#f2be37;
+}
+.s13-question{
+  background:#fff5d4;
+  border-left:5px solid #e6b632;
+  border-radius:10px;
+  padding:13px;
+  margin:13px 0;
+  font-weight:800;
+  line-height:1.7;
+}
+.s13-options{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:9px;
+  margin:12px 0;
+}
+.s13-option{
+  width:100%;
+  padding:14px;
+  text-align:left;
+  background:white;
+  color:#19496e;
+  border:2px solid #b7d0e7;
+  border-radius:10px;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+}
+.s13-option.selected{
+  background:#fff0b5;
+  border-color:#dba92a;
+}
+.s13-dialog textarea{
+  width:100%;
+  box-sizing:border-box;
+  min-height:85px;
+  padding:12px;
+  font-size:16px;
+  border:1px solid #aac5df;
+  border-radius:10px;
+  background:white;
+  color:#173b60;
+}
+.s13-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin-top:15px;
+}
+.s13-actions button{
+  padding:13px 8px;
+  border:0;
+  border-radius:10px;
+  font-weight:900;
+  font-size:15px;
+  background:#176ab4;
+  color:white;
+}
+.s13-actions button:disabled{
+  opacity:.45;
+}
+.s13-actions .secondary{
+  background:#dceaf7;
+  color:#17476f;
+}
+.s13-history{
+  padding:12px;
+  margin:10px 0;
+  border-radius:10px;
+  background:#eef6ff;
+  border:1px solid #b7d1e8;
+  color:#173b60;
+  overflow-wrap:anywhere;
+}
+.s13-history p{
+  margin:6px 0;
+  white-space:pre-wrap;
+}
+.s13-mini{
+  font-size:12px;
+  color:#5c748b;
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/*
+ 第13弾
+ ・既存の第11弾・第12弾に追加
+ ・質問内容はカテゴリーと回答で変化
+ ・保存先は各ノートの deepDives 配列
+ ・XP、能力値、練習データは変更しない
+*/
+
+const S13_CATEGORIES={
+  bat:"バッティング",
+  pitch:"ピッチング",
+  catch:"キャッチング",
+  throw:"スローイング",
+  field:"フィールディング",
+  cover:"カバーリング",
+  run:"ベースランニング",
+  mind:"判断・メンタル",
+  body:"身体・コンディション"
+};
+
+/* 質問データ。
+   1問目の回答によって2問目が変わる。
+   2問目の回答によって3問目が変わる。 */
+
+const S13_TOPICS={
+  bat:[
+    {
+      title:"タイミングが合わなかった",
+      details:[
+        "振り始めるのが早かった",
+        "振り始めるのが遅かった",
+        "速い球についていけなかった",
+        "どのタイミングか分からなかった"
+      ],
+      actions:[
+        ["ボールをもう少し引きつける",
+         "構えるタイミングを見直す",
+         "同じ球でタイミングを確かめる"],
+        ["少し早めに準備する",
+         "投手の動きをよく見る",
+         "振り始める合図を考える"],
+        ["無理に強く振らずタイミングを探す",
+         "速い球の見え方を確かめる",
+         "指導者と一緒に確認する"],
+        ["次の打席でタイミングを意識する",
+         "早い・遅いを自分で確かめる",
+         "練習で違いを比べる"]
+      ]
+    },
+    {
+      title:"ボールがよく見えなかった",
+      details:[
+        "投手の手から離れるところ",
+        "ボールが近づいてくる途中",
+        "打つ直前",
+        "どこか分からなかった"
+      ],
+      actions:[
+        ["投手のリリースを見る",
+         "投手の動きを落ち着いて観察する"],
+        ["ボールの軌道を意識する",
+         "頭の動きを確認する"],
+        ["打つ直前の目線を意識する",
+         "無理に振らず見え方を確認する"],
+        ["次の練習で見えにくい場面を探す",
+         "指導者に相談する"]
+      ]
+    },
+    {
+      title:"思った打球が打てなかった",
+      details:[
+        "打球が弱かった",
+        "ゴロが多かった",
+        "フライが多かった",
+        "狙った方向に飛ばなかった"
+      ],
+      actions:[
+        ["芯でとらえた感覚を探す",
+         "当たった場所を意識する"],
+        ["当たり方を確認する",
+         "打球の違いを比べる"],
+        ["ボールとの当たり方を確認する",
+         "打つ位置を意識する"],
+        ["狙った方向を意識する",
+         "打ったときの身体の向きを確かめる"]
+      ]
+    },
+    {
+      title:"身体が思うように動かなかった",
+      details:[
+        "足の動き",
+        "手やバットの動き",
+        "身体のバランス",
+        "よく分からなかった"
+      ],
+      actions:[
+        ["足の動きをゆっくり確認する",
+         "構えを見直す"],
+        ["力の入れ方を意識する",
+         "バットの動きを確認する"],
+        ["無理のない姿勢を確認する",
+         "力を抜いた感覚を探す"],
+        ["一つの動きだけ意識してみる",
+         "指導者に動きを見てもらう"]
+      ]
+    }
+  ],
+
+  pitch:[
+    {
+      title:"コントロールが難しかった",
+      details:[
+        "高めに外れた",
+        "低めに外れた",
+        "左右に外れた",
+        "毎回ばらばらだった"
+      ],
+      actions:[
+        ["リリースの感覚を確認する",
+         "狙う場所を一つ決める"],
+        ["投げ終わりの姿勢を確認する",
+         "狙う場所を意識する"],
+        ["身体の向きを確認する",
+         "落ち着いて狙う"],
+        ["同じフォームを意識する",
+         "指導者と原因を考える"]
+      ]
+    },
+    {
+      title:"投げた感覚が良くなかった",
+      details:[
+        "力が入りすぎた",
+        "リリースが合わなかった",
+        "バランスが悪かった",
+        "いつもと違う感じだった"
+      ],
+      actions:[
+        ["力を抜く感覚を確認する",
+         "落ち着いてフォームを見直す"],
+        ["リリースの感覚を振り返る",
+         "良かったときと比べる"],
+        ["無理のない姿勢を確認する",
+         "足元の安定を意識する"],
+        ["身体の状態を確認する",
+         "指導者に相談する"]
+      ]
+    },
+    {
+      title:"配球や判断が難しかった",
+      details:[
+        "次に投げる球を迷った",
+        "打者をよく見られなかった",
+        "走者が気になった",
+        "落ち着けなかった"
+      ],
+      actions:[
+        ["次の一球の目的を考える",
+         "捕手と考えを共有する"],
+        ["打者の様子を観察する",
+         "前の打席を思い出す"],
+        ["走者と打者を確認する順番を考える",
+         "状況を整理する"],
+        ["一球ごとに気持ちを切り替える",
+         "深呼吸して次のプレーを考える"]
+      ]
+    }
+  ],
+
+  field:[
+    {
+      title:"一歩目が遅れた",
+      details:[
+        "打球への反応が遅れた",
+        "構えができていなかった",
+        "打球方向を迷った"
+      ],
+      actions:[
+        ["打つ前の準備を意識する",
+         "一歩目の反応を確かめる"],
+        ["準備姿勢を意識する",
+         "投球前に構える"],
+        ["打球の方向を早く判断する",
+         "周りを見て準備する"]
+      ]
+    },
+    {
+      title:"捕球が難しかった",
+      details:[
+        "ゴロを捕りにくかった",
+        "フライを捕りにくかった",
+        "バウンドが合わなかった"
+      ],
+      actions:[
+        ["捕球姿勢を確認する",
+         "ボールを最後まで見る"],
+        ["落下地点を早く考える",
+         "目線を意識する"],
+        ["バウンドを予測する",
+         "無理のない位置で捕る"]
+      ]
+    }
+  ],
+
+  run:[
+    {
+      title:"スタートが難しかった",
+      details:[
+        "判断が遅れた",
+        "スタートの姿勢が悪かった",
+        "状況が分からなかった"
+      ],
+      actions:[
+        ["次のプレーを先に考える",
+         "スタートの合図を確認する"],
+        ["準備姿勢を確認する",
+         "最初の一歩を意識する"],
+        ["アウトカウントを確認する",
+         "指導者と状況を振り返る"]
+      ]
+    },
+    {
+      title:"走塁判断が難しかった",
+      details:[
+        "進むか止まるか迷った",
+        "打球を見られなかった",
+        "コーチの指示を見逃した"
+      ],
+      actions:[
+        ["判断の基準を考える",
+         "次の塁を意識する"],
+        ["打球の位置を確認する",
+         "周囲を見る"],
+        ["コーチを見るタイミングを考える",
+         "事前の確認を意識する"]
+      ]
+    }
+  ],
+
+  mind:[
+    {
+      title:"緊張してしまった",
+      details:[
+        "試合前",
+        "打席に入ったとき",
+        "守備や投球のとき"
+      ],
+      actions:[
+        ["試合前の準備を決める",
+         "できることを一つ考える"],
+        ["打席で意識することを一つにする",
+         "深呼吸して構える"],
+        ["次の一球に集中する",
+         "声を出して切り替える"]
+      ]
+    },
+    {
+      title:"判断に迷った",
+      details:[
+        "何をするか分からなかった",
+        "考える時間が足りなかった",
+        "失敗が気になった"
+      ],
+      actions:[
+        ["プレー前に状況を確認する",
+         "選択肢を考えておく"],
+        ["次のプレーを予測する",
+         "事前の準備を増やす"],
+        ["次のプレーに集中する",
+         "できたことも振り返る"]
+      ]
+    }
+  ],
+
+  body:[
+    {
+      title:"身体が疲れていた",
+      details:[
+        "練習前から疲れていた",
+        "練習中に疲れた",
+        "練習後に疲れが残った"
+      ],
+      actions:[
+        ["睡眠や休養を確認する",
+         "無理せず身体を休める"],
+        ["休憩を取る",
+         "指導者に疲労を伝える"],
+        ["十分に回復する",
+         "翌日の身体の状態を確認する"]
+      ]
+    },
+    {
+      title:"痛みや違和感があった",
+      details:[
+        "腰",
+        "肩や肘",
+        "足",
+        "その他"
+      ],
+      actions:[
+        ["運動を中止して大人に伝える"],
+        ["運動を中止して大人に伝える"],
+        ["運動を中止して大人に伝える"],
+        ["運動を中止して大人に伝える"]
+      ]
+    }
+  ]
+};
+
+/* 共通の守備系質問 */
+const S13_FIELD_DEFAULT=[
+  {
+    title:"準備や判断が難しかった",
+    details:[
+      "準備が遅れた",
+      "どこに動くか迷った",
+      "周りとの連携が難しかった"
+    ],
+    actions:[
+      ["プレー前に準備する",
+       "次の動きを予測する"],
+      ["状況を先に確認する",
+       "動く場所を考える"],
+      ["声をかける",
+       "仲間と役割を確認する"]
+    ]
+  },
+  {
+    title:"動きや技術が難しかった",
+    details:[
+      "捕る動き",
+      "投げる動き",
+      "移動する動き"
+    ],
+    actions:[
+      ["捕球の姿勢を確認する",
+       "ボールをよく見る"],
+      ["送球の方向を意識する",
+       "無理のない動きを確認する"],
+      ["一歩目を意識する",
+       "準備を早くする"]
+    ]
+  }
+];
+
+function s13Topics(category){
+  if(S13_TOPICS[category]){
+    return S13_TOPICS[category];
+  }
+  return S13_FIELD_DEFAULT;
+}
+
+function s13Notes(){
+  return Array.isArray(
+    db.baseballNotebook11?.notes
+  )?db.baseballNotebook11.notes:[];
+}
+
+function s13Esc(v){
+  return String(v==null?"":v)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
+
+let s13State=null;
+
+function s13Close(){
+  const el=document.getElementById("s13Overlay");
+  if(el)el.remove();
+  s13State=null;
+}
+
+window.s13Close=s13Close;
+
+function s13Options(){
+  const s=s13State;
+  if(!s)return [];
+
+  const topics=s13Topics(s.category);
+
+  if(s.step===0){
+    return topics.map(x=>x.title);
+  }
+
+  const topic=topics[s.topic];
+  if(!topic)return [];
+
+  if(s.step===1){
+    return topic.details;
+  }
+
+  return topic.actions[s.detail]||[];
+}
+
+function s13Question(){
+  const s=s13State;
+  if(!s)return "";
+
+  if(s.step===0){
+    return "どんなことが難しかった？";
+  }
+
+  if(s.step===1){
+    const topic=s13Topics(s.category)[s.topic];
+    return "「"+topic.title+
+      "」のは、どんな場面だった？";
+  }
+
+  return "次は何を試してみたい？";
+}
+
+function s13Render(){
+  const s=s13State;
+  const overlay=document.getElementById(
+    "s13Overlay"
+  );
+  if(!s||!overlay)return;
+
+  const options=s13Options();
+  const selected=s.answers[s.step]||"";
+
+  const box=overlay.querySelector(".s13-dialog");
+
+  box.innerHTML=`
+    <h2>🧠 考える野球コーチ</h2>
+
+    <p>
+      ${s13Esc(
+        S13_CATEGORIES[s.category]||"野球"
+      )}の振り返り
+    </p>
+
+    <p class="s13-mini">
+      ${s13Esc(s.date)} の野球ノートに保存
+    </p>
+
+    <div class="s13-progress">
+      ${[0,1,2].map(i=>`
+        <span class="${i<=s.step?"on":""}"></span>
+      `).join("")}
+    </div>
+
+    <p><b>質問 ${s.step+1} / 3</b></p>
+
+    <div class="s13-question">
+      ${s13Esc(s13Question())}
+    </div>
+
+    <div class="s13-options">
+      ${options.map((v,i)=>`
+        <button type="button"
+          class="s13-option ${
+            selected===v?"selected":""
+          }"
+          onclick="s13Choose(${i})">
+          ${s13Esc(v)}
+        </button>
+      `).join("")}
+    </div>
+
+    <p>
+      <b>自分の言葉でも書いてみよう（任意）</b>
+    </p>
+
+    <textarea id="s13Free"
+      placeholder="短い言葉でもOK！">${s13Esc(
+        s.free[s.step]||""
+      )}</textarea>
+
+    <div class="s13-actions">
+      <button class="secondary"
+        onclick="s13Back()">
+        ${s.step===0?"やめる":"← 戻る"}
+      </button>
+
+      <button onclick="s13Next()">
+        ${s.step===2?
+          "📓 ノートに保存":
+          "次の質問へ →"}
+      </button>
+    </div>
+
+    <p class="s13-mini">
+      正解は一つじゃないよ。
+      自分が感じたことを大切にしよう！
+    </p>
+  `;
+}
+
+window.s13Choose=function(i){
+  if(!s13State)return;
+
+  const options=s13Options();
+  const value=options[i];
+  if(value===undefined)return;
+
+  const s=s13State;
+  const old=s.answers[s.step];
+
+  s.answers[s.step]=value;
+
+  if(s.step===0){
+    const nextTopic=i;
+    if(s.topic!==nextTopic || old!==value){
+      s.topic=nextTopic;
+      s.detail=-1;
+      s.answers[1]="";
+      s.answers[2]="";
+      s.free[1]="";
+      s.free[2]="";
+    }
+  }
+
+  if(s.step===1){
+    if(s.detail!==i || old!==value){
+      s.detail=i;
+      s.answers[2]="";
+      s.free[2]="";
+    }
+  }
+
+  s13Render();
+};
+
+window.s13Back=function(){
+  if(!s13State)return;
+
+  const free=document.getElementById("s13Free");
+  if(free){
+    s13State.free[s13State.step]=free.value;
+  }
+
+  if(s13State.step===0){
+    s13Close();
+    return;
+  }
+
+  s13State.step--;
+  s13Render();
+};
+
+window.s13Next=function(){
+  const s=s13State;
+  if(!s)return;
+
+  const free=document.getElementById("s13Free");
+  s.free[s.step]=free?free.value.trim():"";
+
+  if(!s.answers[s.step] && !s.free[s.step]){
+    alert(
+      "一つ選ぶか、自分の言葉で答えてみよう！"
+    );
+    return;
+  }
+
+  if(s.step<2){
+    // 自由記述だけの場合にも次へ進める。
+    // その場合は共通質問を使用する。
+    if(s.step===0 && s.topic<0){
+      s.topic=0;
+    }
+    if(s.step===1 && s.detail<0){
+      s.detail=0;
+    }
+
+    s.step++;
+    s13Render();
+    return;
+  }
+
+  s13Save();
+};
+
+function s13Answer(s,i){
+  return [
+    s.answers[i],
+    s.free[i]
+  ].filter(Boolean).join("。");
+}
+
+function s13Save(){
+  const s=s13State;
+  if(!s)return;
+
+  const notes=s13Notes();
+  const note=notes[s.index];
+
+  if(!note){
+    alert("保存先の野球ノートが見つかりません。");
+    s13Close();
+    return;
+  }
+
+  const before=JSON.stringify(db);
+
+  const record={
+    date:new Date().toLocaleDateString("ja-JP"),
+    category:s.category,
+    questions:[
+      "どんなことが難しかった？",
+      "どんな場面だった？",
+      "次は何を試してみたい？"
+    ],
+    answers:[
+      s13Answer(s,0),
+      s13Answer(s,1),
+      s13Answer(s,2)
+    ]
+  };
+
+  if(!Array.isArray(note.deepDives)){
+    note.deepDives=[];
+  }
+
+  note.deepDives.push(record);
+
+  try{
+    if(save()===false){
+      throw new Error("保存失敗");
+    }
+  }catch(e){
+    db=JSON.parse(before);
+    alert("保存できませんでした。");
+    return;
+  }
+
+  s13Close();
+
+  alert(
+    "🏆 深掘りノート完成！\n\n"+
+    "自分で考えたことが成長につながるよ！"
+  );
+
+  render();
+}
+
+window.s13Start=function(index){
+  const note=s13Notes()[index];
+  if(!note)return;
+
+  s13Close();
+
+  s13State={
+    index:index,
+    date:note.date||"",
+    category:note.category||"bat",
+    step:0,
+    topic:-1,
+    detail:-1,
+    answers:["","",""],
+    free:["","",""]
+  };
+
+  const overlay=document.createElement("div");
+  overlay.id="s13Overlay";
+  overlay.className="s13-overlay";
+
+  const dialog=document.createElement("div");
+  dialog.className="s13-dialog";
+  dialog.setAttribute("role","dialog");
+  dialog.setAttribute("aria-modal","true");
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  s13Render();
+};
+
+/* 保存済みノートに深掘りボタンと履歴を追加 */
+
+function s13EnhanceNotebook(){
+  if(tab!=="baseballNotebook11")return;
+
+  const notes=s13Notes();
+  const cards=document.querySelectorAll(".s11-note");
+
+  cards.forEach(card=>{
+    const copy=card.querySelector(
+      '[onclick^="s11CopyNote("]'
+    );
+    if(!copy)return;
+
+    const match=copy.getAttribute(
+      "onclick"
+    ).match(/\((\d+)\)/);
+
+    if(!match)return;
+
+    const index=Number(match[1]);
+    const note=notes[index];
+    if(!note)return;
+
+    if(!card.querySelector(".s13-start")){
+      const button=document.createElement("button");
+      button.className="s13-start";
+      button.textContent=
+        "🧠 もっと深く考えてみる！";
+      button.onclick=()=>window.s13Start(index);
+
+      copy.insertAdjacentElement(
+        "beforebegin",button
+      );
+    }
+
+    if(!Array.isArray(note.deepDives) ||
+       !note.deepDives.length)return;
+
+    if(card.querySelector(".s13-history"))return;
+
+    const history=document.createElement("div");
+    history.className="s13-history";
+
+    const title=document.createElement("b");
+    title.textContent="🧠 深掘りした記録";
+    history.appendChild(title);
+
+    note.deepDives.forEach((d,i)=>{
+      const section=document.createElement("div");
+      section.className="s13-history";
+
+      const heading=document.createElement("b");
+      heading.textContent=
+        "振り返り "+(i+1)+" / "+(d.date||"");
+      section.appendChild(heading);
+
+      (d.answers||[]).forEach((a,j)=>{
+        const p=document.createElement("p");
+        p.textContent=
+          "質問"+(j+1)+"："+
+          (d.questions?.[j]||"")+
+          "\n答え："+a;
+        section.appendChild(p);
+      });
+
+      history.appendChild(section);
+    });
+
+    copy.insertAdjacentElement(
+      "beforebegin",history
+    );
+  });
+}
+
+/* コピー時にも深掘り回答を含める。
+   第12弾の追記コピー機能を残す。 */
+
+const s13OldCopy=window.s11CopyNote;
+
+window.s11CopyNote=function(index){
+  const note=s13Notes()[index];
+
+  if(!note || !Array.isArray(note.deepDives) ||
+     !note.deepDives.length){
+    return s13OldCopy(index);
+  }
+
+  const lines=[
+    "【野球ノート】",
+    "日付："+(note.date||""),
+    "目標："+(note.goal||""),
+    "練習内容："+(note.content||""),
+    "意識したこと："+(note.focus||""),
+    "結果・感覚："+(note.result||""),
+    "良かったこと："+(note.good||""),
+    "改善点："+(note.improve||""),
+    "次に試すこと："+(note.next||"")
+  ];
+
+  if(Array.isArray(note.additions)){
+    note.additions.forEach(a=>{
+      lines.push(
+        "追記："+(a.date||"")+" "+
+        (a.text||"")
+      );
+    });
+  }
+
+  note.deepDives.forEach((d,i)=>{
+    lines.push("");
+    lines.push(
+      "【深掘り "+(i+1)+"】"
+    );
+
+    (d.answers||[]).forEach((a,j)=>{
+      lines.push(
+        (d.questions?.[j]||"質問"+(j+1))+
+        "："+a
+      );
+    });
+  });
+
+  const text=lines.join("\n");
+
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(text)
+      .then(()=>alert("ノートをコピーしました！"))
+      .catch(()=>prompt(
+        "この文章をコピーしてください",text
+      ));
+  }else{
+    prompt("この文章をコピーしてください",text);
+  }
+};
+
+/* 既存の描画を維持したまま追加 */
+
+const s13OldRender=render;
+
+render=function(){
+  s13OldRender();
+  s13EnhanceNotebook();
+};
+
+render();
+
+})();
+</script>
+<!-- ===== 第13弾 終了 ===== -->
+
 </body>
 </html>
