@@ -2826,5 +2826,795 @@ try{
   }
 }
 </style>
+
+<style>
+/* ===== SUCCESS 2027 ===== */
+.s27-dark{
+  background:linear-gradient(135deg,#071d40,#125ca5);
+  color:white;
+  border:2px solid #ffd44e;
+  border-radius:14px;
+  padding:15px;
+  margin:10px 0;
+}
+.s27-dark h2{margin:0 0 12px;color:#ffd44e}
+.s27-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.s27-stat{
+  background:#ffffff14;
+  border:1px solid #ffffff30;
+  border-radius:10px;
+  padding:12px;
+}
+.s27-stat b{
+  display:block;
+  font-size:24px;
+  color:#ffd44e;
+}
+.s27-stat small{color:#e0eeff}
+.s27-actions{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+}
+.s27-actions button{
+  border:1px solid #d9a52b;
+  border-radius:10px;
+  background:linear-gradient(#fff0aa,#ffcb45);
+  color:#12345c;
+  padding:12px 4px;
+  font-weight:900;
+  font-size:13px;
+}
+.s27-bar{
+  background:#dce9f6;
+  height:13px;
+  border-radius:20px;
+  overflow:hidden;
+}
+.s27-bar span{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#1472c8,#ffd44e);
+}
+.s27-line{margin:13px 0}
+.s27-line .row{margin-bottom:5px;font-size:13px}
+.s27-note{
+  background:#eef7ff;
+  border-left:4px solid #237ac7;
+  padding:10px;
+  border-radius:6px;
+  margin:8px 0;
+  font-size:13px;
+  line-height:1.7;
+}
+.s27-warning{
+  background:#fff1e8;
+  border-left-color:#e56b43;
+}
+.s27-mini{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin:8px 0;
+}
+.s27-mini button{
+  flex:1;
+  min-width:70px;
+  padding:10px 5px;
+  background:#e6f2ff;
+  border:1px solid #7caee0;
+  border-radius:9px;
+  color:#164779;
+  font-weight:800;
+}
+.s27-record{
+  border-bottom:1px solid #d5e5f3;
+  padding:9px 0;
+  font-size:13px;
+}
+.s27-record small{
+  display:block;
+  margin-top:4px;
+}
+</style>
+
+<script>
+"use strict";
+
+/* ==========================================
+   SHUNSUKE SUCCESS 2027
+   第1弾：努力・生活・週間レビュー
+   既存保存キーを変更しない追加方式
+========================================== */
+
+function s27data(){
+  if(!db.success2027 ||
+     typeof db.success2027!=="object" ||
+     Array.isArray(db.success2027)){
+    db.success2027={};
+  }
+  const d=db.success2027;
+  for(const k of [
+    "quick","sleep","meals",
+    "condition","reviews"
+  ]){
+    if(!Array.isArray(d[k]))d[k]=[];
+  }
+  return d;
+}
+
+function s27sum(rows,key){
+  return rows.reduce((s,x)=>
+    s+Math.max(0,num(x[key])),0);
+}
+
+function s27dateOffset(date,n){
+  const p=String(date).split("-").map(Number);
+  const d=new Date(p[0],p[1]-1,p[2]+n);
+  return d.getFullYear()+"-"+
+    String(d.getMonth()+1).padStart(2,"0")+"-"+
+    String(d.getDate()).padStart(2,"0");
+}
+
+function s27week(date){
+  const p=String(date).split("-").map(Number);
+  const d=new Date(p[0],p[1]-1,p[2]);
+  const shift=(d.getDay()+6)%7;
+  return s27dateOffset(date,-shift);
+}
+
+function s27allPractice(){
+  const old=db.practice.map(x=>({
+    date:x.date,
+    name:x.name,
+    kind:x.kind,
+    amount:num(x.amount),
+    unit:x.unit||"",
+    minutes:num(x.minutes),
+    note:x.note||""
+  }));
+  const extra=s27data().quick.map(x=>({
+    date:x.date,
+    name:x.name,
+    kind:x.kind,
+    amount:num(x.amount),
+    unit:x.unit||"",
+    minutes:num(x.minutes),
+    note:x.note||""
+  }));
+  return old.concat(extra);
+}
+
+function s27stats(start,end){
+  const rows=s27allPractice().filter(x=>
+    x.date>=start && x.date<=end
+  );
+  const swings=rows.filter(x=>
+    x.name==="素振り" &&
+    (x.unit==="回" || x.unit==="回数")
+  );
+  const minutes=s27sum(rows,"minutes");
+  const byKind={};
+  for(const x of rows){
+    const k=x.kind||"その他";
+    byKind[k]=(byKind[k]||0)+num(x.minutes);
+  }
+  const days=new Set(rows.map(x=>x.date)).size;
+  return {
+    swings:s27sum(swings,"amount"),
+    minutes,days,byKind,rows
+  };
+}
+
+function s27sleepAverage(days){
+  const end=today();
+  const start=s27dateOffset(end,1-days);
+  const rows=s27data().sleep.filter(x=>
+    x.date>=start && x.date<=end &&
+    num(x.hours)>0
+  );
+  if(!rows.length)return "—";
+  return (s27sum(rows,"hours")/rows.length)
+    .toFixed(1);
+}
+
+function s27quick(name,amount,unit,kind,minutes){
+  if(db.pain && kind!=="身体ケア"){
+    alert(
+      "現在「痛みあり」の設定です。"+
+      "運動は中止し、医師の指示を優先してください。"
+    );
+    return;
+  }
+
+  const d=s27data();
+  d.quick.push({
+    date:today(),name,amount,unit,kind,
+    minutes:minutes||0,note:"",
+    xp:0
+  });
+
+  if(save()){
+    alert(name+"を記録しました！");
+    render();
+  }
+}
+
+function s27saveQuickDetail(){
+  const name=document.getElementById("s27menu").value;
+  const kind=document.getElementById("s27kind").value;
+  const date=document.getElementById("s27date").value;
+  const amount=Number(
+    document.getElementById("s27amount").value||0
+  );
+  const minutes=Number(
+    document.getElementById("s27minutes").value||0
+  );
+  const note=document.getElementById("s27note").value.trim();
+
+  if(!date||!name||
+     !Number.isFinite(amount)||
+     !Number.isFinite(minutes)||
+     amount<0||minutes<0||
+     amount>100000||minutes>1440){
+    alert("入力内容を確認してください。");
+    return;
+  }
+
+  if(db.pain && kind!=="身体ケア" &&
+     kind!=="自主学習"){
+    alert("痛みがある場合は運動を中止してください。");
+    return;
+  }
+
+  s27data().quick.push({
+    date,name,kind,amount,
+    unit:name==="素振り"?"回":"回",
+    minutes,note,xp:0
+  });
+
+  if(save()){
+    alert("練習内容を保存しました！");
+    render();
+  }
+}
+
+function s27saveSleep(){
+  const date=document.getElementById("s27sleepDate").value;
+  const hours=Number(
+    document.getElementById("s27sleepHours").value
+  );
+  if(!date||!Number.isFinite(hours)||
+     hours<=0||hours>24){
+    alert("睡眠時間を正しく入力してください。");
+    return;
+  }
+  const arr=s27data().sleep;
+  const i=arr.findIndex(x=>x.date===date);
+  const item={date,hours};
+  if(i>=0)arr[i]=item;
+  else arr.push(item);
+  if(save()){
+    alert("睡眠を記録しました！");
+    render();
+  }
+}
+
+function s27foodCheck(text){
+  const groups=[
+    ["主食",/ごはん|米|パン|うどん|そば|麺|パスタ|もち|芋/],
+    ["主菜",/肉|鶏|豚|牛|魚|鮭|卵|豆腐|納豆|ツナ/],
+    ["野菜・海藻",/野菜|サラダ|トマト|人参|にんじん|キャベツ|ブロッコリー|ほうれん草|わかめ/],
+    ["乳製品",/牛乳|ヨーグルト|チーズ/],
+    ["果物",/バナナ|りんご|みかん|キウイ|果物|いちご/]
+  ];
+  return groups.filter(x=>x[1].test(text))
+    .map(x=>x[0]);
+}
+
+function s27saveMeal(){
+  const date=document.getElementById("s27mealDate").value;
+  const type=document.getElementById("s27mealType").value;
+  const text=document.getElementById("s27mealText").value.trim();
+
+  if(!date||!text){
+    alert("日付と食事内容を入力してください。");
+    return;
+  }
+  s27data().meals.push({
+    date,type,text,
+    groups:s27foodCheck(text)
+  });
+  if(save()){
+    alert("食事を記録しました！");
+    render();
+  }
+}
+
+function s27saveCondition(){
+  const date=document.getElementById("s27condDate").value;
+  const fatigue=Number(
+    document.getElementById("s27fatigue").value
+  );
+  const part=document.getElementById("s27part").value;
+  const pain=document.getElementById("s27pain").value;
+  const note=document.getElementById("s27condNote").value.trim();
+
+  if(!date)return;
+  const arr=s27data().condition;
+  const item={date,fatigue,part,pain,note};
+  const i=arr.findIndex(x=>x.date===date);
+  if(i>=0)arr[i]=item;
+  else arr.push(item);
+
+  if(pain==="あり")db.pain=true;
+
+  if(save()){
+    alert("コンディションを保存しました！");
+    render();
+  }
+}
+
+function s27bar(name,value,max){
+  const pct=max>0?
+    Math.min(100,value/max*100):0;
+  return `
+    <div class="s27-line">
+      <div class="row">
+        <b>${esc(name)}</b>
+        <span>${Math.round(value)}分</span>
+      </div>
+      <div class="s27-bar">
+        <span style="width:${pct}%"></span>
+      </div>
+    </div>
+  `;
+}
+
+function s27dashboard(){
+  const start=weekStart();
+  const end=s27dateOffset(start,6);
+  const w=s27stats(start,end);
+  const all=s27stats("2000-01-01","2999-12-31");
+  const sunday=new Date().getDay()===0;
+
+  return `
+    <section class="s27-dark">
+      <h2>⚾ SUCCESS 2027</h2>
+      <p>努力を記録し、成長につなげよう！</p>
+      <div class="s27-grid">
+        <div class="s27-stat">
+          今週の素振り
+          <b>${w.swings.toLocaleString()}回</b>
+          <small>累計 ${all.swings.toLocaleString()}回</small>
+        </div>
+        <div class="s27-stat">
+          今週の練習時間
+          <b>${(w.minutes/60).toFixed(1)}h</b>
+          <small>記録された時間のみ</small>
+        </div>
+        <div class="s27-stat">
+          7日平均睡眠
+          <b>${s27sleepAverage(7)}h</b>
+          <small>記録のある日で計算</small>
+        </div>
+        <div class="s27-stat">
+          練習した日数
+          <b>${w.days}日</b>
+          <small>今週の記録</small>
+        </div>
+      </div>
+
+      <h3>⚡ ワンタッチ記録</h3>
+      <div class="s27-actions">
+        <button onclick="s27quick('素振り',10,'回','打撃',0)">
+          素振り<br>＋10
+        </button>
+        <button onclick="s27quick('素振り',50,'回','打撃',0)">
+          素振り<br>＋50
+        </button>
+        <button onclick="s27quick('素振り',100,'回','打撃',0)">
+          素振り<br>＋100
+        </button>
+      </div>
+      <p style="font-size:11px;color:#d7e9ff">
+        ワンタッチ記録は回数のみ加算します。
+        練習時間は別途入力できます。
+      </p>
+
+      <button class="btn full"
+        onclick="go('review2027')">
+        ${sunday?
+          "📋 今日は日曜日！親子振り返りへ":
+          "📊 努力・生活・週間分析を見る"}
+      </button>
+    </section>
+  `;
+}
+
+function s27reviewScreen(){
+  const start=weekStart();
+  const end=s27dateOffset(start,6);
+  const w=s27stats(start,end);
+  const all=s27stats("2000-01-01","2999-12-31");
+  const max=Math.max(1,...Object.values(w.byKind));
+  const d=s27data();
+
+  const cond=d.condition.filter(x=>
+    x.date>=start&&x.date<=end
+  );
+  const warnings=cond.filter(x=>x.pain==="あり");
+  const review=d.reviews.find(x=>x.week===start)||{};
+
+  const meals=d.meals.filter(x=>
+    x.date>=start&&x.date<=end
+  );
+  const groups=[...new Set(
+    meals.flatMap(x=>x.groups||[])
+  )];
+
+  const practiceNotes=s27allPractice()
+    .filter(x=>x.date>=start&&x.date<=end&&x.note)
+    .slice(-8).reverse();
+
+  return `
+    ${box("🏆 努力の積み重ね",`
+      <div class="grid">
+        <div class="tile">
+          累計素振り
+          <strong>${all.swings.toLocaleString()}</strong>回
+        </div>
+        <div class="tile">
+          累計記録練習時間
+          <strong>${(all.minutes/60).toFixed(1)}</strong>時間
+        </div>
+        <div class="tile">
+          累計練習記録
+          <strong>${all.rows.length}</strong>件
+        </div>
+        <div class="tile">
+          30日平均睡眠
+          <strong>${s27sleepAverage(30)}</strong>時間
+        </div>
+      </div>
+      <p class="muted">
+        以前の記録で練習時間が未入力のものは
+        時間集計に含まれません。
+      </p>
+    `)}
+
+    ${box("⚡ 詳しい練習を記録",`
+      <label>日付</label>
+      <input id="s27date" type="date" value="${today()}">
+
+      <label>練習メニュー</label>
+      <select id="s27menu">
+        ${["素振り","羽打ち","置きティー",
+          "キャッチボール","ノック",
+          "ベースランニング","ストレッチ",
+          "野球ノート","その他"].map(x=>
+          `<option>${x}</option>`).join("")}
+      </select>
+
+      <label>練習の種類</label>
+      <select id="s27kind">
+        ${["打撃","投手","守備","走塁",
+          "身体ケア","自主学習"].map(x=>
+          `<option>${x}</option>`).join("")}
+      </select>
+
+      <label>実施回数（時間だけなら0）</label>
+      <input id="s27amount" type="number"
+        min="0" value="0">
+
+      <label>練習時間（分）</label>
+      <input id="s27minutes" type="number"
+        min="0" value="0">
+
+      <label>気づいたこと</label>
+      <textarea id="s27note"
+        placeholder="例：センター方向に打つと調子が良かった"></textarea>
+
+      <button class="btn full"
+        onclick="s27saveQuickDetail()">
+        💪 練習を保存
+      </button>
+    `)}
+
+    ${box("🌙 毎日の睡眠記録",`
+      <div class="grid">
+        <div class="tile">
+          7日平均
+          <strong>${s27sleepAverage(7)}</strong>時間
+        </div>
+        <div class="tile">
+          30日平均
+          <strong>${s27sleepAverage(30)}</strong>時間
+        </div>
+      </div>
+
+      <label>日付</label>
+      <input id="s27sleepDate"
+        type="date" value="${today()}">
+
+      <label>睡眠時間（時間）</label>
+      <div class="s27-mini">
+        ${[8,8.5,9,9.5,10].map(x=>`
+          <button onclick="
+            document.getElementById('s27sleepHours').value=${x}
+          ">${x}h</button>
+        `).join("")}
+      </div>
+      <input id="s27sleepHours"
+        type="number" min="0.5" max="24"
+        step="0.5" value="9">
+
+      <button class="btn full"
+        onclick="s27saveSleep()">
+        🌙 睡眠を保存
+      </button>
+      <p class="muted">
+        小学生の睡眠は一般に9〜12時間が目安。
+        個人差や体調も考慮してください。
+      </p>
+    `)}
+
+    ${box("🍚 食事サポート",`
+      <label>日付</label>
+      <input id="s27mealDate"
+        type="date" value="${today()}">
+
+      <label>食事のタイミング</label>
+      <select id="s27mealType">
+        <option>朝食</option>
+        <option>昼食</option>
+        <option>夕食</option>
+        <option>間食</option>
+      </select>
+
+      <label>食べたもの</label>
+      <textarea id="s27mealText"
+        placeholder="例：ごはん、焼き鮭、サラダ、牛乳"></textarea>
+
+      <button class="btn full"
+        onclick="s27saveMeal()">
+        🍚 食事を保存
+      </button>
+
+      <div class="s27-note">
+        今週の記録から確認できた食品群：
+        ${groups.length?
+          groups.map(esc).join("・"):
+          "まだ記録がありません"}
+        <p class="muted">
+          食品名による簡易チェックです。
+          栄養素の摂取量や不足を
+          正確に判定するものではありません。
+        </p>
+      </div>
+
+      ${meals.slice(-5).reverse().map(x=>`
+        <div class="s27-record">
+          <b>${esc(x.date)} ${esc(x.type)}</b>
+          <small>${esc(x.text)}</small>
+        </div>
+      `).join("")}
+    `)}
+
+    ${box("🩺 身体の負担・コンディション",`
+      <div class="notice">
+        肩・肘・腰などの痛みがある場合は、
+        練習を中止し医師の指示を優先してください。
+        疲労の数値だけでケガの危険度を
+        判定することはできません。
+      </div>
+
+      <label>日付</label>
+      <input id="s27condDate"
+        type="date" value="${today()}">
+
+      <label>疲労感（1＝元気、5＝非常に疲れた）</label>
+      <select id="s27fatigue">
+        ${[1,2,3,4,5].map(x=>
+          `<option value="${x}">${x}</option>`
+        ).join("")}
+      </select>
+
+      <label>気になる部位</label>
+      <select id="s27part">
+        ${["なし","肩","肘","手首",
+          "腰","股関節","膝","足首","全身"].map(x=>
+          `<option>${x}</option>`).join("")}
+      </select>
+
+      <label>痛み</label>
+      <select id="s27pain">
+        <option>なし</option>
+        <option>あり</option>
+      </select>
+
+      <label>気づいたこと</label>
+      <textarea id="s27condNote"
+        placeholder="例：今日は腰に張りを感じた"></textarea>
+
+      <button class="btn full"
+        onclick="s27saveCondition()">
+        🩺 体調を保存
+      </button>
+    `)}
+
+    ${box("📊 今週の練習バランス",`
+      <p>${esc(start)} ～ ${esc(end)}</p>
+
+      <div class="grid">
+        <div class="tile">
+          素振り
+          <strong>${w.swings}</strong>回
+        </div>
+        <div class="tile">
+          練習時間
+          <strong>${(w.minutes/60).toFixed(1)}</strong>時間
+        </div>
+        <div class="tile">
+          練習日数
+          <strong>${w.days}</strong>日
+        </div>
+        <div class="tile">
+          体調記録
+          <strong>${cond.length}</strong>日
+        </div>
+      </div>
+
+      ${Object.keys(w.byKind).length?
+        Object.entries(w.byKind).map(([k,v])=>
+          s27bar(k,v,max)).join(""):
+        "<p>時間を記録すると練習バランスが表示されます。</p>"
+      }
+
+      ${warnings.length?`
+        <div class="s27-note s27-warning">
+          ⚠️ 今週は痛みの記録が
+          ${warnings.length}日あります。
+          無理に練習を増やさず、
+          医師等に相談してください。
+        </div>
+      `:`
+        <div class="s27-note">
+          痛みありの記録：
+          なし（入力済みの日に限る）
+        </div>
+      `}
+
+      <p class="muted">
+        練習時間の偏りや痛みの記録を
+        親子で確認するための画面です。
+        身体内部の負荷を測定するものではありません。
+      </p>
+    `)}
+
+    ${box("💡 今週の気づき",`
+      ${practiceNotes.map(x=>`
+        <div class="s27-record">
+          <b>${esc(x.date)} ${esc(x.name)}</b>
+          <small>${esc(x.note)}</small>
+        </div>
+      `).join("")||
+      "<p>練習の気づきを入力すると、ここに表示されます。</p>"}
+    `)}
+
+    ${box("📋 日曜日の親子サクセス会議",`
+      <p>
+        今週できるようになったこと、
+        まだ難しいこと、
+        来週挑戦することを親子で振り返ろう。
+      </p>
+
+      <label>できるようになったこと</label>
+      <textarea id="s27good">${esc(review.good||"")}</textarea>
+
+      <label>まだできないこと・課題</label>
+      <textarea id="s27challenge">${esc(review.challenge||"")}</textarea>
+
+      <label>調子が良かったときの共通点</label>
+      <textarea id="s27best">${esc(review.best||"")}</textarea>
+
+      <label>体への負担・疲労・休養</label>
+      <textarea id="s27body">${esc(review.body||"")}</textarea>
+
+      <label>来週の目標（最大3つを目安に）</label>
+      <textarea id="s27next">${esc(review.next||"")}</textarea>
+
+      <label>お父さんからのメッセージ</label>
+      <textarea id="s27father">${esc(review.father||"")}</textarea>
+
+      <button class="btn full"
+        onclick="s27saveReview()">
+        🏆 今週の振り返りを保存
+      </button>
+    `)}
+
+    ${box("📚 過去の週間レポート",`
+      ${d.reviews.slice().sort((a,b)=>
+        b.week.localeCompare(a.week)
+      ).slice(0,12).map(x=>`
+        <div class="s27-record">
+          <b>📅 ${esc(x.week)} の週</b>
+          <p>できたこと：${esc(x.good||"—")}</p>
+          <p>課題：${esc(x.challenge||"—")}</p>
+          <p>来週の目標：${esc(x.next||"—")}</p>
+        </div>
+      `).join("")||
+      "<p>最初の日曜レポートを作ろう！</p>"}
+    `)}
+  `;
+}
+
+function s27saveReview(){
+  const week=weekStart();
+  const read=id=>
+    document.getElementById(id).value.trim();
+
+  const item={
+    week,
+    date:today(),
+    good:read("s27good"),
+    challenge:read("s27challenge"),
+    best:read("s27best"),
+    body:read("s27body"),
+    next:read("s27next"),
+    father:read("s27father")
+  };
+
+  const arr=s27data().reviews;
+  const i=arr.findIndex(x=>x.week===week);
+
+  if(i>=0)arr[i]=item;
+  else arr.push(item);
+
+  if(save()){
+    alert("週間レポートを保存しました！");
+    render();
+  }
+}
+
+/* ===== 既存画面への安全な追加 ===== */
+
+const s27oldHome=home;
+home=function(){
+  return s27dashboard()+s27oldHome();
+};
+
+tabs.splice(1,0,[
+  "review2027","📊 努力・週間分析"
+]);
+
+const s27oldRender=render;
+
+render=function(){
+  if(tab==="review2027"){
+    document.getElementById("nav").innerHTML=
+      tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?"active":""}"
+          onclick="go('${id}')">
+          ${name}
+        </button>
+      `).join("");
+
+    document.getElementById("view").innerHTML=
+      s27reviewScreen();
+    return;
+  }
+  s27oldRender();
+};
+
+/* 新しいホーム画面を反映 */
+render();
+</script>
+
 </body>
 </html>
