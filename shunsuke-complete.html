@@ -5073,5 +5073,274 @@ render();
 </script>
 <!-- ===== SUCCESS LINK SYSTEM 終了 ===== -->
 
+<!-- ===== SUCCESS 第6弾：連動チャレンジ ===== -->
+<style>
+.s6-panel{
+  background:#eef6ff;
+  border:2px solid #a9c8e7;
+  border-radius:16px;
+  padding:16px;
+  margin:14px 0;
+  color:#123456;
+}
+.s6-panel h3{margin:0 0 12px}
+.s6-line{
+  background:white;
+  border-radius:10px;
+  padding:12px;
+  margin:9px 0;
+}
+.s6-meter{
+  height:12px;
+  background:#d4e3f1;
+  border-radius:12px;
+  overflow:hidden;
+  margin-top:8px;
+}
+.s6-meter span{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#2599ed,#ffd34f);
+}
+</style>
+
+<script>
+(function(){
+  "use strict";
+
+  const S6_ID="success6";
+  const S6_NAME="🎯 連動チャレンジ";
+
+  function s6Records(){
+    return Array.isArray(db.practice)
+      ? db.practice : [];
+  }
+
+  function s6Date(value){
+    if(typeof value!=="string" ||
+       !/^\d{4}-\d{2}-\d{2}$/.test(value)){
+      return null;
+    }
+    const d=new Date(value+"T12:00:00");
+    if(Number.isNaN(d.getTime()))return null;
+    if(d.getFullYear()+"-"+
+       String(d.getMonth()+1).padStart(2,"0")+"-"+
+       String(d.getDate()).padStart(2,"0")!==value){
+      return null;
+    }
+    return d;
+  }
+
+  function s6Day(d){
+    return d.getFullYear()+"-"+
+      String(d.getMonth()+1).padStart(2,"0")+"-"+
+      String(d.getDate()).padStart(2,"0");
+  }
+
+  function s6Week(){
+    const now=new Date();
+    now.setHours(12,0,0,0);
+    const start=new Date(now);
+    start.setDate(now.getDate()-6);
+    return {
+      start:s6Day(start),
+      end:s6Day(now)
+    };
+  }
+
+  function s6Summary(){
+    const week=s6Week();
+    const all=s6Records();
+    const recent=all.filter(x=>
+      s6Date(x.date) &&
+      x.date>=week.start &&
+      x.date<=week.end
+    );
+
+    const dates=new Set(
+      recent.map(x=>x.date)
+    );
+
+    const batting=recent.filter(x=>
+      /打撃|素振り|バッティング|ティー|羽打ち/.test(
+        String(x.name||"")+" "+String(x.kind||"")
+      )
+    );
+
+    const pitching=recent.filter(x=>
+      /投球|ピッチ|シャドー/.test(
+        String(x.name||"")+" "+String(x.kind||"")
+      )
+    );
+
+    const care=recent.filter(x=>
+      /身体ケア|休養|ストレッチ|ケア/.test(
+        String(x.name||"")+" "+String(x.kind||"")
+      )
+    );
+
+    const allDays=new Set(
+      all.filter(x=>s6Date(x.date)).map(x=>x.date)
+    );
+
+    let streak=0;
+    const cursor=new Date();
+    cursor.setHours(12,0,0,0);
+
+    // 今日の記録がなくても昨日までの継続を評価
+    if(!allDays.has(s6Day(cursor))){
+      cursor.setDate(cursor.getDate()-1);
+    }
+
+    while(allDays.has(s6Day(cursor)) && streak<366){
+      streak++;
+      cursor.setDate(cursor.getDate()-1);
+    }
+
+    return {
+      week,
+      recent,
+      days:dates.size,
+      batting:batting.length,
+      pitching:pitching.length,
+      care:care.length,
+      streak
+    };
+  }
+
+  function s6Progress(label,value,target){
+    const rate=Math.min(100,
+      Math.round(value/target*100));
+    const done=value>=target;
+
+    return `
+      <div class="s6-line">
+        <b>${done?"🏆":"🎯"} ${label}</b>
+        <div>${value} / ${target}
+          ${done?"　達成！":""}
+        </div>
+        <div class="s6-meter">
+          <span style="width:${rate}%"></span>
+        </div>
+      </div>
+    `;
+  }
+
+  function s6Screen(){
+    const s=s6Summary();
+    const xp=Number(db.xp)||0;
+
+    const special=[
+      {
+        name:"継続の星",
+        done:s.streak>=3,
+        info:"3日連続で記録"
+      },
+      {
+        name:"打撃研究家",
+        done:s.batting>=3,
+        info:"直近7日で打撃系3記録"
+      },
+      {
+        name:"投球研究家",
+        done:s.pitching>=2,
+        info:"直近7日で投球系2記録"
+      },
+      {
+        name:"セルフケア名人",
+        done:s.care>=2,
+        info:"直近7日でケア系2記録"
+      }
+    ];
+
+    return `
+      <section class="s6-panel">
+        <h3>⚾ SUCCESS CHALLENGE</h3>
+        <p>駿介の練習記録と自動連動中！</p>
+        <p><b>累計 ${xp} XP</b></p>
+        <p>対象期間：
+          ${s.week.start} ～ ${s.week.end}
+        </p>
+        <p>現在の継続：${s.streak}日</p>
+      </section>
+
+      <section class="s6-panel">
+        <h3>🎯 7日間チャレンジ</h3>
+        ${s6Progress("記録した日数",s.days,3)}
+        ${s6Progress("打撃系の練習記録",s.batting,3)}
+        ${s6Progress("投球系の練習記録",s.pitching,2)}
+        ${s6Progress("身体ケアの記録",s.care,2)}
+        <small>
+          同じ日に複数の練習を記録しても、
+          「記録した日数」は1日として計算します。
+        </small>
+      </section>
+
+      <section class="s6-panel">
+        <h3>🏆 特殊能力・達成判定</h3>
+        ${special.map(x=>`
+          <div class="s6-line">
+            <b>${x.done?"🌟":"🔒"} ${x.name}</b>
+            <p>${x.info}</p>
+            <small>
+              ${x.done?"条件達成！":"未達成"}
+            </small>
+          </div>
+        `).join("")}
+        <small>
+          ここでの特殊能力は達成表示です。
+          既存の能力値やXPを追加変更しません。
+        </small>
+      </section>
+
+      <section class="s6-panel">
+        <h3>🛡️ 成長と休養</h3>
+        <p>
+          ${db.pain
+            ?"痛みありの設定です。運動を中止し、医師の指示を優先してください。"
+            :"練習だけでなく、休養・身体ケアも大切にしましょう。"}
+        </p>
+        <small>
+          この画面は既存記録を読み取るだけです。
+          データの削除・初期化は行いません。
+        </small>
+      </section>
+    `;
+  }
+
+  if(!tabs.some(x=>x[0]===S6_ID)){
+    tabs.push([S6_ID,S6_NAME]);
+  }
+
+  const s6PreviousRender=render;
+
+  render=function(){
+    if(tab!==S6_ID){
+      return s6PreviousRender();
+    }
+
+    const nav=document.getElementById("nav");
+    const main=document.getElementById("content");
+
+    if(!nav || !main){
+      return s6PreviousRender();
+    }
+
+    nav.innerHTML=tabs.map(([id,name])=>`
+      <button
+        class="${tab===id?"active":""}"
+        onclick="go('${id}')">
+        ${esc(name)}
+      </button>
+    `).join("");
+
+    main.innerHTML=s6Screen();
+  };
+
+  render();
+})();
+</script>
+<!-- ===== 第6弾 終了 ===== -->
+
 </body>
 </html>
