@@ -1,0 +1,4145 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#071b41">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>駿介の野球サクセス COMPLETE 2.0</title>
+
+<style>
+:root {
+  --navy: #071b41;
+  --blue: #1559ac;
+  --gold: #ffd04b;
+  --ink: #14274b;
+  --muted: #607493;
+  --green: #12845c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(145deg, #06152e, #0d3670 65%, #071c40);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Hiragino Kaku Gothic ProN", sans-serif;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+header {
+  background: #061a3c;
+  border-bottom: 3px solid var(--gold);
+  padding: 17px 14px;
+}
+
+.logo {
+  font-weight: 1000;
+  font-size: clamp(20px, 5vw, 30px);
+  color: var(--gold);
+}
+
+.sub {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #bad6ff;
+}
+
+.motto {
+  margin-top: 10px;
+  color: #ffe17a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wrap {
+  max-width: 950px;
+  margin: auto;
+  padding: 0 12px 80px;
+}
+
+nav {
+  display: flex;
+  overflow-x: auto;
+  gap: 7px;
+  padding: 12px 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #09264e;
+  scrollbar-width: none;
+}
+
+nav button {
+  white-space: nowrap;
+  background: #143e78;
+  color: white;
+  border: 1px solid #4c7bb6;
+  border-radius: 22px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+nav button.active {
+  background: var(--gold);
+  color: #142747;
+}
+
+.panel {
+  margin: 12px 0;
+  padding: 16px;
+  border: 2px solid #c5d7f0;
+  border-radius: 18px;
+  background: white;
+  color: var(--ink);
+  box-shadow: 0 5px 0 #00152f;
+}
+
+.panel.dark {
+  background: linear-gradient(130deg, #082452, #155fb4);
+  color: white;
+  border-color: #79c3ff;
+}
+
+h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+h3 {
+  font-size: 15px;
+  margin: 14px 0 8px;
+}
+
+.grid, .cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.tile, .card {
+  background: #eff5ff;
+  border: 1px solid #ccddf5;
+  border-radius: 12px;
+  padding: 11px;
+  min-width: 0;
+}
+
+.tile {
+  font-size: 12px;
+}
+
+.tile strong {
+  display: block;
+  color: #1558aa;
+  font-size: 23px;
+  overflow-wrap: anywhere;
+}
+
+.card b {
+  display: block;
+  font-size: 13px;
+}
+
+.card p {
+  font-size: 12px;
+  color: #526784;
+  line-height: 1.5;
+}
+
+.muted {
+  color: #647897;
+  font-size: 12px;
+}
+
+.dark .muted {
+  color: #c4dfff;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 9px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(#ffe17a, #f3b42f);
+  color: #152748;
+  padding: 12px 14px;
+  font-weight: 900;
+  box-shadow: 0 3px 0 #a87613;
+}
+
+.btn.blue {
+  background: linear-gradient(#4cafff, #1461b9);
+  color: white;
+  box-shadow: 0 3px 0 #063e82;
+}
+
+.btn.ghost {
+  background: #e8f0ff;
+  color: #174782;
+  box-shadow: none;
+}
+
+.btn:disabled {
+  opacity: .45;
+}
+
+.full {
+  width: 100%;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 9px;
+}
+
+input, select, textarea {
+  display: block;
+  width: 100%;
+  margin: 5px 0 10px;
+  padding: 11px;
+  border: 1px solid #b6cce8;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #173052;
+}
+
+textarea {
+  min-height: 75px;
+}
+
+.notice {
+  padding: 11px;
+  border-radius: 9px;
+  background: #fff1ce;
+  color: #654600;
+  border-left: 4px solid #e9a825;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.bar {
+  height: 11px;
+  border-radius: 20px;
+  background: #d9e6f8;
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #42a6ff, #ffd34b);
+}
+
+.stat {
+  margin: 12px 0;
+}
+
+.stat .row {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rank {
+  display: inline-block;
+  min-width: 28px;
+  text-align: center;
+  border-radius: 7px;
+  background: #1a63b3;
+  color: white;
+  padding: 2px 4px;
+  margin-right: 5px;
+}
+
+.pill {
+  display: inline-block;
+  background: linear-gradient(#ffe585, #f0b631);
+  color: #20365a;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 5px 9px;
+  border-radius: 15px;
+  margin: 3px;
+}
+
+.listitem {
+  border-bottom: 1px solid #dce7f4;
+  padding: 10px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.hero {
+  background: linear-gradient(135deg, #061b44, #165eb4);
+  border: 2px solid #72baff;
+  border-radius: 16px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 215px;
+}
+
+.heroInfo {
+  min-width: 0;
+  flex: 1;
+  color: white;
+}
+
+.heroInfo h1 {
+  font-size: clamp(23px, 6vw, 38px);
+  margin: 2px 0;
+}
+
+.heroInfo p {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.badgebox {
+  background: #0a2b5f;
+  color: white;
+  border: 1px solid #4c9bde;
+  border-radius: 11px;
+  padding: 10px;
+  margin-top: 8px;
+}
+
+.chart {
+  width: 100%;
+  background: #f1f7ff;
+  border-radius: 10px;
+}
+
+.day {
+  border: 1px solid #d1e0f4;
+  border-radius: 10px;
+  padding: 9px;
+  margin: 6px 0;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.choice input {
+  width: auto;
+  margin: 0;
+}
+
+.success {
+  color: #08744b;
+  font-weight: 800;
+}
+
+footer {
+  text-align: center;
+  color: #aac9ed;
+  font-size: 11px;
+  padding: 20px;
+}
+
+#view {
+  min-height: 60vh;
+}
+
+@media (min-width: 720px) {
+  .grid, .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hero {
+    min-height: 260px;
+  }
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="logo">⚾ 駿介 BASEBALL SUCCESS</div>
+  <div class="sub">COMPLETE 2.0</div>
+  <div class="motto">
+    昨日よりも今日、今日より明日！自分に勝つ！
+  </div>
+</header>
+
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="view"></main>
+  <footer>
+    自分で考え、自分で決め、自分で行動する。
+    昨日の自分を超えていこう。
+  </footer>
+</div>
+
+<script>
+'use strict';
+
+// 第2回からJavaScript本体を続けます。
+
+/* =========================================
+   COMPLETE 2.0
+   第2回：基本データ・共通処理
+========================================= */
+
+const K = 'shunsuke_success_complete';
+const OLD = 'shunsuke_success_v4';
+const K3 = 'shunsuke_success_v3_new';
+
+const AB = [
+  'ミート',
+  'パワー',
+  '走力',
+  '肩力',
+  '守備力',
+  '捕球'
+];
+
+const PB = [
+  '球威',
+  '制球力',
+  'スタミナ',
+  '投球術',
+  '投手守備',
+  'メンタル'
+];
+
+/*
+ メニュー形式：
+ [名前, カテゴリー, 能力, 基本XP, 単位, 説明]
+
+ 睡眠・休養は練習メニューに含めない。
+ 身体ケアは実施時間を別途集計する。
+*/
+
+const MENU = [
+  [
+    '素振り', '打撃', 'ミート', 15, '回',
+    'バットの軌道とバランスを確認。量よりフォーム。'
+  ],
+  [
+    '羽打ち', '打撃', 'ミート', 18, '回',
+    '芯で捉える感覚を確認。'
+  ],
+  [
+    '置きティー', '打撃', 'ミート', 20, '回',
+    '軸足とミートポイントを意識。'
+  ],
+  [
+    'フリーバッティング', '打撃', 'パワー', 20, '球',
+    '打球の質を振り返る。'
+  ],
+  [
+    'シャドーピッチング', '投手', '投球術', 20, '回',
+    '痛みがない場合のみ、フォームを確認。'
+  ],
+  [
+    'キャッチボール', '投手', '制球力', 20, '球',
+    '相手の胸を狙い、無理に強く投げない。'
+  ],
+  [
+    '制球練習', '投手', '制球力', 20, '球',
+    '目標を決めて精度を確認。'
+  ],
+  [
+    '配球研究', '投手', '投球術', 20, '分',
+    '打者と状況を考えて配球を説明。'
+  ],
+  [
+    '投手フィールディング', '投手', '投手守備', 20, '分',
+    'バント処理・ベースカバーを判断。'
+  ],
+  [
+    '牽制の判断研究', '投手', '投球術', 20, '分',
+    '牽制の目的を考える。'
+  ],
+  [
+    'ノック', '守備', '守備力', 20, '分',
+    '一歩目と捕球姿勢を確認。'
+  ],
+  [
+    '捕球練習', '守備', '捕球', 15, '分',
+    '正面・逆シングルを丁寧に。'
+  ],
+  [
+    '送球研究', '守備', '肩力', 15, '分',
+    '足運びと送球判断を研究。'
+  ],
+  [
+    'ラダートレーニング', '走塁', '走力', 18, '分',
+    '正確な足運びを重視。'
+  ],
+  [
+    'ベースランニング', '走塁', '走力', 18, '分',
+    '走路と判断を確認。'
+  ],
+  [
+    '走塁判断の研究', '走塁', '走力', 18, '分',
+    'アウトカウント別の判断を考える。'
+  ],
+  [
+    'ストレッチ', '身体ケア', 'ケア', 25, '分',
+    '痛みのない範囲で、身体を整える。'
+  ],
+  [
+    '体幹・姿勢ケア', '身体ケア', 'ケア', 25, '分',
+    '腰の状態に応じ、許可された内容のみ行う。'
+  ],
+  [
+    '野球ノート', '自主学習', '投球術', 20, '分',
+    '今日の発見と次の課題を書く。'
+  ],
+  [
+    '試合動画の研究', '自主学習', '投球術', 20, '分',
+    '判断と動きの理由を考える。'
+  ]
+];
+
+/* ---------- 共通処理 ---------- */
+
+const today = () => {
+  const d = new Date();
+
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0')
+  ].join('-');
+};
+
+const esc = x => String(x ?? '').replace(
+  /[&<>"']/g,
+  c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c])
+);
+
+const num = (x, d = 0) => {
+  if (x === null || x === undefined || x === '') {
+    return d;
+  }
+
+  const n = Number(x);
+  return Number.isFinite(n) ? n : d;
+};
+
+const cap = (x, a = 0, b = 100) =>
+  Math.min(b, Math.max(a, num(x)));
+
+const arr = x => Array.isArray(x) ? x : [];
+
+const get = id => document.getElementById(id);
+
+/* ---------- 初期データ ---------- */
+
+function fresh() {
+  return {
+    version: 4,
+
+    name: '駿介',
+    hand: '右投右打',
+
+    positions: [
+      '投手',
+      '一塁手',
+      '三塁手'
+    ],
+
+    xp: 0,
+    energy: 100,
+
+    abilities: Object.fromEntries(
+      AB.map(x => [x, 20])
+    ),
+
+    pitch: Object.fromEntries(
+      PB.map(x => [x, 20])
+    ),
+
+    practice: [],
+    games: [],
+    growth: [],
+    pitchlog: [],
+    plans: [],
+    reflections: [],
+
+    week: Array(7).fill('休養'),
+
+    goal: '',
+    father: '自分で考え、自分で挑戦しよう！',
+
+    pain: false,
+    missionClaims: [],
+
+    baseballNotebook11: {
+      notes: [],
+      speeds: []
+    },
+
+    created: today()
+  };
+}
+
+/* ---------- 既存データの補正 ---------- */
+
+function normalize(o) {
+  const d = fresh();
+
+  if (!o || typeof o !== 'object') {
+    return d;
+  }
+
+  Object.assign(d, o);
+
+  const arrays = [
+    'practice',
+    'games',
+    'growth',
+    'pitchlog',
+    'plans',
+    'reflections',
+    'missionClaims'
+  ];
+
+  for (const k of arrays) {
+    d[k] = arr(d[k]);
+  }
+
+  d.abilities = {
+    ...fresh().abilities,
+    ...(o.abilities || {})
+  };
+
+  d.pitch = {
+    ...fresh().pitch,
+    ...(o.pitch || {})
+  };
+
+  d.positions = arr(d.positions).slice(0, 3);
+
+  d.week = Array.isArray(d.week)
+    ? Array.from(
+        { length: 7 },
+        (_, i) => String(d.week[i] || '休養')
+      )
+    : fresh().week;
+
+  if (
+    !d.baseballNotebook11 ||
+    typeof d.baseballNotebook11 !== 'object'
+  ) {
+    d.baseballNotebook11 = {
+      notes: [],
+      speeds: []
+    };
+  }
+
+  d.baseballNotebook11.notes =
+    arr(d.baseballNotebook11.notes);
+
+  d.baseballNotebook11.speeds =
+    arr(d.baseballNotebook11.speeds);
+
+  d.version = 4;
+
+  return d;
+}
+
+/* ---------- 旧バージョンからの移行 ---------- */
+
+function fromV3(o) {
+  const n = fresh();
+
+  for (const k of [
+    'xp',
+    'energy',
+    'abilities',
+    'practice',
+    'games',
+    'growth',
+    'week',
+    'goal',
+    'father'
+  ]) {
+    if (o[k] !== undefined) {
+      n[k] = o[k];
+    }
+  }
+
+  n.migrated = true;
+  return normalize(n);
+}
+
+function readJSON(k) {
+  try {
+    return JSON.parse(localStorage.getItem(k));
+  } catch {
+    return null;
+  }
+}
+
+let origin = 'new';
+
+function load() {
+  let a = readJSON(K);
+
+  if (a && typeof a === 'object' && a.version === 4) {
+    origin = 'complete';
+    return normalize(a);
+  }
+
+  a = readJSON(OLD);
+
+  if (a && typeof a === 'object' && a.version === 4) {
+    origin = 'v4';
+    return normalize(a);
+  }
+
+  a = readJSON(K3);
+
+  if (a && typeof a === 'object' && a.version === 3) {
+    origin = 'v3';
+    return fromV3(a);
+  }
+
+  return fresh();
+}
+
+let db = load();
+
+function save() {
+  try {
+    localStorage.setItem(K, JSON.stringify(db));
+    return true;
+  } catch (e) {
+    alert(
+      '保存できません。端末の空き容量やブラウザ設定を確認してください。'
+    );
+    return false;
+  }
+}
+
+/*
+ 注意：
+ 起動時には自動保存しない。
+ データの書き込みは記録操作の際に行う。
+*/
+
+/* ---------- レベル・経験値 ---------- */
+
+const level = () =>
+  Math.floor(
+    Math.sqrt(Math.max(0, num(db.xp)) / 100)
+  ) + 1;
+
+function xpRate() {
+  const l = level();
+  const a = 100 * (l - 1) ** 2;
+  const b = 100 * l ** 2;
+
+  return cap(
+    (db.xp - a) / (b - a) * 100
+  );
+}
+
+function latest(k) {
+  return [...arr(db.growth)]
+    .filter(x => num(x[k], 0) > 0)
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date))
+    )[0]?.[k] ?? null;
+}
+
+const count = n =>
+  db.practice.filter(x => x.name === n).length;
+
+function rank(v) {
+  v = cap(v);
+
+  if (v >= 90) return 'S';
+  if (v >= 80) return 'A';
+  if (v >= 65) return 'B';
+  if (v >= 50) return 'C';
+  if (v >= 35) return 'D';
+
+  return 'E';
+}
+
+/* ---------- 身体ケアの時間集計 ---------- */
+
+function careMinutes(x) {
+  if (!x) return 0;
+
+  const isCare =
+    x.kind === '身体ケア' ||
+    x.category === '身体ケア';
+
+  if (!isCare) return 0;
+
+  if (/睡眠|休養/.test(x.name || '')) {
+    return 0;
+  }
+
+  const direct = num(x.minutes);
+
+  if (direct > 0) {
+    return Math.min(direct, 1440);
+  }
+
+  if (x.unit === '分') {
+    return Math.min(
+      Math.max(0, num(x.amount)),
+      1440
+    );
+  }
+
+  return 0;
+}
+
+function careTotal(start, end) {
+  const quick = arr(db.success2027?.quick);
+
+  const records = [
+    ...db.practice,
+    ...quick
+  ].filter(
+    x => x.date >= start && x.date <= end
+  );
+
+  return records.reduce(
+    (sum, x) => sum + careMinutes(x),
+    0
+  );
+}
+
+function minutesText(minutes) {
+  const m = Math.max(0, Math.round(num(minutes)));
+
+  const hours = Math.floor(m / 60);
+  const rest = m % 60;
+
+  if (!hours) return `${rest}分`;
+  if (!rest) return `${hours}時間`;
+
+  return `${hours}時間${rest}分`;
+}
+
+/* ---------- 週の開始日 ---------- */
+
+function weekStart() {
+  const d = new Date();
+  const day = (d.getDay() + 6) % 7;
+
+  d.setDate(d.getDate() - day);
+
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function weekEnd() {
+  const d = new Date(weekStart() + 'T12:00:00');
+
+  d.setDate(d.getDate() + 6);
+
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0')
+  ].join('-');
+}
+
+/* ---------- 週間身体ケア評価 ---------- */
+
+function weeklyCareStats() {
+  const start = weekStart();
+  const end = weekEnd();
+
+  const records = [
+    ...db.practice,
+    ...arr(db.success2027?.quick)
+  ].filter(
+    x =>
+      x.date >= start &&
+      x.date <= end &&
+      careMinutes(x) > 0
+  );
+
+  return {
+    minutes: records.reduce(
+      (sum, x) => sum + careMinutes(x),
+      0
+    ),
+
+    days: new Set(
+      records.map(x => x.date)
+    ).size,
+
+    count: records.length
+  };
+}
+
+/*
+ 第3回：
+ ・画面の共通部品
+ ・選手プロフィール
+ ・能力値表示
+ ・称号と特殊能力
+ ・ホーム画面
+*/
+
+/* =========================================
+   COMPLETE 2.0
+   第3回：画面部品・選手情報・ホーム
+========================================= */
+
+/* ---------- 画面の共通部品 ---------- */
+
+function box(title, content, dark = false) {
+  return `
+    <section class="panel ${dark ? 'dark' : ''}">
+      <h2>${title}</h2>
+      ${content}
+    </section>
+  `;
+}
+
+function tile(label, value, unit = '') {
+  return `
+    <div class="tile">
+      <span>${esc(label)}</span>
+      <strong>${esc(value)}</strong>
+      <small>${esc(unit)}</small>
+    </div>
+  `;
+}
+
+function progress(value, max = 100) {
+  const percentage = max > 0
+    ? cap(num(value) / max * 100)
+    : 0;
+
+  return `
+    <div class="bar">
+      <span style="width:${percentage}%"></span>
+    </div>
+  `;
+}
+
+function abilityCard(name, value) {
+  const v = cap(value);
+
+  return `
+    <div class="stat">
+      <div class="row">
+        <span>${esc(name)}</span>
+        <span>
+          <span class="rank">${rank(v)}</span>
+          ${Math.round(v)}
+        </span>
+      </div>
+      ${progress(v)}
+    </div>
+  `;
+}
+
+/* ---------- 選手称号 ---------- */
+
+function playerTitle() {
+  const l = level();
+
+  if (l >= 30) return '伝説への挑戦者';
+  if (l >= 25) return '全国を目指す挑戦者';
+  if (l >= 20) return '努力のエース';
+  if (l >= 15) return '成長する主力選手';
+  if (l >= 10) return '未来のエース';
+  if (l >= 5) return '努力を続ける野球少年';
+
+  return '夢に向かう挑戦者';
+}
+
+function specialAbilities() {
+  const result = [];
+
+  const practices = arr(db.practice);
+  const games = arr(db.games);
+  const care = practices.filter(
+    x => careMinutes(x) > 0
+  );
+
+  if (practices.length >= 10) {
+    result.push('継続力○');
+  }
+
+  if (practices.length >= 30) {
+    result.push('努力家');
+  }
+
+  if (practices.length >= 100) {
+    result.push('練習の達人');
+  }
+
+  if (games.length >= 5) {
+    result.push('試合経験○');
+  }
+
+  if (care.length >= 5) {
+    result.push('身体ケア○');
+  }
+
+  if (care.length >= 20) {
+    result.push('セルフケア上手');
+  }
+
+  if (arr(db.baseballNotebook11?.notes).length >= 10) {
+    result.push('野球研究家');
+  }
+
+  if (!result.length) {
+    result.push('成長中');
+  }
+
+  return result;
+}
+
+/* ---------- 選手カード ---------- */
+
+function playerCard() {
+  const height = latest('height');
+  const weight = latest('weight');
+
+  const positions = arr(db.positions).join('・');
+
+  return `
+    <div class="hero">
+      <div class="heroInfo">
+        <div class="sub">BASEBALL PLAYER</div>
+
+        <h1>${esc(db.name || '駿介')}</h1>
+
+        <p>
+          ${esc(db.hand || '右投右打')}<br>
+          ${esc(positions || '投手')}
+        </p>
+
+        <div class="pill">
+          LEVEL ${level()}
+        </div>
+
+        <div class="pill">
+          ${esc(playerTitle())}
+        </div>
+
+        <div class="badgebox">
+          <b>⚾ 成長データ</b>
+          <p>
+            身長：
+            ${height ? esc(height) + 'cm' : '未登録'}
+            <br>
+            体重：
+            ${weight ? esc(weight) + 'kg' : '未登録'}
+          </p>
+        </div>
+      </div>
+
+      <div style="
+        width:95px;
+        height:145px;
+        border-radius:18px;
+        background:linear-gradient(
+          160deg,#d6edff,#6cb3f3
+        );
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:58px;
+        flex-shrink:0;
+      ">
+        ⚾
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- 身体ケア評価 ---------- */
+
+function careMessage(stats) {
+  if (stats.days >= 5) {
+    return '🌟 今週は身体ケアを継続できています！';
+  }
+
+  if (stats.days >= 3) {
+    return '👏 身体を大切にする習慣が育っています！';
+  }
+
+  if (stats.days >= 1) {
+    return '💚 ストレッチに取り組めました！';
+  }
+
+  return '🌱 身体の状態に合わせて、無理なくケアしよう。';
+}
+
+function weeklyCarePanel() {
+  const stats = weeklyCareStats();
+
+  return box(
+    '🧘 今週の練習バランス・身体ケア',
+    `
+      <div class="grid">
+        ${tile(
+          '身体ケア累積時間',
+          minutesText(stats.minutes)
+        )}
+
+        ${tile(
+          '身体ケア実施日数',
+          stats.days,
+          '日'
+        )}
+
+        ${tile(
+          '実施回数',
+          stats.count,
+          '回'
+        )}
+      </div>
+
+      <div class="notice" style="margin-top:12px">
+        ${careMessage(stats)}
+      </div>
+
+      <p class="muted">
+        ストレッチや姿勢ケアなど、
+        「身体ケア」に分類された記録の時間を集計します。
+        睡眠・休養はこの集計に含めません。
+      </p>
+    `
+  );
+}
+
+/* ---------- 能力値画面 ---------- */
+
+function abilityScreen() {
+  return box(
+    '⚾ 野手能力',
+    AB.map(
+      name => abilityCard(
+        name,
+        db.abilities[name] || 0
+      )
+    ).join('')
+  ) + box(
+    '🔥 投手能力',
+    PB.map(
+      name => abilityCard(
+        name,
+        db.pitch[name] || 0
+      )
+    ).join('')
+  );
+}
+
+/* ---------- プロフィール ---------- */
+
+function profile() {
+  const height = latest('height');
+  const weight = latest('weight');
+
+  return `
+    ${playerCard()}
+
+    ${box(
+      '🏆 選手プロフィール',
+      `
+        <div class="grid">
+          ${tile('レベル', level())}
+          ${tile('総経験値', num(db.xp), 'XP')}
+          ${tile('練習記録', db.practice.length, '件')}
+          ${tile('試合記録', db.games.length, '試合')}
+          ${tile('身長', height || '未登録', 'cm')}
+          ${tile('体重', weight || '未登録', 'kg')}
+        </div>
+
+        <h3>現在の称号</h3>
+        <div class="pill">
+          ${esc(playerTitle())}
+        </div>
+
+        <h3>特殊能力</h3>
+        ${specialAbilities().map(
+          x => `<span class="pill">${esc(x)}</span>`
+        ).join('')}
+      `
+    )}
+
+    ${abilityScreen()}
+
+    ${weeklyCarePanel()}
+  `;
+}
+
+/* ---------- 今週の目標 ---------- */
+
+function goalPanel() {
+  return box(
+    '🎯 今週の目標',
+    `
+      <p>
+        ${esc(
+          db.goal ||
+          '自分の課題を一つ決めて取り組もう！'
+        )}
+      </p>
+
+      <label>目標を更新する</label>
+      <textarea id="newGoal"
+        placeholder="例：打席で最後までボールを見る"
+      >${esc(db.goal || '')}</textarea>
+
+      <button class="btn blue full"
+        onclick="saveGoal()">
+        目標を保存
+      </button>
+    `
+  );
+}
+
+function saveGoal() {
+  const value = get('newGoal')?.value.trim() || '';
+
+  db.goal = value;
+
+  if (save()) {
+    render();
+  }
+}
+
+/* ---------- 今日のメッセージ ---------- */
+
+function dailyMessage() {
+  const messages = [
+    '昨日の自分より、一つ成長しよう！',
+    '努力は一日では完成しない。',
+    '休む勇気も、一流選手の力。',
+    '身体を大切にすることも野球の練習。',
+    '失敗から学べば、それは成長。',
+    '自分で考えて行動する選手になろう！',
+    '野球を楽しむ気持ちを忘れずに！'
+  ];
+
+  const d = new Date().getDay();
+
+  return messages[d];
+}
+
+/* ---------- ホーム画面 ---------- */
+
+function home() {
+  const stats = weeklyCareStats();
+
+  const lastPractice = [...db.practice]
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date))
+    )[0];
+
+  return `
+    ${playerCard()}
+
+    ${box(
+      '🔥 今日のサクセス',
+      `
+        <h3>${esc(dailyMessage())}</h3>
+
+        <div class="grid">
+          ${tile('LEVEL', level())}
+          ${tile('総XP', num(db.xp))}
+          ${tile(
+            '今週の身体ケア',
+            minutesText(stats.minutes)
+          )}
+        </div>
+
+        <h3>次のレベルまで</h3>
+        ${progress(xpRate())}
+
+        <p class="muted">
+          経験値を積み重ねて、
+          自分の成長を確認しよう！
+        </p>
+
+        <button class="btn full"
+          onclick="go('training')">
+          ⚾ 今日の練習を記録
+        </button>
+      `,
+      true
+    )}
+
+    ${weeklyCarePanel()}
+
+    ${goalPanel()}
+
+    ${box(
+      '📅 最近の練習',
+      lastPractice
+        ? `
+          <div class="listitem">
+            <b>${esc(lastPractice.date)}</b>
+            <p>
+              ${esc(lastPractice.name || '練習')}
+            </p>
+            <p>
+              ${esc(lastPractice.note || '')}
+            </p>
+          </div>
+        `
+        : `
+          <p class="muted">
+            まだ練習記録がありません。
+            最初の一歩を記録しよう！
+          </p>
+        `
+    )}
+
+    ${box(
+      '💬 お父さんからのメッセージ',
+      `
+        <p>
+          ${esc(
+            db.father ||
+            '自分で考え、自分で挑戦しよう！'
+          )}
+        </p>
+      `
+    )}
+  `;
+}
+
+/*
+ 第4回：
+ ・練習入力
+ ・ストレッチ時間の記録
+ ・練習履歴
+ ・XP加算
+ ・練習バランス
+*/
+
+/* =========================================
+   COMPLETE 2.0
+   第4回：練習記録・身体ケア・練習バランス
+========================================= */
+
+/* ---------- 練習の分類 ---------- */
+
+const TRAINING_CATEGORIES = [
+  '打撃',
+  '投手',
+  '守備',
+  '走塁',
+  '身体ケア',
+  '自主学習'
+];
+
+function trainingCategory(x) {
+  if (!x) return 'その他';
+
+  if (x.kind && TRAINING_CATEGORIES.includes(x.kind)) {
+    return x.kind;
+  }
+
+  if (
+    x.category &&
+    TRAINING_CATEGORIES.includes(x.category)
+  ) {
+    return x.category;
+  }
+
+  const menu = MENU.find(m => m[0] === x.name);
+
+  return menu ? menu[1] : 'その他';
+}
+
+function isCareTraining(x) {
+  return trainingCategory(x) === '身体ケア' &&
+    !/睡眠|休養/.test(x.name || '');
+}
+
+function isStudyTraining(x) {
+  return trainingCategory(x) === '自主学習';
+}
+
+function isPhysicalTraining(x) {
+  return !isCareTraining(x) &&
+    !isStudyTraining(x) &&
+    !/睡眠|休養/.test(x.name || '');
+}
+
+/* ---------- 練習時間 ---------- */
+
+function trainingMinutes(x) {
+  if (!x) return 0;
+
+  const m = num(x.minutes);
+
+  if (m > 0) {
+    return Math.min(1440, m);
+  }
+
+  if (x.unit === '分') {
+    return Math.min(
+      1440,
+      Math.max(0, num(x.amount))
+    );
+  }
+
+  return 0;
+}
+
+/*
+ 身体ケア：
+ ストレッチ10分 → 身体ケア10分
+
+ 身体ケアは身体ケアの時間として評価。
+ 通常練習時間には二重加算しない。
+*/
+
+/* ---------- 週間の練習集計 ---------- */
+
+function weeklyTrainingStats() {
+  const start = weekStart();
+  const end = weekEnd();
+
+  const rows = [
+    ...arr(db.practice),
+    ...arr(db.success2027?.quick)
+  ].filter(
+    x => x.date >= start && x.date <= end
+  );
+
+  const physical = rows.filter(isPhysicalTraining);
+  const care = rows.filter(isCareTraining);
+  const study = rows.filter(isStudyTraining);
+
+  return {
+    physicalMinutes: physical.reduce(
+      (s, x) => s + trainingMinutes(x),
+      0
+    ),
+
+    careMinutes: care.reduce(
+      (s, x) => s + trainingMinutes(x),
+      0
+    ),
+
+    studyMinutes: study.reduce(
+      (s, x) => s + trainingMinutes(x),
+      0
+    ),
+
+    physicalDays: new Set(
+      physical.map(x => x.date)
+    ).size,
+
+    careDays: new Set(
+      care.map(x => x.date)
+    ).size,
+
+    practiceCount: physical.length,
+
+    careCount: care.length
+  };
+}
+
+/* ---------- 練習バランス表示 ---------- */
+
+function trainingBalancePanel() {
+  const s = weeklyTrainingStats();
+
+  const total =
+    s.physicalMinutes +
+    s.careMinutes +
+    s.studyMinutes;
+
+  const percent = value =>
+    total > 0
+      ? Math.round(value / total * 100)
+      : 0;
+
+  const items = [
+    ['⚾ 通常練習', s.physicalMinutes],
+    ['🧘 身体ケア', s.careMinutes],
+    ['📚 自主学習', s.studyMinutes]
+  ];
+
+  return box(
+    '📊 今週の練習バランス',
+    `
+      <div class="grid">
+        ${tile(
+          '通常練習',
+          minutesText(s.physicalMinutes)
+        )}
+
+        ${tile(
+          '身体ケア',
+          minutesText(s.careMinutes)
+        )}
+
+        ${tile(
+          '自主学習',
+          minutesText(s.studyMinutes)
+        )}
+      </div>
+
+      <h3>時間の内訳</h3>
+
+      ${items.map(([name, value]) => `
+        <div class="stat">
+          <div class="row">
+            <span>${name}</span>
+            <span>
+              ${minutesText(value)}
+              (${percent(value)}%)
+            </span>
+          </div>
+          ${progress(value, Math.max(1, total))}
+        </div>
+      `).join('')}
+
+      <div class="notice">
+        💚 身体ケアは練習と同じくらい大切な習慣です。
+        ストレッチ10分でも、正しく記録して評価します。
+      </div>
+
+      <p class="muted">
+        このグラフは時間の内訳を示します。
+        理想的な割合や運動負荷の安全性を
+        判定するものではありません。
+      </p>
+    `
+  );
+}
+
+/* ---------- XP計算 ---------- */
+
+function trainingXP(menu, amount, minutes) {
+  const base = num(menu[3], 10);
+  const category = menu[1];
+
+  let xp = base;
+
+  if (category === '身体ケア') {
+    /*
+      短時間のケアも評価する。
+      時間を増やしてXPを稼ぐ仕組みにはしない。
+    */
+
+    if (minutes >= 1) {
+      xp += 5;
+    }
+
+    if (minutes >= 5) {
+      xp += 5;
+    }
+
+    if (minutes >= 10) {
+      xp += 5;
+    }
+
+    return Math.min(40, xp);
+  }
+
+  if (category === '自主学習') {
+    return Math.min(35, base + 5);
+  }
+
+  if (amount > 0) {
+    xp += Math.min(10, Math.floor(amount / 20));
+  }
+
+  return Math.min(40, xp);
+}
+
+/* ---------- 能力値の成長 ---------- */
+
+function addTrainingAbility(menu, xp) {
+  const ability = menu[2];
+
+  /*
+    身体ケアはXPで評価するが、
+    無理に身体能力を上昇させない。
+  */
+
+  if (
+    menu[1] === '身体ケア' ||
+    menu[1] === '自主学習'
+  ) {
+    return;
+  }
+
+  const gain = Math.max(1, Math.floor(xp / 20));
+
+  if (Object.hasOwn(db.abilities, ability)) {
+    db.abilities[ability] = cap(
+      num(db.abilities[ability]) + gain
+    );
+  }
+
+  if (Object.hasOwn(db.pitch, ability)) {
+    db.pitch[ability] = cap(
+      num(db.pitch[ability]) + gain
+    );
+  }
+}
+
+/* ---------- 練習入力画面 ---------- */
+
+function training() {
+  const options = MENU.map(
+    (m, i) => `
+      <option value="${i}">
+        ${esc(m[1])}｜${esc(m[0])}
+      </option>
+    `
+  ).join('');
+
+  const recent = [...db.practice]
+    .map((x, i) => ({ ...x, index: i }))
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date))
+    )
+    .slice(0, 15);
+
+  return `
+    ${box(
+      '⚾ 今日の練習を記録',
+      `
+        <label>練習日</label>
+        <input
+          type="date"
+          id="practiceDate"
+          value="${today()}"
+        >
+
+        <label>練習メニュー</label>
+        <select
+          id="practiceMenu"
+          onchange="updatePracticeFields()"
+        >
+          ${options}
+        </select>
+
+        <div id="practiceFields"></div>
+
+        <label>今日意識したこと・気づき</label>
+        <textarea
+          id="practiceMemo"
+          placeholder="例：最後までボールを見ることを意識した"
+        ></textarea>
+
+        <button
+          class="btn full"
+          onclick="savePractice()"
+        >
+          💾 練習を記録する
+        </button>
+
+        <p class="muted">
+          痛みや強い疲労がある場合は、
+          無理に練習を続けないでください。
+        </p>
+      `
+    )}
+
+    ${trainingBalancePanel()}
+
+    ${weeklyCarePanel()}
+
+    ${box(
+      '📚 最近の練習記録',
+      recent.length
+        ? recent.map(x => `
+          <div class="listitem">
+            <div class="row">
+              <b>
+                ${esc(x.date)}
+                ${esc(x.name)}
+              </b>
+
+              <button
+                class="btn ghost"
+                onclick="deletePractice(${x.index})"
+              >
+                削除
+              </button>
+            </div>
+
+            <p>
+              ${esc(trainingCategory(x))}
+              ／
+              ${esc(x.amount || '')}
+              ${esc(x.unit || '')}
+            </p>
+
+            ${
+              trainingMinutes(x) > 0
+                ? `<p>⏱ ${minutesText(trainingMinutes(x))}</p>`
+                : ''
+            }
+
+            <p>${esc(x.note || '')}</p>
+          </div>
+        `).join('')
+        : '<p class="muted">記録はまだありません。</p>'
+    )}
+  `;
+}
+
+/* ---------- 入力項目の切り替え ---------- */
+
+function updatePracticeFields() {
+  const index = Number(
+    get('practiceMenu')?.value || 0
+  );
+
+  const menu = MENU[index];
+
+  if (!menu) return;
+
+  const unit = menu[4];
+  const category = menu[1];
+
+  const isMinutes = unit === '分';
+
+  get('practiceFields').innerHTML = `
+    <div class="notice">
+      <b>${esc(menu[0])}</b><br>
+      ${esc(menu[5])}
+    </div>
+
+    <label>
+      ${
+        isMinutes
+          ? '実施時間（分）'
+          : `実施量（${esc(unit)}）`
+      }
+    </label>
+
+    <input
+      type="number"
+      id="practiceAmount"
+      min="0"
+      max="1440"
+      step="1"
+      placeholder="${
+        isMinutes ? '例：10' : '例：30'
+      }"
+    >
+
+    ${
+      !isMinutes
+        ? `
+          <label>実際の練習時間（分・任意）</label>
+          <input
+            type="number"
+            id="practiceMinutes"
+            min="0"
+            max="1440"
+            step="1"
+            placeholder="例：15"
+          >
+        `
+        : ''
+    }
+
+    ${
+      category === '身体ケア'
+        ? `
+          <p class="success">
+            💚 この記録は身体ケア時間として
+            週間バランスに反映されます。
+          </p>
+        `
+        : ''
+    }
+  `;
+}
+
+/* ---------- 練習記録の保存 ---------- */
+
+function savePractice() {
+  const index = Number(
+    get('practiceMenu')?.value || 0
+  );
+
+  const menu = MENU[index];
+
+  if (!menu) {
+    alert('練習メニューを選択してください。');
+    return;
+  }
+
+  const date = get('practiceDate')?.value || today();
+
+  const amount = num(
+    get('practiceAmount')?.value
+  );
+
+  const unit = menu[4];
+
+  const minutes = unit === '分'
+    ? amount
+    : num(get('practiceMinutes')?.value);
+
+  const note =
+    get('practiceMemo')?.value.trim() || '';
+
+  if (amount <= 0) {
+    alert('実施量または時間を入力してください。');
+    return;
+  }
+
+  if (minutes < 0 || minutes > 1440) {
+    alert('時間は0〜1440分で入力してください。');
+    return;
+  }
+
+  const xp = trainingXP(
+    menu,
+    amount,
+    minutes
+  );
+
+  const record = {
+    date,
+    name: menu[0],
+    kind: menu[1],
+    category: menu[1],
+    ability: menu[2],
+    amount,
+    unit,
+    minutes,
+    note,
+    xp,
+    createdAt: new Date().toISOString()
+  };
+
+  db.practice.push(record);
+  db.xp = num(db.xp) + xp;
+
+  addTrainingAbility(menu, xp);
+
+  if (save()) {
+    alert(
+      `${menu[0]}を記録しました！\n` +
+      `獲得XP：${xp}`
+    );
+
+    render();
+  }
+}
+
+/* ---------- 練習記録の削除 ---------- */
+
+function deletePractice(index) {
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= db.practice.length
+  ) {
+    return;
+  }
+
+  const record = db.practice[index];
+
+  const ok = confirm(
+    `${record.name}の記録を削除しますか？`
+  );
+
+  if (!ok) return;
+
+  /*
+    XPや能力値は他の記録と関連する可能性があるため、
+    ここでは自動減算しない。
+    削除時に経験値が不正に変動することを防ぐ。
+  */
+
+  db.practice.splice(index, 1);
+
+  if (save()) {
+    render();
+  }
+}
+
+/*
+ 第5回：
+ ・試合成績
+ ・投手記録
+ ・球速記録
+ ・身長・体重の成長記録
+*/
+
+/* =========================================
+   COMPLETE 2.0
+   第5回：試合・投手・球速・身体の成長
+========================================= */
+
+/* ---------- 試合成績の集計 ---------- */
+
+function gameStats() {
+  const games = arr(db.games);
+
+  const sum = key => games.reduce(
+    (total, g) => total + Math.max(0, num(g[key])),
+    0
+  );
+
+  const atBats = sum('atBats');
+  const hits = sum('hits');
+  const walks = sum('walks');
+  const hbp = sum('hbp');
+  const sacFlies = sum('sacFlies');
+
+  const avg = atBats > 0
+    ? hits / atBats
+    : null;
+
+  const obpDenominator =
+    atBats + walks + hbp + sacFlies;
+
+  const obp = obpDenominator > 0
+    ? (hits + walks + hbp) / obpDenominator
+    : null;
+
+  return {
+    games: games.length,
+    atBats,
+    hits,
+    homeRuns: sum('homeRuns'),
+    rbi: sum('rbi'),
+    walks,
+    strikeouts: sum('strikeouts'),
+    steals: sum('steals'),
+    avg,
+    obp
+  };
+}
+
+function baseballAverage(value) {
+  return value === null
+    ? '---'
+    : value.toFixed(3).replace(/^0/, '');
+}
+
+/* ---------- 試合成績画面 ---------- */
+
+function game() {
+  const s = gameStats();
+
+  const recent = [...arr(db.games)]
+    .map((g, i) => ({ ...g, index: i }))
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date))
+    )
+    .slice(0, 20);
+
+  return `
+    ${box(
+      '🏆 通算打撃成績',
+      `
+        <div class="grid">
+          ${tile('試合数', s.games, '試合')}
+          ${tile('打率', baseballAverage(s.avg))}
+          ${tile('出塁率', baseballAverage(s.obp))}
+          ${tile('安打', s.hits, '本')}
+          ${tile('本塁打', s.homeRuns, '本')}
+          ${tile('打点', s.rbi, '点')}
+          ${tile('四球', s.walks, '個')}
+          ${tile('三振', s.strikeouts, '個')}
+          ${tile('盗塁', s.steals, '個')}
+        </div>
+      `
+    )}
+
+    ${box(
+      '⚾ 試合を記録する',
+      `
+        <label>試合日</label>
+        <input type="date" id="gameDate"
+          value="${today()}">
+
+        <label>対戦相手</label>
+        <input id="gameOpponent"
+          placeholder="例：〇〇スポーツ少年団">
+
+        <div class="grid">
+          <div>
+            <label>打数</label>
+            <input type="number" id="gameAB"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>安打</label>
+            <input type="number" id="gameHits"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>本塁打</label>
+            <input type="number" id="gameHR"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>打点</label>
+            <input type="number" id="gameRBI"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>四球</label>
+            <input type="number" id="gameBB"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>死球</label>
+            <input type="number" id="gameHBP"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>犠飛</label>
+            <input type="number" id="gameSF"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>三振</label>
+            <input type="number" id="gameSO"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>盗塁</label>
+            <input type="number" id="gameSB"
+              min="0" value="0">
+          </div>
+        </div>
+
+        <label>今日のよかったプレー</label>
+        <textarea id="gameGood"
+          placeholder="結果だけでなく、よかった判断も記録"
+        ></textarea>
+
+        <label>次の試合で意識すること</label>
+        <textarea id="gameNext"></textarea>
+
+        <button class="btn full"
+          onclick="saveGame()">
+          試合成績を保存
+        </button>
+      `
+    )}
+
+    ${box(
+      '📚 試合履歴',
+      recent.length
+        ? recent.map(g => `
+          <div class="listitem">
+            <div class="row">
+              <b>
+                ${esc(g.date)}
+                ${esc(g.opponent || '')}
+              </b>
+              <button class="btn ghost"
+                onclick="deleteGame(${g.index})">
+                削除
+              </button>
+            </div>
+
+            <p>
+              ${num(g.atBats)}打数
+              ${num(g.hits)}安打
+              ${num(g.homeRuns)}本塁打
+              ${num(g.rbi)}打点
+            </p>
+
+            <p>👍 ${esc(g.good || '')}</p>
+            <p>🎯 ${esc(g.next || '')}</p>
+          </div>
+        `).join('')
+        : '<p class="muted">試合記録はまだありません。</p>'
+    )}
+  `;
+}
+
+function saveGame() {
+  const value = id =>
+    Math.max(0, Math.floor(num(get(id)?.value)));
+
+  const g = {
+    date: get('gameDate')?.value || today(),
+    opponent: get('gameOpponent')?.value.trim() || '',
+    atBats: value('gameAB'),
+    hits: value('gameHits'),
+    homeRuns: value('gameHR'),
+    rbi: value('gameRBI'),
+    walks: value('gameBB'),
+    hbp: value('gameHBP'),
+    sacFlies: value('gameSF'),
+    strikeouts: value('gameSO'),
+    steals: value('gameSB'),
+    good: get('gameGood')?.value.trim() || '',
+    next: get('gameNext')?.value.trim() || '',
+    createdAt: new Date().toISOString()
+  };
+
+  if (g.hits > g.atBats) {
+    alert('安打数が打数を超えています。');
+    return;
+  }
+
+  if (g.homeRuns > g.hits) {
+    alert('本塁打数が安打数を超えています。');
+    return;
+  }
+
+  db.games.push(g);
+
+  if (save()) {
+    alert('試合成績を保存しました！');
+    render();
+  }
+}
+
+function deleteGame(index) {
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= db.games.length
+  ) return;
+
+  if (!confirm('この試合記録を削除しますか？')) {
+    return;
+  }
+
+  db.games.splice(index, 1);
+
+  if (save()) render();
+}
+
+/* ---------- 投手成績 ---------- */
+
+function pitchingStats() {
+  const logs = arr(db.pitchlog);
+
+  const total = key => logs.reduce(
+    (sum, x) => sum + Math.max(0, num(x[key])),
+    0
+  );
+
+  const outs = total('outs');
+  const earnedRuns = total('earnedRuns');
+
+  return {
+    appearances: logs.length,
+    outs,
+    innings: Math.floor(outs / 3),
+    remainingOuts: outs % 3,
+    pitches: total('pitches'),
+    strikeouts: total('strikeouts'),
+    walks: total('walks'),
+    earnedRuns,
+    era: outs > 0
+      ? earnedRuns * 21 / outs
+      : null
+  };
+}
+
+function pitchingScreen() {
+  const s = pitchingStats();
+
+  return `
+    ${box(
+      '🔥 投手成績',
+      `
+        <div class="grid">
+          ${tile('登板数', s.appearances)}
+          ${tile(
+            '投球回',
+            s.innings + '.' + s.remainingOuts
+          )}
+          ${tile('総投球数', s.pitches)}
+          ${tile('奪三振', s.strikeouts)}
+          ${tile('与四球', s.walks)}
+          ${tile(
+            '防御率（7回制）',
+            s.era === null
+              ? '---'
+              : s.era.toFixed(2)
+          )}
+        </div>
+
+        <p class="muted">
+          防御率は7回制換算です。
+          実際の大会規定に合わせた評価が必要です。
+        </p>
+      `
+    )}
+
+    ${box(
+      '📝 登板記録',
+      `
+        <label>登板日</label>
+        <input type="date" id="pitchDate"
+          value="${today()}">
+
+        <label>対戦相手</label>
+        <input id="pitchOpponent">
+
+        <div class="grid">
+          <div>
+            <label>投球回（整数部分）</label>
+            <input type="number" id="pitchInnings"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>端数アウト（0〜2）</label>
+            <input type="number" id="pitchOuts"
+              min="0" max="2" value="0">
+          </div>
+
+          <div>
+            <label>投球数</label>
+            <input type="number" id="pitchPitches"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>奪三振</label>
+            <input type="number" id="pitchSO"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>与四球</label>
+            <input type="number" id="pitchBB"
+              min="0" value="0">
+          </div>
+
+          <div>
+            <label>自責点</label>
+            <input type="number" id="pitchER"
+              min="0" value="0">
+          </div>
+        </div>
+
+        <label>投球内容・気づき</label>
+        <textarea id="pitchMemo"></textarea>
+
+        <button class="btn full"
+          onclick="savePitching()">
+          投手成績を保存
+        </button>
+      `
+    )}
+
+    ${box(
+      '📚 登板履歴',
+      [...arr(db.pitchlog)]
+        .reverse()
+        .slice(0, 15)
+        .map(x => `
+          <div class="listitem">
+            <b>
+              ${esc(x.date)}
+              ${esc(x.opponent || '')}
+            </b>
+            <p>
+              ${Math.floor(num(x.outs) / 3)}.
+              ${num(x.outs) % 3}回
+              ／ ${num(x.pitches)}球
+              ／ ${num(x.strikeouts)}奪三振
+            </p>
+            <p>${esc(x.note || '')}</p>
+          </div>
+        `).join('') ||
+        '<p class="muted">まだ登板記録はありません。</p>'
+    )}
+  `;
+}
+
+function savePitching() {
+  const value = id =>
+    Math.max(0, Math.floor(num(get(id)?.value)));
+
+  const innings = value('pitchInnings');
+  const remainder = value('pitchOuts');
+
+  if (remainder > 2) {
+    alert('端数アウトは0〜2で入力してください。');
+    return;
+  }
+
+  const record = {
+    date: get('pitchDate')?.value || today(),
+    opponent:
+      get('pitchOpponent')?.value.trim() || '',
+    outs: innings * 3 + remainder,
+    pitches: value('pitchPitches'),
+    strikeouts: value('pitchSO'),
+    walks: value('pitchBB'),
+    earnedRuns: value('pitchER'),
+    note: get('pitchMemo')?.value.trim() || '',
+    createdAt: new Date().toISOString()
+  };
+
+  db.pitchlog.push(record);
+
+  if (save()) {
+    alert('登板記録を保存しました！');
+    render();
+  }
+}
+
+/* ---------- 球速記録 ---------- */
+
+function speedRecords() {
+  return arr(db.baseballNotebook11?.speeds);
+}
+
+function maxSpeed() {
+  const speeds = speedRecords()
+    .map(x => num(x.speed))
+    .filter(x => x > 0);
+
+  return speeds.length ? Math.max(...speeds) : null;
+}
+
+function speedScreen() {
+  const speeds = [...speedRecords()]
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date))
+    );
+
+  return `
+    ${box(
+      '🚀 球速記録',
+      `
+        <div class="grid">
+          ${tile(
+            '自己最速',
+            maxSpeed() ?? '未測定',
+            'km/h'
+          )}
+          ${tile('測定記録', speeds.length, '件')}
+        </div>
+
+        <label>測定日</label>
+        <input type="date" id="speedDate"
+          value="${today()}">
+
+        <label>球速（km/h）</label>
+        <input type="number" id="speedValue"
+          min="0" max="200" step="0.1"
+          placeholder="例：95.5">
+
+        <label>測定状況</label>
+        <select id="speedScene">
+          <option>練習</option>
+          <option>試合</option>
+          <option>自主練習</option>
+          <option>その他</option>
+        </select>
+
+        <label>メモ</label>
+        <textarea id="speedMemo"
+          placeholder="無理に球速を追わず、フォームや体調も記録"
+        ></textarea>
+
+        <button class="btn full"
+          onclick="saveSpeed()">
+          球速を記録
+        </button>
+      `
+    )}
+
+    ${box(
+      '📈 球速の履歴',
+      speeds.length
+        ? speeds.map(x => `
+          <div class="listitem">
+            <b>
+              ${esc(x.date)}
+              ／ ${esc(x.speed)} km/h
+            </b>
+            <p>
+              ${esc(x.scene || '')}
+              ${esc(x.note || '')}
+            </p>
+          </div>
+        `).join('')
+        : '<p class="muted">まだ球速記録はありません。</p>'
+    )}
+  `;
+}
+
+function saveSpeed() {
+  const speed = num(get('speedValue')?.value);
+
+  if (speed <= 0 || speed > 200) {
+    alert('球速を正しく入力してください。');
+    return;
+  }
+
+  db.baseballNotebook11.speeds.push({
+    date: get('speedDate')?.value || today(),
+    speed,
+    scene: get('speedScene')?.value || '',
+    note: get('speedMemo')?.value.trim() || '',
+    createdAt: new Date().toISOString()
+  });
+
+  if (save()) {
+    alert('球速を記録しました！');
+    render();
+  }
+}
+
+/* ---------- 身長・体重の成長記録 ---------- */
+
+function growth() {
+  const records = [...arr(db.growth)]
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date))
+    );
+
+  return `
+    ${box(
+      '📏 身体の成長',
+      `
+        <div class="grid">
+          ${tile(
+            '最新身長',
+            latest('height') ?? '未登録',
+            'cm'
+          )}
+          ${tile(
+            '最新体重',
+            latest('weight') ?? '未登録',
+            'kg'
+          )}
+          ${tile('測定回数', records.length, '回')}
+        </div>
+
+        <label>測定日</label>
+        <input type="date" id="growthDate"
+          value="${today()}">
+
+        <label>身長（cm）</label>
+        <input type="number" id="growthHeight"
+          min="50" max="250" step="0.1"
+          placeholder="例：145.0">
+
+        <label>体重（kg）</label>
+        <input type="number" id="growthWeight"
+          min="10" max="200" step="0.1"
+          placeholder="例：56.0">
+
+        <label>睡眠時間（時間・任意）</label>
+        <input type="number" id="growthSleep"
+          min="0" max="24" step="0.5"
+          placeholder="例：9">
+
+        <label>体調・食事・気づき</label>
+        <textarea id="growthMemo"></textarea>
+
+        <button class="btn full"
+          onclick="saveGrowth()">
+          成長記録を保存
+        </button>
+      `
+    )}
+
+    ${box(
+      '📚 成長の履歴',
+      records.length
+        ? records.map(x => `
+          <div class="listitem">
+            <b>${esc(x.date)}</b>
+            <p>
+              身長：${esc(x.height || '---')} cm
+              ／
+              体重：${esc(x.weight || '---')} kg
+            </p>
+            <p>
+              睡眠：${esc(x.sleep || '---')} 時間
+            </p>
+            <p>${esc(x.note || '')}</p>
+          </div>
+        `).join('')
+        : '<p class="muted">成長記録はまだありません。</p>'
+    )}
+  `;
+}
+
+function saveGrowth() {
+  const height = num(get('growthHeight')?.value);
+  const weight = num(get('growthWeight')?.value);
+  const sleep = num(get('growthSleep')?.value);
+
+  if (height <= 0 && weight <= 0) {
+    alert('身長または体重を入力してください。');
+    return;
+  }
+
+  if (
+    (height && (height < 50 || height > 250)) ||
+    (weight && (weight < 10 || weight > 200)) ||
+    sleep < 0 ||
+    sleep > 24
+  ) {
+    alert('測定値を確認してください。');
+    return;
+  }
+
+  db.growth.push({
+    date: get('growthDate')?.value || today(),
+    height: height || null,
+    weight: weight || null,
+    sleep: sleep || null,
+    note: get('growthMemo')?.value.trim() || '',
+    createdAt: new Date().toISOString()
+  });
+
+  if (save()) {
+    alert('成長記録を保存しました！');
+    render();
+  }
+}
+
+/*
+ 第6回：
+ ・野球ノート
+ ・編集・追記・削除
+ ・深掘り質問
+ ・練習予定と休養管理
+*/
+
+/* =========================================
+   COMPLETE 2.0
+   第6回：野球ノート完全統合
+========================================= */
+
+/* ---------- ノートのカテゴリー ---------- */
+
+const NOTE_CATEGORIES = [
+  '打撃',
+  '投球',
+  '捕球',
+  '送球',
+  '守備',
+  'カバー',
+  '走塁',
+  'メンタル',
+  '身体'
+];
+
+const NOTE_SCENES = [
+  'チーム練習',
+  '自主練習',
+  '練習試合',
+  '公式戦',
+  '動画研究',
+  '休養日',
+  'その他'
+];
+
+const NOTE_RATINGS = [
+  '◎ とてもよかった',
+  '○ よかった',
+  '△ 課題が残った',
+  '× うまくできなかった'
+];
+
+/* ---------- カテゴリー別の深掘り質問 ---------- */
+
+const DEEP_QUESTIONS = {
+  '打撃': [
+    {
+      question: '打席で一番意識したことは？',
+      options: [
+        'タイミング',
+        'ボールの見極め',
+        'スイング軌道',
+        '強く振り切る',
+        'その他'
+      ]
+    },
+    {
+      question: 'うまくいった理由・課題は？',
+      options: [
+        '準備がよかった',
+        '狙い球を決められた',
+        '身体の使い方',
+        'タイミングが合わなかった',
+        'まだ分からない'
+      ]
+    },
+    {
+      question: '次に挑戦することは？',
+      options: [
+        '打席前の準備',
+        '狙い球の整理',
+        'ミートポイント',
+        'スイングの再確認',
+        'その他'
+      ]
+    }
+  ],
+
+  '投球': [
+    {
+      question: '投球で意識したことは？',
+      options: [
+        'コントロール',
+        'フォーム',
+        'テンポ',
+        '配球',
+        '力まず投げる'
+      ]
+    },
+    {
+      question: '今日の投球をどう感じた？',
+      options: [
+        '狙った場所に投げられた',
+        'フォームが安定した',
+        '力みがあった',
+        '球がばらついた',
+        'その他'
+      ]
+    },
+    {
+      question: '次に改善することは？',
+      options: [
+        '投球前の準備',
+        'フォーム確認',
+        '配球の考え方',
+        '守備との連携',
+        '身体の状態を優先'
+      ]
+    }
+  ],
+
+  '守備': [
+    {
+      question: '守備で一番意識したことは？',
+      options: [
+        '一歩目',
+        '捕球姿勢',
+        '送球',
+        '打球判断',
+        '声かけ'
+      ]
+    },
+    {
+      question: 'プレーの結果は？',
+      options: [
+        '落ち着いてできた',
+        '判断がよかった',
+        '捕球に課題があった',
+        '送球に課題があった',
+        'その他'
+      ]
+    },
+    {
+      question: '次に意識することは？',
+      options: [
+        '準備姿勢',
+        '一歩目の反応',
+        '捕球から送球',
+        '状況判断',
+        'その他'
+      ]
+    }
+  ],
+
+  '走塁': [
+    {
+      question: '走塁で意識したことは？',
+      options: [
+        'スタート',
+        'リード',
+        '打球判断',
+        'ベースの回り方',
+        '次の塁を狙う判断'
+      ]
+    },
+    {
+      question: '判断はどうだった？',
+      options: [
+        'よく判断できた',
+        '少し迷った',
+        'スタートが遅れた',
+        '周りを確認できなかった',
+        'その他'
+      ]
+    },
+    {
+      question: '次に改善することは？',
+      options: [
+        '事前の状況確認',
+        'スタートの準備',
+        'コーチャーの確認',
+        '積極的な判断',
+        'その他'
+      ]
+    }
+  ],
+
+  'メンタル': [
+    {
+      question: '今日の気持ちは？',
+      options: [
+        '自信があった',
+        '集中できた',
+        '緊張した',
+        '悔しかった',
+        '楽しかった'
+      ]
+    },
+    {
+      question: '気持ちに影響したことは？',
+      options: [
+        '成功したプレー',
+        '失敗したプレー',
+        '仲間の声',
+        '試合の状況',
+        'その他'
+      ]
+    },
+    {
+      question: '次に意識することは？',
+      options: [
+        '切り替えを早くする',
+        '自分の準備に集中する',
+        '仲間に声をかける',
+        '結果より行動を大切にする',
+        'その他'
+      ]
+    }
+  ],
+
+  '身体': [
+    {
+      question: '今日の身体の状態は？',
+      options: [
+        '調子がよい',
+        '普通',
+        '少し疲れている',
+        '身体が重い',
+        '痛みや違和感がある'
+      ]
+    },
+    {
+      question: '身体ケアで意識したことは？',
+      options: [
+        'ストレッチ',
+        '姿勢',
+        '休息',
+        '水分補給',
+        '身体の状態の確認'
+      ]
+    },
+    {
+      question: '明日のために大切なことは？',
+      options: [
+        'しっかり休む',
+        '睡眠を確保する',
+        '無理をしない',
+        '身体の状態を相談する',
+        'その他'
+      ]
+    }
+  ]
+};
+
+/*
+ 捕球・送球・カバーは
+ 守備の質問を基本として使用する。
+*/
+
+function noteQuestions(category) {
+  if (
+    ['捕球', '送球', 'カバー'].includes(category)
+  ) {
+    return DEEP_QUESTIONS['守備'];
+  }
+
+  return DEEP_QUESTIONS[category] ||
+    DEEP_QUESTIONS['メンタル'];
+}
+
+/* ---------- ノート保存先 ---------- */
+
+function noteRecords() {
+  if (!db.baseballNotebook11) {
+    db.baseballNotebook11 = {
+      notes: [],
+      speeds: []
+    };
+  }
+
+  if (!Array.isArray(db.baseballNotebook11.notes)) {
+    db.baseballNotebook11.notes = [];
+  }
+
+  return db.baseballNotebook11.notes;
+}
+
+/* ---------- 野球ノート入力画面 ---------- */
+
+function notebook() {
+  const notes = noteRecords();
+
+  const history = notes
+    .map((n, i) => ({ n, i }))
+    .reverse();
+
+  return `
+    ${box(
+      '📓 今日の野球ノート',
+      `
+        <div class="notice">
+          昨日よりも今日、今日より明日！
+          自分に勝つ！
+          <br>
+          今日の気づきを、明日の成長につなげよう。
+        </div>
+
+        <label>日付</label>
+        <input
+          type="date"
+          id="noteDate"
+          value="${today()}"
+        >
+
+        <label>場面</label>
+        <select id="noteScene">
+          ${NOTE_SCENES.map(x => `
+            <option>${esc(x)}</option>
+          `).join('')}
+        </select>
+
+        <label>場所</label>
+        <input
+          id="notePlace"
+          placeholder="例：学校グラウンド"
+        >
+
+        <label>天気</label>
+        <select id="noteWeather">
+          <option>晴れ</option>
+          <option>曇り</option>
+          <option>雨</option>
+          <option>その他</option>
+        </select>
+
+        <label>今日の体調</label>
+        <select id="noteCondition">
+          <option>とてもよい</option>
+          <option>よい</option>
+          <option>普通</option>
+          <option>少し疲れている</option>
+          <option>痛み・違和感がある</option>
+        </select>
+
+        <label>カテゴリー</label>
+        <select id="noteCategory">
+          ${NOTE_CATEGORIES.map(x => `
+            <option>${esc(x)}</option>
+          `).join('')}
+        </select>
+
+        <label>今日の目標</label>
+        <textarea
+          id="noteGoal"
+          placeholder="今日は何を意識する？"
+        ></textarea>
+
+        <label>練習・試合の内容</label>
+        <textarea
+          id="noteContent"
+          placeholder="何をした？ 何が起きた？"
+        ></textarea>
+
+        <label>今日の自己評価</label>
+        <select id="noteRating">
+          ${NOTE_RATINGS.map(x => `
+            <option>${esc(x)}</option>
+          `).join('')}
+        </select>
+
+        <label>特に意識したこと</label>
+        <textarea id="noteFocus"></textarea>
+
+        <label>その結果どうなった？</label>
+        <textarea id="noteResult"></textarea>
+
+        <label>よかったこと</label>
+        <textarea id="noteGood"></textarea>
+
+        <label>改善したいこと</label>
+        <textarea id="noteImprove"></textarea>
+
+        <label>次に挑戦すること</label>
+        <textarea id="noteNext"></textarea>
+
+        <button
+          class="btn full"
+          onclick="saveNotebook()"
+        >
+          📓 野球ノートを保存
+        </button>
+      `
+    )}
+
+    ${box(
+      '📚 これまでの野球ノート',
+      history.length
+        ? history.map(({ n, i }) =>
+            notebookCard(n, i)
+          ).join('')
+        : `
+          <p class="muted">
+            まだノートはありません。
+            今日の気づきを最初の1ページにしよう！
+          </p>
+        `
+    )}
+  `;
+}
+
+/* ---------- ノートの表示 ---------- */
+
+function notebookCard(n, index) {
+  const additions = arr(n.additions);
+  const deepDives = arr(n.deepDives);
+
+  return `
+    <div class="listitem">
+      <b>
+        📅 ${esc(n.date || '')}
+        ／ ${esc(n.category || '')}
+      </b>
+
+      <p>
+        ${esc(n.scene || '')}
+        ${esc(n.place || '')}
+      </p>
+
+      <p>🎯 目標：${esc(n.goal || '')}</p>
+
+      <p>
+        ⚾ 内容：${esc(n.content || '')}
+      </p>
+
+      <p>
+        ⭐ 自己評価：${esc(n.rating || '')}
+      </p>
+
+      <p>
+        👍 よかったこと：${esc(n.good || '')}
+      </p>
+
+      <p>
+        🔧 改善点：${esc(n.improve || '')}
+      </p>
+
+      <p>
+        🚀 次の挑戦：${esc(n.next || '')}
+      </p>
+
+      ${
+        additions.length
+          ? `
+            <h3>📝 追記</h3>
+            ${additions.map(a => `
+              <p>
+                ${esc(a.date || '')}：
+                ${esc(a.text || '')}
+              </p>
+            `).join('')}
+          `
+          : ''
+      }
+
+      ${
+        deepDives.length
+          ? `
+            <h3>🔍 深掘りした記録</h3>
+            ${deepDives.map(d => `
+              <div class="card">
+                <b>
+                  ${esc(d.date || '')}
+                  ／ ${esc(d.category || '')}
+                </b>
+
+                ${arr(d.questions).map(
+                  (q, i) => `
+                    <p>
+                      <b>${esc(q)}</b><br>
+                      ${esc(arr(d.answers)[i] || '')}
+                    </p>
+                  `
+                ).join('')}
+              </div>
+            `).join('')}
+          `
+          : ''
+      }
+
+      <div style="
+        display:flex;
+        flex-wrap:wrap;
+        gap:6px;
+        margin-top:10px;
+      ">
+        <button class="btn ghost"
+          onclick="editNotebook(${index})">
+          ✏️ 編集
+        </button>
+
+        <button class="btn ghost"
+          onclick="appendNotebook(${index})">
+          📝 追記
+        </button>
+
+        <button class="btn blue"
+          onclick="startDeepDive(${index})">
+          🔍 深掘り
+        </button>
+
+        <button class="btn ghost"
+          onclick="copyNotebook(${index})">
+          📋 コピー
+        </button>
+
+        <button class="btn ghost"
+          onclick="deleteNotebook(${index})">
+          🗑️ 削除
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- ノート新規保存 ---------- */
+
+function saveNotebook() {
+  const value = id =>
+    get(id)?.value.trim() || '';
+
+  const record = {
+    date: value('noteDate') || today(),
+    scene: value('noteScene'),
+    place: value('notePlace'),
+    weather: value('noteWeather'),
+    condition: value('noteCondition'),
+    category: value('noteCategory'),
+    goal: value('noteGoal'),
+    content: value('noteContent'),
+    rating: value('noteRating'),
+    focus: value('noteFocus'),
+    result: value('noteResult'),
+    good: value('noteGood'),
+    improve: value('noteImprove'),
+    next: value('noteNext'),
+    additions: [],
+    deepDives: [],
+    createdAt: new Date().toISOString()
+  };
+
+  if (
+    !record.goal &&
+    !record.content &&
+    !record.good &&
+    !record.next
+  ) {
+    alert('ノートの内容を入力してください。');
+    return;
+  }
+
+  noteRecords().push(record);
+
+  if (save()) {
+    alert('野球ノートを保存しました！');
+    render();
+  }
+}
+
+/* ---------- ノート編集 ---------- */
+
+function editNotebook(index) {
+  const n = noteRecords()[index];
+
+  if (!n) return;
+
+  const fields = [
+    ['goal', '今日の目標'],
+    ['content', '練習・試合の内容'],
+    ['focus', '意識したこと'],
+    ['result', '結果'],
+    ['good', 'よかったこと'],
+    ['improve', '改善点'],
+    ['next', '次に挑戦すること']
+  ];
+
+  const changes = {};
+
+  for (const [key, label] of fields) {
+    const answer = prompt(
+      label,
+      n[key] || ''
+    );
+
+    if (answer === null) {
+      return;
+    }
+
+    changes[key] = answer.trim();
+  }
+
+  Object.assign(n, changes);
+
+  if (save()) {
+    render();
+  }
+}
+
+/* ---------- ノート追記 ---------- */
+
+function appendNotebook(index) {
+  const n = noteRecords()[index];
+
+  if (!n) return;
+
+  const text = prompt(
+    'このノートに追記する内容を入力してください。'
+  );
+
+  if (!text || !text.trim()) {
+    return;
+  }
+
+  if (!Array.isArray(n.additions)) {
+    n.additions = [];
+  }
+
+  n.additions.push({
+    date: today(),
+    text: text.trim()
+  });
+
+  if (save()) {
+    render();
+  }
+}
+
+/* ---------- ノート削除 ---------- */
+
+function deleteNotebook(index) {
+  const notes = noteRecords();
+
+  if (!notes[index]) return;
+
+  if (!confirm(
+    'この野球ノートを削除しますか？\n' +
+    '削除した記録は元に戻せません。'
+  )) {
+    return;
+  }
+
+  notes.splice(index, 1);
+
+  if (save()) {
+    render();
+  }
+}
+
+/* ---------- ノートのコピー ---------- */
+
+function notebookText(n) {
+  const lines = [
+    '⚾ 駿介 野球ノート',
+    `日付：${n.date || ''}`,
+    `場面：${n.scene || ''}`,
+    `カテゴリー：${n.category || ''}`,
+    `目標：${n.goal || ''}`,
+    `内容：${n.content || ''}`,
+    `自己評価：${n.rating || ''}`,
+    `意識したこと：${n.focus || ''}`,
+    `結果：${n.result || ''}`,
+    `よかったこと：${n.good || ''}`,
+    `改善点：${n.improve || ''}`,
+    `次の挑戦：${n.next || ''}`
+  ];
+
+  arr(n.additions).forEach(a => {
+    lines.push(
+      `追記（${a.date || ''}）：${a.text || ''}`
+    );
+  });
+
+  arr(n.deepDives).forEach(d => {
+    lines.push(
+      `深掘り（${d.date || ''}）`
+    );
+
+    arr(d.questions).forEach((q, i) => {
+      lines.push(
+        `${q}：${arr(d.answers)[i] || ''}`
+      );
+    });
+  });
+
+  return lines.join('\n');
+}
+
+async function copyNotebook(index) {
+  const n = noteRecords()[index];
+
+  if (!n) return;
+
+  const text = notebookText(n);
+
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('ノートをコピーしました！');
+  } catch {
+    prompt(
+      '以下を長押ししてコピーしてください。',
+      text
+    );
+  }
+}
+
+/* ---------- 深掘り質問の状態 ---------- */
+
+let deepDiveState = null;
+
+function startDeepDive(index) {
+  const n = noteRecords()[index];
+
+  if (!n) return;
+
+  deepDiveState = {
+    index,
+    category: n.category || 'メンタル',
+    step: 0,
+    answers: [],
+    freeAnswers: []
+  };
+
+  showDeepDive();
+}
+
+/* ---------- 深掘り画面 ---------- */
+
+function showDeepDive() {
+  if (!deepDiveState) return;
+
+  const state = deepDiveState;
+
+  const questions = noteQuestions(
+    state.category
+  );
+
+  const q = questions[state.step];
+
+  if (!q) return;
+
+  let overlay = get('deepDiveOverlay');
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'deepDiveOverlay';
+
+    overlay.style.cssText = `
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      background:rgba(0,10,30,.82);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:15px;
+    `;
+
+    document.body.appendChild(overlay);
+  }
+
+  overlay.innerHTML = `
+    <div style="
+      background:white;
+      color:#14274b;
+      border-radius:18px;
+      padding:18px;
+      width:100%;
+      max-width:520px;
+      max-height:90vh;
+      overflow:auto;
+    ">
+      <h2>
+        🔍 深掘り
+        ${state.step + 1} / ${questions.length}
+      </h2>
+
+      <h3>${esc(q.question)}</h3>
+
+      ${q.options.map((option, i) => `
+        <label class="choice"
+          style="
+            border:1px solid #cbdcf0;
+            padding:10px;
+            border-radius:9px;
+            margin-bottom:7px;
+          ">
+          <input
+            type="radio"
+            name="deepAnswer"
+            value="${i}"
+            ${
+              state.answers[state.step] === option
+                ? 'checked'
+                : ''
+            }
+          >
+          ${esc(option)}
+        </label>
+      `).join('')}
+
+      <label>自分の言葉で詳しく書く（任意）</label>
+
+      <textarea id="deepFree"
+        placeholder="なぜそう思った？"
+      >${esc(
+        state.freeAnswers[state.step] || ''
+      )}</textarea>
+
+      <div style="
+        display:flex;
+        gap:8px;
+        margin-top:12px;
+      ">
+        <button class="btn ghost"
+          onclick="closeDeepDive()">
+          中止
+        </button>
+
+        ${
+          state.step > 0
+            ? `
+              <button class="btn ghost"
+                onclick="previousDeepDive()">
+                戻る
+              </button>
+            `
+            : ''
+        }
+
+        <button class="btn blue"
+          onclick="nextDeepDive()">
+          ${
+            state.step === questions.length - 1
+              ? '保存'
+              : '次へ'
+          }
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- 回答の取得 ---------- */
+
+function captureDeepAnswer() {
+  if (!deepDiveState) return false;
+
+  const selected = document.querySelector(
+    'input[name="deepAnswer"]:checked'
+  );
+
+  if (!selected) {
+    alert('選択肢を一つ選んでください。');
+    return false;
+  }
+
+  const state = deepDiveState;
+
+  const q = noteQuestions(
+    state.category
+  )[state.step];
+
+  state.answers[state.step] =
+    q.options[Number(selected.value)];
+
+  state.freeAnswers[state.step] =
+    get('deepFree')?.value.trim() || '';
+
+  return true;
+}
+
+/* ---------- 次の質問 ---------- */
+
+function nextDeepDive() {
+  if (!deepDiveState) return;
+
+  if (!captureDeepAnswer()) {
+    return;
+  }
+
+  const state = deepDiveState;
+
+  const questions = noteQuestions(
+    state.category
+  );
+
+  if (state.step < questions.length - 1) {
+    state.step++;
+    showDeepDive();
+    return;
+  }
+
+  saveDeepDive();
+}
+
+/* ---------- 前の質問 ---------- */
+
+function previousDeepDive() {
+  if (!deepDiveState) return;
+
+  if (deepDiveState.step > 0) {
+    deepDiveState.step--;
+    showDeepDive();
+  }
+}
+
+/* ---------- 深掘り保存 ---------- */
+
+function saveDeepDive() {
+  if (!deepDiveState) return;
+
+  const state = deepDiveState;
+  const n = noteRecords()[state.index];
+
+  if (!n) {
+    closeDeepDive();
+    return;
+  }
+
+  const questions = noteQuestions(
+    state.category
+  );
+
+  const answers = questions.map((q, i) => {
+    const selected = state.answers[i] || '';
+    const free = state.freeAnswers[i] || '';
+
+    return free
+      ? `${selected}／${free}`
+      : selected;
+  });
+
+  if (!Array.isArray(n.deepDives)) {
+    n.deepDives = [];
+  }
+
+  n.deepDives.push({
+    date: today(),
+    category: state.category,
+    questions: questions.map(q => q.question),
+    answers
+  });
+
+  if (save()) {
+    closeDeepDive();
+    render();
+  }
+}
+
+/* ---------- 深掘り画面を閉じる ---------- */
+
+function closeDeepDive() {
+  get('deepDiveOverlay')?.remove();
+  deepDiveState = null;
+}
+
+/*
+ 第7回：
+ ・週間予定
+ ・休養管理
+ ・疲労・痛みの確認
+ ・振り返り
+ ・データバックアップ
+ ・画面切り替えと起動処理
+*/
+
+/* =========================================
+   COMPLETE 2.0
+   第7回：予定・休養・振り返り・起動
+========================================= */
+
+/* ---------- 週間予定 ---------- */
+
+const WEEK_DAYS = [
+  '月曜日',
+  '火曜日',
+  '水曜日',
+  '木曜日',
+  '金曜日',
+  '土曜日',
+  '日曜日'
+];
+
+const PLAN_TYPES = [
+  '休養',
+  'チーム練習',
+  '自主練習',
+  '試合',
+  '身体ケア',
+  '自主学習',
+  'その他'
+];
+
+function plan() {
+  const schedule = arr(db.week);
+
+  const restDays = schedule.filter(
+    x => x === '休養'
+  ).length;
+
+  return `
+    ${box(
+      '📅 1週間の予定',
+      `
+        <div class="grid">
+          ${tile('休養予定', restDays, '日')}
+          ${tile(
+            '練習・試合予定',
+            schedule.filter(
+              x => [
+                'チーム練習',
+                '自主練習',
+                '試合'
+              ].includes(x)
+            ).length,
+            '日'
+          )}
+        </div>
+
+        <p class="muted">
+          予定はいつでも変更できます。
+          身体の状態を優先しましょう。
+        </p>
+
+        ${WEEK_DAYS.map((day, i) => `
+          <div class="day">
+            <b>${day}</b>
+
+            <select id="weekPlan${i}">
+              ${PLAN_TYPES.map(type => `
+                <option value="${esc(type)}"
+                  ${
+                    schedule[i] === type
+                      ? 'selected'
+                      : ''
+                  }>
+                  ${esc(type)}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+        `).join('')}
+
+        <button class="btn full"
+          onclick="saveWeekPlan()">
+          📅 週間予定を保存
+        </button>
+      `
+    )}
+
+    ${restPanel()}
+
+    ${box(
+      '🎯 予定を立てるときの考え方',
+      `
+        <p>
+          練習の量だけでなく、
+          学校生活、睡眠、疲労、
+          身体の状態も考えて予定を決めよう。
+        </p>
+
+        <div class="notice">
+          休養日はサボりではありません。
+          身体を回復させる大切な時間です。
+        </div>
+      `
+    )}
+  `;
+}
+
+function saveWeekPlan() {
+  const schedule = WEEK_DAYS.map(
+    (_, i) =>
+      get(`weekPlan${i}`)?.value || '休養'
+  );
+
+  db.week = schedule;
+
+  if (save()) {
+    alert('週間予定を保存しました！');
+    render();
+  }
+}
+
+/* ---------- 休養・体調管理 ---------- */
+
+function restRecords() {
+  if (!Array.isArray(db.restRecords2)) {
+    db.restRecords2 = [];
+  }
+
+  return db.restRecords2;
+}
+
+function restPanel() {
+  const records = restRecords();
+
+  const recent = [...records]
+    .sort(
+      (a, b) =>
+        String(b.date).localeCompare(String(a.date))
+    )
+    .slice(0, 10);
+
+  return box(
+    '💚 休養・コンディション管理',
+    `
+      <p class="muted">
+        睡眠と休養は練習メニューとは分けて管理します。
+      </p>
+
+      <label>記録日</label>
+      <input type="date" id="restDate"
+        value="${today()}">
+
+      <label>睡眠時間（時間）</label>
+      <input type="number" id="restSleep"
+        min="0" max="24" step="0.5"
+        placeholder="例：9">
+
+      <label>疲労感</label>
+      <select id="restFatigue">
+        <option>疲れなし</option>
+        <option>少し疲れている</option>
+        <option>疲れている</option>
+        <option>かなり疲れている</option>
+      </select>
+
+      <label>痛み・違和感</label>
+      <select id="restPain">
+        <option value="なし">なし</option>
+        <option value="あり">あり</option>
+      </select>
+
+      <label>今日の身体の状態・メモ</label>
+      <textarea id="restMemo"
+        placeholder="疲れた場所や気になることを記録"
+      ></textarea>
+
+      <button class="btn blue full"
+        onclick="saveRestRecord()">
+        💚 コンディションを保存
+      </button>
+
+      <h3>最近のコンディション</h3>
+
+      ${
+        recent.length
+          ? recent.map(r => `
+            <div class="listitem">
+              <b>${esc(r.date)}</b>
+
+              <p>
+                睡眠：${esc(r.sleep ?? '---')}時間
+                ／ 疲労：${esc(r.fatigue)}
+              </p>
+
+              <p>
+                痛み・違和感：
+                ${esc(r.pain)}
+              </p>
+
+              <p>${esc(r.note || '')}</p>
+            </div>
+          `).join('')
+          : '<p class="muted">まだ記録はありません。</p>'
+      }
+    `
+  );
+}
+
+function saveRestRecord() {
+  const sleepRaw = get('restSleep')?.value || '';
+  const sleep = sleepRaw === ''
+    ? null
+    : num(sleepRaw);
+
+  if (
+    sleep !== null &&
+    (sleep < 0 || sleep > 24)
+  ) {
+    alert('睡眠時間を確認してください。');
+    return;
+  }
+
+  const record = {
+    date: get('restDate')?.value || today(),
+    sleep,
+    fatigue:
+      get('restFatigue')?.value || '疲れなし',
+    pain:
+      get('restPain')?.value || 'なし',
+    note:
+      get('restMemo')?.value.trim() || '',
+    createdAt: new Date().toISOString()
+  };
+
+  restRecords().push(record);
+
+  db.pain = record.pain === 'あり';
+
+  if (save()) {
+    if (db.pain) {
+      alert(
+        '記録しました。\n' +
+        '痛みがある場合は練習を控え、' +
+        '保護者や医療者に相談してください。'
+      );
+    } else {
+      alert('コンディションを保存しました！');
+    }
+
+    render();
+  }
+}
+
+/* ---------- 振り返り ---------- */
+
+function reflectionRecords() {
+  db.reflections = arr(db.reflections);
+  return db.reflections;
+}
+
+function reflection() {
+  const records = reflectionRecords();
+
+  return `
+    ${box(
+      '🧠 今日の振り返り',
+      `
+        <label>日付</label>
+        <input type="date" id="reflectionDate"
+          value="${today()}">
+
+        <label>今日できたこと</label>
+        <textarea id="reflectionGood"
+          placeholder="小さな成長でもOK！"
+        ></textarea>
+
+        <label>難しかったこと</label>
+        <textarea id="reflectionHard"></textarea>
+
+        <label>次に挑戦すること</label>
+        <textarea id="reflectionNext"></textarea>
+
+        <label>今日の満足度</label>
+        <select id="reflectionRating">
+          <option>5 とても満足</option>
+          <option>4 満足</option>
+          <option>3 普通</option>
+          <option>2 少し悔しい</option>
+          <option>1 悔しい</option>
+        </select>
+
+        <button class="btn full"
+          onclick="saveReflection()">
+          振り返りを保存
+        </button>
+      `
+    )}
+
+    ${box(
+      '📚 振り返り履歴',
+      [...records]
+        .reverse()
+        .slice(0, 20)
+        .map(x => `
+          <div class="listitem">
+            <b>${esc(x.date)}</b>
+
+            <p>👍 ${esc(x.good || '')}</p>
+            <p>🔧 ${esc(x.hard || '')}</p>
+            <p>🚀 ${esc(x.next || '')}</p>
+
+            <p class="muted">
+              ${esc(x.rating || '')}
+            </p>
+          </div>
+        `).join('') ||
+        '<p class="muted">まだ振り返りはありません。</p>'
+    )}
+  `;
+}
+
+function saveReflection() {
+  const record = {
+    date:
+      get('reflectionDate')?.value || today(),
+    good:
+      get('reflectionGood')?.value.trim() || '',
+    hard:
+      get('reflectionHard')?.value.trim() || '',
+    next:
+      get('reflectionNext')?.value.trim() || '',
+    rating:
+      get('reflectionRating')?.value || '',
+    createdAt: new Date().toISOString()
+  };
+
+  if (
+    !record.good &&
+    !record.hard &&
+    !record.next
+  ) {
+    alert('振り返りの内容を入力してください。');
+    return;
+  }
+
+  reflectionRecords().push(record);
+
+  if (save()) {
+    alert('振り返りを保存しました！');
+    render();
+  }
+}
+
+/* ---------- データのバックアップ ---------- */
+
+function exportData() {
+  const text = JSON.stringify(
+    {
+      app: 'SHUNSUKE_BASEBALL_SUCCESS',
+      exportedAt: new Date().toISOString(),
+      data: db
+    },
+    null,
+    2
+  );
+
+  const blob = new Blob(
+    [text],
+    { type: 'application/json;charset=utf-8' }
+  );
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = `shunsuke-backup-${today()}.json`;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(
+    () => URL.revokeObjectURL(url),
+    1000
+  );
+}
+
+/* ---------- バックアップの復元 ---------- */
+
+function importData() {
+  const file = get('importFile')?.files?.[0];
+
+  if (!file) {
+    alert('バックアップファイルを選択してください。');
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+
+      if (
+        parsed.app !==
+        'SHUNSUKE_BASEBALL_SUCCESS'
+      ) {
+        throw new Error('形式が異なります');
+      }
+
+      if (
+        !parsed.data ||
+        typeof parsed.data !== 'object'
+      ) {
+        throw new Error('データがありません');
+      }
+
+      const ok = confirm(
+        'バックアップを復元しますか？\n' +
+        '現在の統合版データが置き換わります。'
+      );
+
+      if (!ok) return;
+
+      const restored = normalize(parsed.data);
+      const previous = db;
+
+      db = restored;
+
+      if (!save()) {
+        db = previous;
+        return;
+      }
+
+      alert('データを復元しました！');
+      render();
+
+    } catch {
+      alert(
+        'バックアップを読み込めませんでした。'
+      );
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+/* ---------- 設定画面 ---------- */
+
+function settings() {
+  return `
+    ${box(
+      '⚙️ アプリ設定',
+      `
+        <label>選手名</label>
+        <input id="settingsName"
+          value="${esc(db.name || '駿介')}">
+
+        <label>投打</label>
+        <select id="settingsHand">
+          ${[
+            '右投右打',
+            '右投左打',
+            '左投左打',
+            '左投右打'
+          ].map(x => `
+            <option
+              ${db.hand === x ? 'selected' : ''}>
+              ${x}
+            </option>
+          `).join('')}
+        </select>
+
+        <label>お父さんからのメッセージ</label>
+        <textarea id="settingsFather"
+        >${esc(db.father || '')}</textarea>
+
+        <button class="btn full"
+          onclick="saveSettings()">
+          設定を保存
+        </button>
+      `
+    )}
+
+    ${box(
+      '🛡️ データの保護',
+      `
+        <p>
+          大切な記録を守るため、
+          定期的にバックアップを作成してください。
+        </p>
+
+        <button class="btn blue full"
+          onclick="exportData()">
+          バックアップを書き出す
+        </button>
+
+        <h3>バックアップから復元</h3>
+
+        <input
+          type="file"
+          id="importFile"
+          accept=".json,application/json"
+        >
+
+        <button class="btn ghost full"
+          onclick="importData()">
+          バックアップを読み込む
+        </button>
+
+        <div class="notice">
+          このアプリの記録は、
+          基本的に使用端末のブラウザ内に保存されます。
+          GitHubに公開しただけでは、
+          iPhoneとiPadの記録は自動共有されません。
+        </div>
+      `
+    )}
+  `;
+}
+
+function saveSettings() {
+  db.name =
+    get('settingsName')?.value.trim() ||
+    '駿介';
+
+  db.hand =
+    get('settingsHand')?.value ||
+    '右投右打';
+
+  db.father =
+    get('settingsFather')?.value.trim() || '';
+
+  if (save()) {
+    render();
+  }
+}
+
+/* ---------- 画面一覧 ---------- */
+
+const TABS = [
+  ['home', '🏠 ホーム'],
+  ['profile', '👤 選手'],
+  ['training', '⚾ 練習'],
+  ['notebook', '📓 野球ノート'],
+  ['game', '🏆 試合'],
+  ['pitching', '🔥 投手'],
+  ['speed', '🚀 球速'],
+  ['growth', '📏 成長'],
+  ['plan', '📅 週間予定'],
+  ['reflection', '🧠 振り返り'],
+  ['settings', '⚙️ 設定']
+];
+
+const SCREENS = {
+  home,
+  profile,
+  training,
+  notebook,
+  game,
+  pitching: pitchingScreen,
+  speed: speedScreen,
+  growth,
+  plan,
+  reflection,
+  settings
+};
+
+/* ---------- 画面切り替え ---------- */
+
+let tab = 'home';
+
+function go(next) {
+  if (!SCREENS[next]) {
+    next = 'home';
+  }
+
+  tab = next;
+  render();
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+/* ---------- 画面描画 ---------- */
+
+function render() {
+  const nav = get('nav');
+  const view = get('view');
+
+  if (!nav || !view) {
+    return;
+  }
+
+  nav.innerHTML = TABS.map(
+    ([id, label]) => `
+      <button
+        class="${tab === id ? 'active' : ''}"
+        onclick="go('${id}')"
+      >
+        ${label}
+      </button>
+    `
+  ).join('');
+
+  const screen = SCREENS[tab] || home;
+
+  view.innerHTML = screen();
+
+  if (tab === 'training') {
+    updatePracticeFields();
+  }
+}
+
+/* ---------- アプリ起動 ---------- */
+
+render();
+</script>
+</body>
+</html>
