@@ -11008,5 +11008,327 @@ render();
 </script>
 <!-- ===== 第13弾 終了 ===== -->
 
+<!-- ===== 第14弾：身体ケア時間の正確な集計 ===== -->
+<style>
+.s14-care{
+  margin:12px 0;
+  padding:16px;
+  border:2px solid #65bd94;
+  border-radius:14px;
+  background:#eafaf1;
+  color:#174a38;
+}
+.s14-care h3{
+  margin:0 0 12px;
+  color:#176744;
+}
+.s14-care-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.s14-care-stat{
+  padding:13px;
+  border-radius:11px;
+  background:white;
+  text-align:center;
+}
+.s14-care-stat strong{
+  display:block;
+  font-size:25px;
+  color:#148153;
+  margin-top:5px;
+}
+.s14-care-bar{
+  height:13px;
+  border-radius:20px;
+  background:#c9e5d7;
+  overflow:hidden;
+  margin:12px 0;
+}
+.s14-care-fill{
+  height:100%;
+  background:linear-gradient(90deg,#43b781,#169c65);
+  border-radius:20px;
+}
+.s14-care-message{
+  font-weight:bold;
+  line-height:1.7;
+  margin-top:10px;
+}
+.s14-care small{
+  display:block;
+  line-height:1.6;
+  color:#527665;
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/*
+ 第14弾
+ 身体ケアの時間を元の練習記録から集計。
+ XP・能力値・既存記録は変更しない。
+*/
+
+// 身体ケアとして認識する分類
+function s14IsCare(x){
+  if(!x)return false;
+
+  const kind=String(x.kind||"");
+  const name=String(x.name||"");
+
+  // 睡眠・休養は身体ケア時間に含めない
+  if(/睡眠|休養/.test(name))return false;
+
+  return kind==="身体ケア" ||
+    /ストレッチ|姿勢ケア|リカバリー/.test(name);
+}
+
+// 記録された時間を分単位に変換
+function s14Minutes(x){
+  if(!x)return 0;
+
+  const minutes=Number(x.minutes);
+
+  if(Number.isFinite(minutes) &&
+     minutes>0){
+    return Math.min(1440,minutes);
+  }
+
+  // 旧記録で「実施量」が分単位の場合
+  if(/分/.test(String(x.unit||""))){
+    const amount=Number(x.amount);
+    if(Number.isFinite(amount) &&
+       amount>0){
+      return Math.min(1440,amount);
+    }
+  }
+
+  return 0;
+}
+
+function s14Records(){
+  const main=Array.isArray(db.practice)?
+    db.practice:[];
+
+  const quick=Array.isArray(
+    db.success2027?.quick
+  )?db.success2027.quick:[];
+
+  return main.concat(quick);
+}
+
+function s14WeekEnd(start){
+  const [y,m,d]=start.split("-").map(Number);
+  const date=new Date(y,m-1,d+6);
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth()+1).padStart(2,"0"),
+    String(date.getDate()).padStart(2,"0")
+  ].join("-");
+}
+
+function s14Stats(){
+  const start=weekStart();
+  const end=s14WeekEnd(start);
+
+  const records=s14Records().filter(x=>
+    x.date>=start &&
+    x.date<=end &&
+    s14IsCare(x)
+  );
+
+  const minutes=records.reduce(
+    (sum,x)=>sum+s14Minutes(x),0
+  );
+
+  const days=new Set(
+    records.filter(x=>s14Minutes(x)>0)
+      .map(x=>x.date)
+  ).size;
+
+  return {
+    minutes:Math.round(minutes),
+    days:days,
+    count:records.length,
+    start:start,
+    end:end
+  };
+}
+
+function s14Format(minutes){
+  const h=Math.floor(minutes/60);
+  const m=minutes%60;
+
+  return h?
+    h+"時間"+(m?m+"分":""):
+    m+"分";
+}
+
+function s14CarePanel(){
+  const s=s14Stats();
+
+  // 週3日のケアを表示上の目安とする。
+  // それ以上の時間を強制するものではない。
+  const progress=Math.min(
+    100,Math.round(s.days/3*100)
+  );
+
+  let message;
+
+  if(s.days>=3){
+    message=
+      "🏆 すばらしい！身体を大切にする習慣が続いているね！";
+  }else if(s.days>=1){
+    message=
+      "🌱 ナイスケア！ストレッチも立派な成長だよ！";
+  }else{
+    message=
+      "💚 身体を整えることも、強くなるための大切な一歩！";
+  }
+
+  return `
+    <section class="s14-care" id="s14CarePanel">
+      <h3>🧘 今週の身体ケア</h3>
+
+      <div class="s14-care-grid">
+        <div class="s14-care-stat">
+          合計ケア時間
+          <strong>${s14Format(s.minutes)}</strong>
+        </div>
+        <div class="s14-care-stat">
+          ケア実施日数
+          <strong>${s.days}日</strong>
+        </div>
+      </div>
+
+      <div class="s14-care-bar">
+        <div class="s14-care-fill"
+          style="width:${progress}%">
+        </div>
+      </div>
+
+      <small>
+        継続の目安：週3日
+        （達成のために無理に増やす必要はありません）
+      </small>
+
+      <p class="s14-care-message">
+        ${message}
+      </p>
+
+      <small>
+        身体ケアに分類されたストレッチなどの
+        実施時間を集計しています。
+        睡眠・休養は含みません。
+      </small>
+    </section>
+  `;
+}
+
+/*
+ 旧集計の「今週のケア・研究」は、
+ 身体ケアと自主学習を合わせた数字なので
+ 身体ケア単独の数字と混同しないようにする。
+*/
+
+function s14EnhanceBalance(){
+  const view=document.getElementById("view");
+  if(!view)return;
+
+  if(document.getElementById("s14CarePanel")){
+    return;
+  }
+
+  // 「今週の練習バランス」を含む要素を探す
+  const candidates=Array.from(
+    view.querySelectorAll(
+      "h2,h3,h4,.title,.section-title"
+    )
+  );
+
+  const heading=candidates.find(el=>
+    el.textContent.includes("今週の練習バランス")
+  );
+
+  const panel=document.createElement("div");
+  panel.innerHTML=s14CarePanel();
+
+  if(heading){
+    // バランスの見出し直後にケア実績を表示
+    heading.insertAdjacentElement(
+      "afterend",panel.firstElementChild
+    );
+  }else{
+    // 見出し構造が異なる場合はホーム内に表示
+    if(tab==="home"){
+      view.insertBefore(
+        panel.firstElementChild,
+        view.firstChild
+      );
+    }
+  }
+}
+
+/*
+ 練習メニューから「睡眠・休養」を除く。
+ 過去に保存した睡眠・休養の記録は残す。
+*/
+
+function s14RemoveSleepMenu(){
+  // メニュー定義から取り除く
+  if(typeof TRAINING_MENU!=="undefined" &&
+     Array.isArray(TRAINING_MENU)){
+    for(let i=TRAINING_MENU.length-1;i>=0;i--){
+      const name=String(TRAINING_MENU[i][0]||"");
+      if(/睡眠|休養/.test(name)){
+        TRAINING_MENU.splice(i,1);
+      }
+    }
+  }
+
+  // 画面の選択肢からも除く
+  const view=document.getElementById("view");
+  if(!view)return;
+
+  view.querySelectorAll("select").forEach(select=>{
+    const id=select.id||"";
+
+    // 練習メニューの選択欄だけを対象にする
+    if(!/trainingMenu|s27menu|^menu$/.test(id)){
+      return;
+    }
+
+    Array.from(select.options).forEach(option=>{
+      if(/睡眠|休養/.test(option.textContent)){
+        option.remove();
+      }
+    });
+  });
+}
+
+/*
+ 既存の描画処理を維持して集計表示を追加
+*/
+
+const s14OldRender=render;
+
+render=function(){
+  s14RemoveSleepMenu();
+  s14OldRender();
+  s14RemoveSleepMenu();
+  s14EnhanceBalance();
+};
+
+render();
+
+})();
+</script>
+<!-- ===== 第14弾 終了 ===== -->
+
 </body>
 </html>
