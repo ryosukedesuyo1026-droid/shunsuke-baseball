@@ -8245,5 +8245,1122 @@ render();
 })();
 </script>
 <!-- ===== SUCCESS 第10弾 終了 ===== -->
+
+<!-- ===== 第11弾：考える野球ノート＆投手・速度統合 ===== -->
+<style>
+.s11-hero{
+  background:linear-gradient(130deg,#092650,#1164af);
+  color:#fff;
+  border:2px solid #ffd34d;
+  border-radius:16px;
+  padding:18px;
+  margin:12px 0;
+}
+.s11-hero h2{color:#ffd34d;margin:0 0 10px}
+.s11-hero p{line-height:1.7}
+.s11-card{
+  background:#f1f7ff;
+  color:#173653;
+  border:1px solid #b7d3ed;
+  border-radius:12px;
+  padding:14px;
+  margin:12px 0;
+}
+.s11-card h3{margin:0 0 12px;color:#135a9e}
+.s11-card label{
+  display:block;
+  font-weight:800;
+  margin:12px 0 6px;
+}
+.s11-card input,
+.s11-card select,
+.s11-card textarea{
+  box-sizing:border-box;
+  width:100%;
+  padding:11px;
+  border:1px solid #9cbad4;
+  border-radius:9px;
+  font-size:16px;
+  background:white;
+  color:#173653;
+}
+.s11-card textarea{min-height:75px}
+.s11-choice{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin:9px 0;
+}
+.s11-choice button{
+  padding:12px 7px;
+  border:2px solid #bdd5e9;
+  border-radius:10px;
+  background:white;
+  color:#164676;
+  font-weight:800;
+  cursor:pointer;
+}
+.s11-choice button.selected{
+  background:#ffd34d;
+  border-color:#e4a915;
+  color:#12385d;
+}
+.s11-btn{
+  width:100%;
+  padding:14px;
+  border:0;
+  border-radius:11px;
+  background:linear-gradient(110deg,#ffdb65,#ffbc27);
+  color:#173653;
+  font-size:16px;
+  font-weight:900;
+  margin-top:10px;
+  cursor:pointer;
+}
+.s11-blue{
+  background:linear-gradient(110deg,#166cba,#0a478b);
+  color:white;
+}
+.s11-note{
+  background:white;
+  border:1px solid #b5d0e7;
+  border-radius:10px;
+  padding:13px;
+  margin:10px 0;
+  line-height:1.8;
+  overflow-wrap:anywhere;
+}
+.s11-note p{margin:6px 0}
+.s11-muted{color:#59738c;font-size:13px}
+.s11-tag{
+  display:inline-block;
+  background:#e1eeff;
+  border-radius:20px;
+  padding:4px 9px;
+  margin:3px;
+  font-size:12px;
+  color:#174b80;
+}
+.s11-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.s11-stat{
+  background:#0c407d;
+  border:1px solid #6ea4d8;
+  color:white;
+  border-radius:12px;
+  padding:13px;
+}
+.s11-stat strong{
+  display:block;
+  color:#ffd34d;
+  font-size:24px;
+  margin:7px 0;
+}
+.s11-question{
+  background:#fff8dc;
+  border-left:5px solid #e8b632;
+  padding:12px;
+  border-radius:8px;
+  margin:12px 0;
+  color:#51411a;
+}
+.s11-top-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.s11-top-actions button{margin-top:0}
+@media(max-width:480px){
+  .s11-choice{grid-template-columns:1fr 1fr}
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+const S11_NOTE_ID="baseballNotebook11";
+const S11_SPEED_ID="pitchSpeed11";
+
+const S11_CATEGORIES=[
+  ["bat","🏏 バッティング"],
+  ["pitch","🔥 ピッチング"],
+  ["catch","🧤 キャッチング"],
+  ["throw","⚾ スローイング"],
+  ["field","🧢 フィールディング"],
+  ["cover","🏃 カバーリング"],
+  ["run","💨 ベースランニング"],
+  ["mind","🧠 判断・メンタル"],
+  ["body","🌱 身体・コンディション"]
+];
+
+const S11_QUESTIONS={
+  bat:{
+    focus:[
+      "ボールを最後まで見る",
+      "タイミングを合わせる",
+      "最後まで振り切る",
+      "センター方向を意識する"
+    ],
+    next:[
+      "力を抜いて振る",
+      "タイミングを早めに取る",
+      "ボールをよく見る",
+      "同じ感覚をもう一度試す"
+    ]
+  },
+  pitch:{
+    focus:[
+      "狙ったところに投げる",
+      "リリースを意識する",
+      "下半身を使う",
+      "落ち着いて投げる"
+    ],
+    next:[
+      "フォームを確認する",
+      "コントロールを意識する",
+      "無理せず同じ感覚を探す",
+      "配球を考える"
+    ]
+  },
+  default:{
+    focus:[
+      "準備を早くする",
+      "一歩目を意識する",
+      "次のプレーを考える",
+      "声を出して連携する"
+    ],
+    next:[
+      "同じ動きをもう一度試す",
+      "準備を早くする",
+      "周りをよく見る",
+      "落ち着いてプレーする"
+    ]
+  }
+};
+
+let s11Category="bat";
+let s11Scene="練習";
+let s11Focus="";
+let s11Result="";
+let s11Next="";
+let s11Rating="○";
+let s11Filter="all";
+
+function s11Store(){
+  if(!db.baseballNotebook11 ||
+     typeof db.baseballNotebook11!=="object" ||
+     Array.isArray(db.baseballNotebook11)){
+    db.baseballNotebook11={notes:[],speeds:[]};
+  }
+
+  const d=db.baseballNotebook11;
+
+  if(!Array.isArray(d.notes))d.notes=[];
+  if(!Array.isArray(d.speeds))d.speeds=[];
+
+  return d;
+}
+
+function s11Escape(v){
+  return esc(String(v==null?"":v));
+}
+
+function s11CategoryName(id){
+  const found=S11_CATEGORIES.find(x=>x[0]===id);
+  return found?found[1]:id;
+}
+
+function s11Questions(){
+  return S11_QUESTIONS[s11Category]||
+    S11_QUESTIONS.default;
+}
+
+function s11SelectButtons(values,current,action){
+  return '<div class="s11-choice">'+
+    values.map((v,i)=>`
+      <button type="button"
+        class="${current===v?"selected":""}"
+        onclick="${action}(${i})">
+        ${s11Escape(v)}
+      </button>
+    `).join("")+
+  '</div>';
+}
+
+function s11NoteText(n){
+  const lines=[
+    "【"+(n.scene||"練習")+"の野球ノート】",
+    "日付："+(n.date||""),
+    "場所："+(n.place||""),
+    "天気："+(n.weather||""),
+    "体調："+(n.condition||""),
+    "今日の目標："+(n.goal||""),
+    "練習・試合内容："+(n.content||""),
+    "分類："+s11CategoryName(n.category),
+    "自己評価："+(n.rating||""),
+    "意識したこと："+(n.focus||""),
+    "今日の結果・感覚："+(n.result||""),
+    "良かったこと："+(n.good||""),
+    "改善したいこと："+(n.improve||""),
+    "次に試すこと："+(n.next||"")
+  ];
+  return lines.join("\n");
+}
+
+function s11LatestNote(){
+  const notes=s11Store().notes;
+  return notes.length?notes[notes.length-1]:null;
+}
+
+function s11ExistingMemo(){
+  const all=[];
+
+  if(Array.isArray(db.practice)){
+    db.practice.forEach(x=>{
+      if(String(x.note||"").trim()){
+        all.push({
+          date:x.date,
+          type:"練習",
+          name:x.name,
+          text:x.note
+        });
+      }
+    });
+  }
+
+  if(Array.isArray(db.games)){
+    db.games.forEach(x=>{
+      const text=String(
+        x.note||x.memo||x.comment||""
+      ).trim();
+
+      if(text){
+        all.push({
+          date:x.date,
+          type:"試合",
+          name:x.opponent||"試合",
+          text:text
+        });
+      }
+    });
+  }
+
+  if(Array.isArray(db.reflections)){
+    db.reflections.forEach(x=>{
+      const text=String(
+        x.text||x.note||""
+      ).trim();
+
+      if(text){
+        all.push({
+          date:x.date,
+          type:"振り返り",
+          name:"過去の振り返り",
+          text:text
+        });
+      }
+    });
+  }
+
+  return all.sort((a,b)=>
+    String(b.date||"").localeCompare(
+      String(a.date||"")
+    )
+  );
+}
+
+function s11NotebookScreen(){
+  const d=s11Store();
+  const latest=s11LatestNote();
+  const q=s11Questions();
+
+  const focusOptions=q.focus;
+  const nextOptions=q.next;
+  const resultOptions=[
+    "うまくできた",
+    "少しできた",
+    "難しかった",
+    "よく分からなかった"
+  ];
+
+  const oldNotes=s11ExistingMemo();
+
+  const filtered=d.notes.map((n,i)=>({
+    n:n,index:i
+  })).filter(x=>
+    s11Filter==="all"||
+    x.n.category===s11Filter
+  ).reverse();
+
+  return `
+    <section class="s11-hero">
+      <h2>📓 考える野球ノート</h2>
+      <p>
+        昨日よりも今日。今日より明日。<br>
+        <b>自分に勝つ！</b>
+      </p>
+      <p>
+        うまく書こうとしなくて大丈夫。<br>
+        まずは質問に答えてみよう！
+      </p>
+    </section>
+
+    ${latest?`
+      <div class="s11-card">
+        <h3>🎯 前回の自分からの宿題</h3>
+        <p class="s11-muted">
+          ${s11Escape(latest.date)}
+          ${s11CategoryName(latest.category)}
+        </p>
+        <div class="s11-question">
+          <b>前回は「${s11Escape(
+            latest.next||"次の挑戦を考える"
+          )}」が目標だったね。</b>
+          <p>
+            今日の練習ではどうだった？
+            少しでも試せたかな？
+          </p>
+        </div>
+      </div>
+    `:""}
+
+    <div class="s11-card">
+      <h3>① 今日の基本情報</h3>
+
+      <label>日付</label>
+      <input id="s11Date" type="date"
+        value="${today()}">
+
+      <label>練習・試合</label>
+      ${s11SelectButtons(
+        ["練習","練習試合","公式戦"],
+        s11Scene,"s11SetScene"
+      )}
+
+      <label>場所</label>
+      <input id="s11Place"
+        placeholder="例：本球場">
+
+      <label>天気</label>
+      <select id="s11Weather">
+        <option>晴れ</option>
+        <option>くもり</option>
+        <option>雨</option>
+      </select>
+
+      <label>体調</label>
+      <select id="s11Condition">
+        <option>良い</option>
+        <option>ふつう</option>
+        <option>悪い</option>
+      </select>
+
+      <label>今日の目標は？</label>
+      <input id="s11Goal"
+        placeholder="例：左右に打ち分ける">
+
+      <label>どんな練習・試合をした？</label>
+      <textarea id="s11Content"
+        placeholder="例：キャッチボール、打撃練習、紅白戦"></textarea>
+    </div>
+
+    <div class="s11-card">
+      <h3>② 今日のテーマを選ぼう</h3>
+
+      <div class="s11-choice">
+        ${S11_CATEGORIES.map(([id,name])=>`
+          <button type="button"
+            class="${s11Category===id?"selected":""}"
+            onclick="s11SetCategory('${id}')">
+            ${name}
+          </button>
+        `).join("")}
+      </div>
+
+      <label>自分の評価は？</label>
+      ${s11SelectButtons(
+        ["◎","○","△","×"],
+        s11Rating,"s11SetRating"
+      )}
+
+      <p class="s11-muted">
+        ◎ とても良い / ○ できた /
+        △ もう少し / × 次の課題
+      </p>
+    </div>
+
+    <div class="s11-card">
+      <h3>③ 質問に答えてみよう！</h3>
+
+      <div class="s11-question">
+        <b>質問1</b>
+        <p>今日は何を意識して取り組んだ？</p>
+      </div>
+
+      ${s11SelectButtons(
+        focusOptions,s11Focus,"s11SetFocus"
+      )}
+
+      <label>自分の言葉で付け足すなら？</label>
+      <input id="s11FocusOther"
+        placeholder="例：左足の踏み込み">
+
+      <div class="s11-question">
+        <b>質問2</b>
+        <p>実際にやってみてどうだった？</p>
+      </div>
+
+      ${s11SelectButtons(
+        resultOptions,s11Result,"s11SetResult"
+      )}
+
+      <label>どんな場面でそう感じた？</label>
+      <textarea id="s11Feeling"
+        placeholder="例：2打席目はタイミングが合った"></textarea>
+
+      <div class="s11-question">
+        <b>質問3</b>
+        <p>次の練習では何を試してみたい？</p>
+      </div>
+
+      ${s11SelectButtons(
+        nextOptions,s11Next,"s11SetNext"
+      )}
+
+      <label>自分で考えた次の挑戦</label>
+      <input id="s11NextOther"
+        placeholder="例：早めに構えて打つ">
+    </div>
+
+    <div class="s11-card">
+      <h3>④ 良かったこと・改善点</h3>
+
+      <label>今日良かったことは？</label>
+      <textarea id="s11Good"
+        placeholder="例：強い打球が打てた"></textarea>
+
+      <label>どうして良かったと思う？</label>
+      <div class="s11-question">
+        「できた」だけで終わらず、
+        どんな動きや感覚が良かったか
+        思い出してみよう。
+      </div>
+
+      <label>今日改善したいことは？</label>
+      <textarea id="s11Improve"
+        placeholder="例：守備の一歩目が遅かった"></textarea>
+
+      <p class="s11-muted">
+        悪かったことは失敗ではなく、
+        次に成長するためのヒントだよ。
+      </p>
+
+      <button class="s11-btn"
+        onclick="s11SaveNote()">
+        📓 今日の野球ノートを保存
+      </button>
+    </div>
+
+    <div class="s11-card">
+      <h3>📚 保存した野球ノート</h3>
+
+      <label>分類で探す</label>
+      <select onchange="s11SetFilter(this.value)">
+        <option value="all"
+          ${s11Filter==="all"?"selected":""}>
+          すべて表示
+        </option>
+        ${S11_CATEGORIES.map(([id,name])=>`
+          <option value="${id}"
+            ${s11Filter===id?"selected":""}>
+            ${name}
+          </option>
+        `).join("")}
+      </select>
+
+      ${filtered.length?
+        filtered.map(({n,index})=>`
+          <div class="s11-note">
+            <b>${s11Escape(n.date)}</b>
+            <span class="s11-tag">
+              ${s11CategoryName(n.category)}
+            </span>
+            <span class="s11-tag">
+              評価 ${s11Escape(n.rating)}
+            </span>
+
+            <p><b>目標：</b>
+              ${s11Escape(n.goal)}</p>
+            <p><b>意識：</b>
+              ${s11Escape(n.focus)}</p>
+            <p><b>感覚：</b>
+              ${s11Escape(n.result)}</p>
+            <p><b>良かった：</b>
+              ${s11Escape(n.good)}</p>
+            <p><b>改善：</b>
+              ${s11Escape(n.improve)}</p>
+            <p><b>次の挑戦：</b>
+              ${s11Escape(n.next)}</p>
+
+            <button class="s11-btn s11-blue"
+              onclick="s11CopyNote(${index})">
+              📋 紙のノート用にコピー
+            </button>
+          </div>
+        `).join(""):
+        "<p>この分類のノートはまだありません。</p>"
+      }
+    </div>
+
+    <div class="s11-card">
+      <h3>📖 これまでの練習・試合メモ</h3>
+      <p class="s11-muted">
+        以前に入力した気づきも確認できます。
+        元の記録は変更しません。
+      </p>
+
+      ${oldNotes.length?
+        oldNotes.slice(0,30).map(x=>`
+          <div class="s11-note">
+            <b>${s11Escape(x.date)}</b>
+            <span class="s11-tag">
+              ${s11Escape(x.type)}
+            </span>
+            <p>${s11Escape(x.name)}</p>
+            <p>${s11Escape(x.text)}</p>
+          </div>
+        `).join(""):
+        "<p>以前のメモはまだありません。</p>"
+      }
+    </div>
+  `;
+}
+
+function s11Get(id){
+  const e=document.getElementById(id);
+  return e?e.value.trim():"";
+}
+
+function s11SetAndRender(kind,value){
+  if(kind==="category"){
+    s11Category=value;
+    s11Focus="";
+    s11Next="";
+  }
+  if(kind==="scene")s11Scene=value;
+  if(kind==="rating")s11Rating=value;
+  if(kind==="focus")s11Focus=value;
+  if(kind==="result")s11Result=value;
+  if(kind==="next")s11Next=value;
+
+  // 選択中の自由入力を消さないよう、
+  // 再描画前にフォームを一時保持
+  const ids=[
+    "s11Date","s11Place","s11Weather",
+    "s11Condition","s11Goal","s11Content",
+    "s11FocusOther","s11Feeling",
+    "s11NextOther","s11Good","s11Improve"
+  ];
+
+  const values={};
+  ids.forEach(id=>{
+    const e=document.getElementById(id);
+    if(e)values[id]=e.value;
+  });
+
+  render();
+
+  ids.forEach(id=>{
+    const e=document.getElementById(id);
+    if(e && values[id]!==undefined){
+      e.value=values[id];
+    }
+  });
+}
+
+window.s11SetCategory=i=>
+  s11SetAndRender("category",i);
+
+window.s11SetScene=i=>
+  s11SetAndRender(
+    "scene",
+    ["練習","練習試合","公式戦"][i]
+  );
+
+window.s11SetRating=i=>
+  s11SetAndRender(
+    "rating",["◎","○","△","×"][i]
+  );
+
+window.s11SetFocus=i=>
+  s11SetAndRender(
+    "focus",s11Questions().focus[i]
+  );
+
+window.s11SetResult=i=>
+  s11SetAndRender(
+    "result",[
+      "うまくできた",
+      "少しできた",
+      "難しかった",
+      "よく分からなかった"
+    ][i]
+  );
+
+window.s11SetNext=i=>
+  s11SetAndRender(
+    "next",s11Questions().next[i]
+  );
+
+window.s11SetFilter=function(v){
+  s11Filter=v;
+  render();
+};
+
+window.s11SaveNote=function(){
+  const focus=[
+    s11Focus,
+    s11Get("s11FocusOther")
+  ].filter(Boolean).join("。");
+
+  const result=[
+    s11Result,
+    s11Get("s11Feeling")
+  ].filter(Boolean).join("。");
+
+  const next=[
+    s11Next,
+    s11Get("s11NextOther")
+  ].filter(Boolean).join("。");
+
+  const record={
+    date:s11Get("s11Date")||today(),
+    scene:s11Scene,
+    place:s11Get("s11Place"),
+    weather:s11Get("s11Weather"),
+    condition:s11Get("s11Condition"),
+    goal:s11Get("s11Goal"),
+    content:s11Get("s11Content"),
+    category:s11Category,
+    rating:s11Rating,
+    focus:focus,
+    result:result,
+    good:s11Get("s11Good"),
+    improve:s11Get("s11Improve"),
+    next:next
+  };
+
+  if(!record.goal && !record.focus &&
+     !record.good && !record.next){
+    alert("今日の目標や気づきを1つ入力しよう！");
+    return;
+  }
+
+  const before=JSON.stringify(db);
+  s11Store().notes.push(record);
+
+  if(!save()){
+    db=JSON.parse(before);
+    return;
+  }
+
+  alert(
+    "📓 野球ノート完成！\n"+
+    "今日の気づきが次の成長につながるよ！"
+  );
+
+  s11Focus="";
+  s11Result="";
+  s11Next="";
+
+  render();
+};
+
+window.s11CopyNote=function(index){
+  const note=s11Store().notes[index];
+  if(!note)return;
+
+  const text=s11NoteText(note);
+
+  if(navigator.clipboard &&
+     navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text)
+      .then(()=>alert(
+        "コピーしました！\n紙のノートに活用しよう。"
+      ))
+      .catch(()=>window.prompt(
+        "この文章をコピーしてください",text
+      ));
+  }else{
+    window.prompt(
+      "この文章をコピーしてください",text
+    );
+  }
+};
+
+/* ===== 投手・速度管理 ===== */
+
+function s11SpeedRows(){
+  return s11Store().speeds;
+}
+
+function s11SpeedSummary(type){
+  const rows=s11SpeedRows().filter(x=>
+    x.type===type
+  );
+
+  if(!rows.length){
+    return {best:"未記録",latest:"未記録"};
+  }
+
+  const best=Math.max(
+    ...rows.map(x=>Number(x.value)||0)
+  );
+
+  const latest=rows[rows.length-1];
+
+  return {
+    best:best+" km/h",
+    latest:latest.value+" km/h"
+  };
+}
+
+function s11SpeedPanel(){
+  const ball=s11SpeedSummary("ball");
+  const swing=s11SpeedSummary("swing");
+
+  const rows=s11SpeedRows()
+    .map((x,i)=>({x,index:i}))
+    .reverse();
+
+  return `
+    <section class="s11-hero">
+      <h2>🔥 投手・速度データ</h2>
+      <p>
+        球速とスイングスピードを
+        まとめて管理しよう！
+      </p>
+
+      <div class="s11-grid">
+        <div class="s11-stat">
+          ⚾ 最高球速
+          <strong>${ball.best}</strong>
+          最新 ${ball.latest}
+        </div>
+        <div class="s11-stat">
+          🏏 最高スイング速度
+          <strong>${swing.best}</strong>
+          最新 ${swing.latest}
+        </div>
+      </div>
+    </section>
+
+    <div class="s11-card">
+      <h3>⏱️ 速度を記録</h3>
+
+      <p>
+        投球練習をしない日でも、
+        測定した記録を入力できます。
+      </p>
+
+      <label>測定日</label>
+      <input id="s11SpeedDate"
+        type="date" value="${today()}">
+
+      <label>測定項目</label>
+      <select id="s11SpeedType">
+        <option value="ball">⚾ 球速</option>
+        <option value="swing">
+          🏏 スイングスピード
+        </option>
+      </select>
+
+      <label>速度（km/h）</label>
+      <input id="s11SpeedValue"
+        type="number"
+        min="1" max="250"
+        step="0.1"
+        placeholder="例：85.5">
+
+      <label>測定時のメモ（任意）</label>
+      <input id="s11SpeedMemo"
+        placeholder="例：力を抜いて振れた">
+
+      <button class="s11-btn"
+        onclick="s11SaveSpeed()">
+        ⭐ 測定結果を保存
+      </button>
+
+      <p class="s11-muted">
+        測定値は実測記録です。
+        ゲーム内の能力値とは別に管理します。
+        無理な全力投球や測定の繰り返しは
+        必要ありません。
+      </p>
+    </div>
+
+    <div class="s11-card">
+      <h3>📈 速度の成長履歴</h3>
+
+      ${rows.length?
+        rows.map(({x,index})=>`
+          <div class="s11-note">
+            <b>${s11Escape(x.date)}</b>
+            <span class="s11-tag">
+              ${x.type==="ball"?"球速":"スイング"}
+            </span>
+            <p>
+              <b>${s11Escape(x.value)} km/h</b>
+            </p>
+            <p>${s11Escape(x.memo)}</p>
+            <button class="s11-btn s11-blue"
+              onclick="s11EditSpeed(${index})">
+              ✏️ この記録を修正
+            </button>
+          </div>
+        `).join(""):
+        "<p>速度の測定記録はまだありません。</p>"
+      }
+    </div>
+  `;
+}
+
+window.s11SaveSpeed=function(){
+  const date=s11Get("s11SpeedDate");
+  const type=s11Get("s11SpeedType");
+  const raw=s11Get("s11SpeedValue");
+  const value=Number(raw);
+
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+     !["ball","swing"].includes(type) ||
+     raw==="" ||
+     !Number.isFinite(value) ||
+     value<=0 || value>250){
+    alert("日付と速度を確認してください。");
+    return;
+  }
+
+  const before=JSON.stringify(db);
+
+  s11SpeedRows().push({
+    date:date,
+    type:type,
+    value:value,
+    memo:s11Get("s11SpeedMemo")
+  });
+
+  if(!save()){
+    db=JSON.parse(before);
+    return;
+  }
+
+  alert("⭐ 速度を記録しました！");
+  render();
+};
+
+window.s11EditSpeed=function(index){
+  const record=s11SpeedRows()[index];
+  if(!record)return;
+
+  const answer=prompt(
+    "新しい速度（km/h）を入力",
+    record.value
+  );
+
+  if(answer===null)return;
+
+  const value=Number(answer);
+
+  if(answer.trim()==="" ||
+     !Number.isFinite(value) ||
+     value<=0 || value>250){
+    alert("速度を確認してください。");
+    return;
+  }
+
+  const before=JSON.stringify(db);
+  record.value=value;
+
+  if(!save()){
+    db=JSON.parse(before);
+    return;
+  }
+
+  alert("速度を修正しました！");
+  render();
+};
+
+/* ===== 既存画面との統合 ===== */
+
+// タブは保存データではなく画面構成のみ変更
+function s11FindTab(pattern){
+  return tabs.find(x=>pattern.test(
+    String(x[1]||"")
+  ));
+}
+
+const s11PitchTab=s11FindTab(
+  /投手|ピッチング/
+);
+
+const s11OldSpeedTab=s11FindTab(
+  /速度|球速/
+);
+
+// 投手画面がある場合はそのタブを活用
+const s11PitchId=s11PitchTab?
+  s11PitchTab[0]:S11_SPEED_ID;
+
+// 速度専用タブが別にあれば非表示にする
+if(s11OldSpeedTab &&
+   s11OldSpeedTab[0]!==s11PitchId){
+  const i=tabs.findIndex(x=>
+    x[0]===s11OldSpeedTab[0]
+  );
+  if(i>=0)tabs.splice(i,1);
+}
+
+if(s11PitchTab){
+  s11PitchTab[1]="🔥 投手・速度";
+}else if(!tabs.some(x=>x[0]===S11_SPEED_ID)){
+  tabs.push([S11_SPEED_ID,"🔥 投手・速度"]);
+}
+
+if(!tabs.some(x=>x[0]===S11_NOTE_ID)){
+  tabs.push([S11_NOTE_ID,"📓 野球ノート"]);
+}
+
+// ホーム・野球ノート・練習・投手を左側へ
+const priority=[
+  "home",
+  S11_NOTE_ID,
+  "training",
+  s11PitchId
+];
+
+const ordered=[];
+
+priority.forEach(id=>{
+  const found=tabs.find(x=>x[0]===id);
+  if(found && !ordered.includes(found)){
+    ordered.push(found);
+  }
+});
+
+tabs.forEach(x=>{
+  if(!ordered.includes(x))ordered.push(x);
+});
+
+tabs.splice(0,tabs.length,...ordered);
+
+/* ホーム画面の上部に野球ノート導線 */
+
+const s11PreviousHome=home;
+
+home=function(){
+  const latest=s11LatestNote();
+
+  const hero=`
+    <section class="s11-hero">
+      <h2>🏆 昨日の自分に勝つ！</h2>
+      <p>
+        昨日よりも今日。今日より明日。<br>
+        努力して、考えて、成長しよう！
+      </p>
+
+      <div class="s11-top-actions">
+        <button class="s11-btn"
+          onclick="go('${S11_NOTE_ID}')">
+          📓 野球ノート
+        </button>
+        <button class="s11-btn"
+          onclick="go('${s11PitchId}')">
+          🔥 投手・速度
+        </button>
+      </div>
+
+      ${latest?`
+        <div class="s11-question">
+          <b>🎯 前回の課題</b>
+          <p>${s11Escape(
+            latest.next||"次の目標を考えよう"
+          )}</p>
+          <button class="s11-btn s11-blue"
+            onclick="go('${S11_NOTE_ID}')">
+            前回のノートを振り返る
+          </button>
+        </div>
+      `:`
+        <p>
+          今日の目標を考えて、
+          最初の野球ノートを書いてみよう！
+        </p>
+      `}
+    </section>
+  `;
+
+  return hero+s11PreviousHome();
+};
+
+/* 最新のrenderを包み、既存機能を維持 */
+
+const s11PreviousRender=render;
+
+render=function(){
+  const nav=document.getElementById("nav");
+  const view=document.getElementById("view");
+
+  if(tab===S11_NOTE_ID){
+    if(nav){
+      nav.innerHTML=tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?"active":""}"
+          onclick="go('${id}')">
+          ${s11Escape(name)}
+        </button>
+      `).join("");
+    }
+
+    if(view)view.innerHTML=s11NotebookScreen();
+    return;
+  }
+
+  if(tab===S11_SPEED_ID &&
+     !s11PitchTab){
+    if(nav){
+      nav.innerHTML=tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?"active":""}"
+          onclick="go('${id}')">
+          ${s11Escape(name)}
+        </button>
+      `).join("");
+    }
+
+    if(view)view.innerHTML=s11SpeedPanel();
+    return;
+  }
+
+  s11PreviousRender();
+
+  // 既存の投手画面に速度管理を追加
+  if(tab===s11PitchId && s11PitchTab && view){
+    const holder=document.createElement("div");
+    holder.innerHTML=s11SpeedPanel();
+    view.appendChild(holder);
+  }
+};
+
+// 初期画面を更新
+render();
+
+})();
+</script>
+<!-- ===== 第11弾 終了 ===== -->
+
 </body>
 </html>
