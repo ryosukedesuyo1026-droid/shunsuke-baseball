@@ -3616,5 +3616,253 @@ render=function(){
 render();
 </script>
 
+<!-- SUCCESS 2027 第2弾：4週間分析 -->
+<style>
+.s28-week{
+  background:#f0f7ff;
+  border:1px solid #a9c9e9;
+  border-radius:12px;
+  padding:12px;
+  margin:12px 0;
+}
+.s28-week h3{
+  margin:0 0 10px;
+  color:#124c8e;
+}
+.s28-metric{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:13px;
+  margin:9px 0 4px;
+}
+.s28-track{
+  height:12px;
+  background:#d6e5f4;
+  border-radius:20px;
+  overflow:hidden;
+}
+.s28-track span{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#1975d2,#ffd44e);
+}
+.s28-alert{
+  background:#fff0e5;
+  border-left:4px solid #df7541;
+  padding:10px;
+  border-radius:7px;
+  margin:10px 0;
+  font-size:13px;
+}
+</style>
+
+<script>
+"use strict";
+
+/* 既存の保存データは変更しない */
+
+function s28weeks(){
+  const current=s27week(today());
+  return [3,2,1,0].map(n=>{
+    const start=s27dateOffset(current,-7*n);
+    const end=s27dateOffset(start,6);
+    const stats=s27stats(start,end);
+
+    const sleep=s27data().sleep.filter(x=>
+      x.date>=start && x.date<=end &&
+      Number(x.hours)>0
+    );
+
+    const avgSleep=sleep.length?
+      sleep.reduce((s,x)=>s+Number(x.hours),0)/
+      sleep.length:null;
+
+    const conditions=s27data().condition.filter(x=>
+      x.date>=start && x.date<=end
+    );
+
+    const painDays=conditions.filter(x=>
+      x.pain==="あり"
+    ).length;
+
+    return {
+      start,end,
+      swings:stats.swings,
+      minutes:stats.minutes,
+      days:stats.days,
+      sleep:avgSleep,
+      sleepDays:sleep.length,
+      painDays,
+      conditionDays:conditions.length
+    };
+  });
+}
+
+function s28bar(label,value,max,suffix){
+  const pct=max>0?
+    Math.min(100,Math.max(0,value/max*100)):0;
+
+  return `
+    <div class="s28-metric">
+      <span>${esc(label)}</span>
+      <b>${Number(value).toLocaleString()}${suffix}</b>
+    </div>
+    <div class="s28-track">
+      <span style="width:${pct}%"></span>
+    </div>
+  `;
+}
+
+function s28report(){
+  const weeks=s28weeks();
+  const maxSwings=Math.max(1,...weeks.map(x=>x.swings));
+  const maxMinutes=Math.max(1,...weeks.map(x=>x.minutes));
+
+  const totalSwings=weeks.reduce((s,x)=>s+x.swings,0);
+  const totalMinutes=weeks.reduce((s,x)=>s+x.minutes,0);
+
+  const latest=weeks[3];
+  const previous=weeks[2];
+
+  const latestNotes=s27allPractice()
+    .filter(x=>x.note)
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)))
+    .slice(0,8);
+
+  return `
+    ${box("📊 4週間の努力レポート",`
+      <p class="muted">
+        過去3週間と今週の記録を比較します。
+        未入力の練習時間は0分として集計されます。
+      </p>
+
+      <div class="grid">
+        <div class="tile">
+          4週間の素振り
+          <strong>${totalSwings.toLocaleString()}</strong>回
+        </div>
+        <div class="tile">
+          4週間の記録練習時間
+          <strong>${(totalMinutes/60).toFixed(1)}</strong>時間
+        </div>
+      </div>
+
+      ${weeks.map((w,i)=>`
+        <div class="s28-week">
+          <h3>
+            ${i===3?"⚾ 今週":`${i+1}週目`}
+          </h3>
+          <small>${esc(w.start)} ～ ${esc(w.end)}</small>
+
+          ${s28bar("素振り",w.swings,maxSwings,"回")}
+          ${s28bar("記録練習時間",w.minutes,maxMinutes,"分")}
+
+          <div class="s28-metric">
+            <span>記録のある練習日</span>
+            <b>${w.days}日</b>
+          </div>
+
+          <div class="s28-metric">
+            <span>睡眠平均</span>
+            <b>${w.sleep===null?"未記録":
+              w.sleep.toFixed(1)+"時間"}</b>
+          </div>
+
+          <small>睡眠記録 ${w.sleepDays}日分</small>
+
+          ${w.painDays>0?`
+            <div class="s28-alert">
+              ⚠️ 痛みの記録：${w.painDays}日
+            </div>
+          `:""}
+        </div>
+      `).join("")}
+
+      <div class="s27-note">
+        <b>💡 今週と先週の比較</b>
+        <p>
+          素振り：
+          ${latest.swings-previous.swings>=0?"+":""}
+          ${latest.swings-previous.swings}回
+        </p>
+        <p>
+          記録練習時間：
+          ${latest.minutes-previous.minutes>=0?"+":""}
+          ${latest.minutes-previous.minutes}分
+        </p>
+        <small>
+          今週は途中経過です。
+          数字が増えることだけを目標にせず、
+          休養や練習の質も確認しましょう。
+        </small>
+      </div>
+    `)}
+
+    ${box("🧠 最近の練習で気づいたこと",`
+      ${latestNotes.length?
+        latestNotes.map(x=>`
+          <div class="s28-week">
+            <b>${esc(x.date)} ${esc(x.name)}</b>
+            <p>${esc(x.note)}</p>
+          </div>
+        `).join(""):
+        "<p>練習で気づいたことを記録しよう！</p>"
+      }
+    `)}
+
+    ${box("🏆 親子で確認する3つのポイント",`
+      <div class="s27-note">
+        <b>① 努力</b>
+        <p>先週より何ができるようになった？</p>
+      </div>
+      <div class="s27-note">
+        <b>② 身体</b>
+        <p>睡眠・疲労・痛み・休養はどうだった？</p>
+      </div>
+      <div class="s27-note">
+        <b>③ 挑戦</b>
+        <p>来週は何を一つ改善する？</p>
+      </div>
+      <button class="btn full"
+        onclick="go('review2027')">
+        📋 週間サクセス会議へ
+      </button>
+    `)}
+  `;
+}
+
+/* 新しいタブを追加 */
+if(!tabs.some(x=>x[0]==="report28")){
+  tabs.splice(2,0,[
+    "report28","📊 4週間レポート"
+  ]);
+}
+
+/* 既存の画面表示を保持して追加 */
+const s28previousRender=render;
+
+render=function(){
+  if(tab==="report28"){
+    document.getElementById("nav").innerHTML=
+      tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?"active":""}"
+          onclick="go('${id}')">
+          ${name}
+        </button>
+      `).join("");
+
+    document.getElementById("view").innerHTML=
+      s28report();
+    return;
+  }
+
+  s28previousRender();
+};
+
+render();
+</script>
+
 </body>
 </html>
