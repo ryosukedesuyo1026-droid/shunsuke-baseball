@@ -7181,5 +7181,1069 @@ render();
 })();
 </script>
 <!-- ===== 第9弾 終了 ===== -->
+<!-- ===== SUCCESS 第10弾：画面整理・目標・速度記録 ===== -->
+<style>
+.s10-panel{
+  background:#fff;
+  border:2px solid #a8c9e8;
+  border-radius:15px;
+  padding:15px;
+  margin:12px 0;
+  color:#163958;
+}
+.s10-panel h3{
+  margin:0 0 12px;
+  color:#155da7;
+}
+.s10-hero{
+  background:linear-gradient(135deg,#092a59,#176bb9);
+  color:white;
+  border:2px solid #ffd44e;
+  border-radius:15px;
+  padding:18px;
+  margin:12px 0;
+}
+.s10-hero h2{
+  color:#ffd44e;
+  margin:0 0 12px;
+}
+.s10-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.s10-stat{
+  background:#eef6ff;
+  border:1px solid #b2d0eb;
+  border-radius:11px;
+  padding:12px;
+  color:#173b60;
+}
+.s10-stat strong{
+  display:block;
+  font-size:23px;
+  color:#1266b4;
+  margin:5px 0;
+}
+.s10-goal{
+  background:#f0f7ff;
+  border-left:5px solid #ffd34d;
+  border-radius:9px;
+  padding:12px;
+  margin:10px 0;
+}
+.s10-goal b{
+  color:#155ca7;
+}
+.s10-goal p{
+  margin:8px 0;
+  overflow-wrap:anywhere;
+}
+.s10-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  margin:12px 0;
+}
+.s10-btn{
+  display:block;
+  width:100%;
+  border:0;
+  border-radius:10px;
+  padding:13px 8px;
+  background:linear-gradient(120deg,#1765af,#2492d8);
+  color:white;
+  font-size:14px;
+  font-weight:800;
+  cursor:pointer;
+}
+.s10-btn.gold{
+  background:linear-gradient(120deg,#ffd44e,#ffea96);
+  color:#173b60;
+}
+.s10-btn.light{
+  background:#e8f3ff;
+  color:#165a9b;
+  border:1px solid #9fc4e5;
+}
+.s10-input{
+  width:100%;
+  box-sizing:border-box;
+  margin:6px 0 12px;
+  padding:11px;
+  border:1px solid #9abbd8;
+  border-radius:9px;
+  font-size:16px;
+  background:white;
+  color:#163958;
+}
+.s10-label{
+  display:block;
+  font-size:13px;
+  font-weight:800;
+  margin-top:10px;
+}
+.s10-record{
+  border-bottom:1px solid #d5e4f0;
+  padding:10px 0;
+  font-size:13px;
+}
+.s10-record:last-child{
+  border-bottom:0;
+}
+.s10-note{
+  color:#617b92;
+  font-size:12px;
+  line-height:1.7;
+}
+.s10-meter{
+  height:12px;
+  background:#dce8f4;
+  border-radius:12px;
+  overflow:hidden;
+  margin:8px 0;
+}
+.s10-meter span{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#1685d1,#ffd34e);
+}
+.s10-nav-more{
+  background:#ffdf69!important;
+  color:#173b60!important;
+  font-weight:900!important;
+}
+@media(max-width:480px){
+  .s10-hero{padding:13px}
+  .s10-panel{padding:12px}
+  .s10-stat strong{font-size:20px}
+  .s10-btn{font-size:13px}
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/*
+ SUCCESS 第10弾
+
+ 1. ホーム画面の重複表示を整理
+ 2. 長期・現在・週間目標
+ 3. 球速・スイングスピード測定
+ 4. ナビゲーションの整理
+ 5. 既存データ・XP・能力値を維持
+
+ 既存のK4を使用。
+ 保存済みデータの削除や再計算は行わない。
+*/
+
+const S10_VERSION="10.0";
+
+/* ==============================
+   データ管理
+============================== */
+
+function s10Data(){
+  if(!db.success10 ||
+     typeof db.success10!=="object" ||
+     Array.isArray(db.success10)){
+    db.success10={};
+  }
+
+  const d=db.success10;
+
+  if(!d.goals ||
+     typeof d.goals!=="object" ||
+     Array.isArray(d.goals)){
+    d.goals={};
+  }
+
+  if(!Array.isArray(d.speeds)){
+    d.speeds=[];
+  }
+
+  if(!Array.isArray(d.goalHistory)){
+    d.goalHistory=[];
+  }
+
+  return d;
+}
+
+function s10Text(value){
+  return String(value==null?"":value);
+}
+
+function s10Safe(value){
+  return esc(s10Text(value));
+}
+
+function s10Date(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value||"")){
+    return false;
+  }
+
+  const d=new Date(value+"T12:00:00");
+
+  return !Number.isNaN(d.getTime()) &&
+    d.getFullYear()===Number(value.slice(0,4)) &&
+    d.getMonth()+1===Number(value.slice(5,7)) &&
+    d.getDate()===Number(value.slice(8,10));
+}
+
+function s10Read(id){
+  const el=document.getElementById(id);
+  return el?el.value.trim():"";
+}
+
+function s10SaveChange(change){
+  const before=JSON.stringify(db);
+
+  try{
+    change();
+
+    if(!save()){
+      db=JSON.parse(before);
+      return false;
+    }
+
+    return true;
+
+  }catch(e){
+    console.error(e);
+    db=JSON.parse(before);
+    alert("保存処理でエラーが発生しました。");
+    return false;
+  }
+}
+
+/* ==============================
+   目標管理
+============================== */
+
+const S10_GOALS=[
+  ["long","🌟 長期目標・将来の夢"],
+  ["current","🎯 今の目標"],
+  ["weekly","📅 今週の目標"]
+];
+
+function s10Goal(key){
+  const goals=s10Data().goals;
+  const g=goals[key];
+
+  if(!g)return {
+    text:"",
+    deadline:"",
+    progress:0,
+    updated:""
+  };
+
+  // 将来の形式変更にも対応
+  if(typeof g==="string"){
+    return {
+      text:g,
+      deadline:"",
+      progress:0,
+      updated:""
+    };
+  }
+
+  return {
+    text:s10Text(g.text),
+    deadline:s10Text(g.deadline),
+    progress:Math.max(
+      0,Math.min(100,Number(g.progress)||0)
+    ),
+    updated:s10Text(g.updated)
+  };
+}
+
+function s10GoalCard(key,title){
+  const g=s10Goal(key);
+
+  return `
+    <div class="s10-goal">
+      <b>${title}</b>
+
+      <p>
+        ${g.text
+          ?s10Safe(g.text)
+          :"まだ目標が設定されていません。"}
+      </p>
+
+      ${g.deadline?`
+        <small>達成予定：${s10Safe(g.deadline)}</small>
+      `:""}
+
+      <div class="s10-meter">
+        <span style="width:${g.progress}%"></span>
+      </div>
+
+      <small>達成度 ${g.progress}%</small>
+    </div>
+  `;
+}
+
+function s10GoalsHome(){
+  return `
+    <section class="s10-panel">
+      <h3>🌟 駿介の夢と目標</h3>
+
+      ${S10_GOALS.map(([key,title])=>
+        s10GoalCard(key,title)
+      ).join("")}
+
+      <button class="s10-btn gold"
+        onclick="go('goals10')">
+        ✏️ 目標を設定・更新する
+      </button>
+    </section>
+  `;
+}
+
+function s10GoalEditor(key,title){
+  const g=s10Goal(key);
+
+  return `
+    <div class="s10-goal">
+      <h3>${title}</h3>
+
+      <label class="s10-label">
+        自分の言葉で目標を書く
+      </label>
+
+      <textarea
+        class="s10-input"
+        id="s10goal_${key}"
+        rows="3"
+        placeholder="どんな選手になりたい？">${s10Safe(g.text)}</textarea>
+
+      <label class="s10-label">
+        達成予定日（任意）
+      </label>
+
+      <input
+        class="s10-input"
+        id="s10date_${key}"
+        type="date"
+        value="${s10Safe(g.deadline)}">
+
+      <label class="s10-label">
+        現在の達成度
+      </label>
+
+      <select
+        class="s10-input"
+        id="s10progress_${key}">
+
+        ${[0,10,20,30,40,50,60,70,80,90,100]
+          .map(n=>`
+            <option value="${n}"
+              ${g.progress===n?"selected":""}>
+              ${n}%
+            </option>
+          `).join("")}
+      </select>
+
+      <button class="s10-btn"
+        onclick="s10SaveGoal('${key}')">
+        💾 この目標を保存
+      </button>
+
+      ${g.text?`
+        <button
+          class="s10-btn light"
+          style="margin-top:8px"
+          onclick="s10CompleteGoal('${key}')">
+          🏆 目標を達成した！
+        </button>
+      `:""}
+    </div>
+  `;
+}
+
+window.s10SaveGoal=function(key){
+  if(!S10_GOALS.some(x=>x[0]===key))return;
+
+  const text=s10Read("s10goal_"+key);
+  const deadline=s10Read("s10date_"+key);
+  const progress=Number(
+    s10Read("s10progress_"+key)
+  );
+
+  if(!text){
+    alert("目標を入力してください。");
+    return;
+  }
+
+  if(text.length>500){
+    alert("目標は500文字以内にしてください。");
+    return;
+  }
+
+  if(deadline&&!s10Date(deadline)){
+    alert("達成予定日を確認してください。");
+    return;
+  }
+
+  if(!Number.isFinite(progress) ||
+     progress<0||progress>100){
+    alert("達成度を確認してください。");
+    return;
+  }
+
+  const ok=s10SaveChange(()=>{
+    s10Data().goals[key]={
+      text,
+      deadline,
+      progress,
+      updated:today()
+    };
+  });
+
+  if(!ok)return;
+
+  alert("目標を保存しました！");
+  render();
+};
+
+window.s10CompleteGoal=function(key){
+  if(!S10_GOALS.some(x=>x[0]===key))return;
+
+  const goal=s10Goal(key);
+  if(!goal.text)return;
+
+  if(!confirm(
+    "この目標を達成済みにしますか？\n\n"+
+    goal.text+
+    "\n\n達成履歴に残します。"
+  ))return;
+
+  const ok=s10SaveChange(()=>{
+    const d=s10Data();
+
+    d.goalHistory.push({
+      type:key,
+      text:goal.text,
+      date:today()
+    });
+
+    // 目標を履歴へ移動し、新しい目標を設定可能にする
+    d.goals[key]={
+      text:"",
+      deadline:"",
+      progress:0,
+      updated:today()
+    };
+  });
+
+  if(!ok)return;
+
+  alert("🏆 目標達成！ 次の目標を考えよう！");
+  render();
+};
+
+function s10GoalsScreen(){
+  const history=s10Data().goalHistory;
+
+  return `
+    <section class="s10-hero">
+      <h2>🌟 DREAM & GOALS</h2>
+      <p>夢を持ち、考え、行動しよう！</p>
+      <p>
+        大きな夢も、毎日の小さな一歩から。
+      </p>
+    </section>
+
+    <section class="s10-panel">
+      <h3>🎯 目標を編集する</h3>
+
+      ${S10_GOALS.map(([key,title])=>
+        s10GoalEditor(key,title)
+      ).join("")}
+    </section>
+
+    <section class="s10-panel">
+      <h3>🏆 達成した目標</h3>
+
+      ${history.length?
+        history.slice().reverse().map(x=>`
+          <div class="s10-record">
+            <b>🏅 ${s10Safe(x.text)}</b>
+            <p>${s10Safe(x.date)}</p>
+          </div>
+        `).join(""):
+        "<p>目標を達成すると、ここに記録されます。</p>"
+      }
+
+      <p class="s10-note">
+        目標達成は記録として保存します。
+        XPや能力値を自動変更しないため、
+        既存のゲームバランスを維持できます。
+      </p>
+    </section>
+  `;
+}
+
+/* ==============================
+   球速・スイングスピード
+============================== */
+
+const S10_SPEED_TYPES=[
+  ["pitch","🔥 球速"],
+  ["swing","🏏 スイングスピード"]
+];
+
+function s10SpeedRecords(type){
+  return s10Data().speeds.filter(x=>
+    x.type===type &&
+    Number.isFinite(Number(x.value)) &&
+    Number(x.value)>0
+  );
+}
+
+function s10SpeedInfo(type){
+  const rows=s10SpeedRecords(type);
+
+  if(!rows.length){
+    return {
+      latest:null,
+      best:null,
+      count:0
+    };
+  }
+
+  const sorted=rows.slice().sort((a,b)=>
+    String(b.date).localeCompare(String(a.date))||
+    Number(b.created||0)-Number(a.created||0)
+  );
+
+  const best=rows.reduce((a,b)=>
+    Number(b.value)>Number(a.value)?b:a
+  );
+
+  return {
+    latest:sorted[0],
+    best,
+    count:rows.length
+  };
+}
+
+function s10SpeedValue(record){
+  return record
+    ?Number(record.value).toFixed(1)
+    :"未記録";
+}
+
+function s10SpeedCards(){
+  return `
+    <div class="s10-grid">
+      ${S10_SPEED_TYPES.map(([type,title])=>{
+        const info=s10SpeedInfo(type);
+
+        return `
+          <div class="s10-stat">
+            <b>${title}</b>
+
+            <small>最新測定</small>
+
+            <strong>
+              ${s10SpeedValue(info.latest)}
+            </strong>
+
+            <small>
+              ${info.latest?"km/h":"測定待ち"}
+            </small>
+
+            <p>
+              自己ベスト<br>
+              <b>
+                ${s10SpeedValue(info.best)}
+                ${info.best?" km/h":""}
+              </b>
+            </p>
+
+            <small>
+              ${info.latest
+                ?"測定日："+s10Safe(info.latest.date)
+                :"まだ測定していません"}
+            </small>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function s10SpeedHome(){
+  return `
+    <section class="s10-panel">
+      <h3>⚾ 選手データ</h3>
+
+      ${s10SpeedCards()}
+
+      <button class="s10-btn"
+        style="margin-top:12px"
+        onclick="go('speed10')">
+        📏 球速・スイングスピードを記録
+      </button>
+
+      <p class="s10-note">
+        実際に測定した速度のみ表示します。
+        投球練習の記録とは別に登録できます。
+      </p>
+    </section>
+  `;
+}
+
+function s10SpeedScreen(){
+  const rows=s10Data().speeds.slice().reverse();
+
+  return `
+    <section class="s10-hero">
+      <h2>🔥 SPEED RECORD</h2>
+      <p>球速・スイングスピード成長記録</p>
+      <p>
+        数字だけでなく、
+        正しいフォームと身体の状態も大切にしよう！
+      </p>
+    </section>
+
+    <section class="s10-panel">
+      <h3>📊 現在の測定データ</h3>
+      ${s10SpeedCards()}
+    </section>
+
+    <section class="s10-panel">
+      <h3>➕ 新しい測定を記録</h3>
+
+      <label class="s10-label">測定日</label>
+
+      <input
+        class="s10-input"
+        id="s10speedDate"
+        type="date"
+        value="${today()}">
+
+      <label class="s10-label">測定項目</label>
+
+      <select
+        class="s10-input"
+        id="s10speedType">
+
+        <option value="pitch">
+          🔥 球速
+        </option>
+
+        <option value="swing">
+          🏏 スイングスピード
+        </option>
+      </select>
+
+      <label class="s10-label">
+        測定値（km/h）
+      </label>
+
+      <input
+        class="s10-input"
+        id="s10speedValue"
+        type="number"
+        min="1"
+        max="250"
+        step="0.1"
+        placeholder="例：85.5">
+
+      <label class="s10-label">
+        測定方法・メモ（任意）
+      </label>
+
+      <input
+        class="s10-input"
+        id="s10speedNote"
+        placeholder="例：スピードガンで測定">
+
+      <button class="s10-btn gold"
+        onclick="s10SaveSpeed()">
+        💾 測定値を保存する
+      </button>
+
+      <p class="s10-note">
+        速度測定は練習メニューではありません。
+        記録しても練習時間・投球数・XP・
+        能力値は増えません。
+      </p>
+    </section>
+
+    <section class="s10-panel">
+      <h3>📚 測定履歴</h3>
+
+      ${rows.length?rows.map(x=>`
+        <div class="s10-record">
+          <b>
+            ${x.type==="pitch"
+              ?"🔥 球速"
+              :"🏏 スイングスピード"}
+          </b>
+
+          <p>
+            ${s10Safe(x.date)}
+            ／
+            <b>${Number(x.value).toFixed(1)} km/h</b>
+          </p>
+
+          <small>${s10Safe(x.note||"")}</small>
+        </div>
+      `).join(""):
+      "<p>まだ測定記録がありません。</p>"}
+    </section>
+  `;
+}
+
+window.s10SaveSpeed=function(){
+  const date=s10Read("s10speedDate");
+  const type=s10Read("s10speedType");
+  const raw=s10Read("s10speedValue");
+  const note=s10Read("s10speedNote");
+  const value=Number(raw);
+
+  if(!s10Date(date)){
+    alert("測定日を確認してください。");
+    return;
+  }
+
+  if(!S10_SPEED_TYPES.some(x=>x[0]===type)){
+    alert("測定項目を確認してください。");
+    return;
+  }
+
+  if(raw===""||
+     !Number.isFinite(value)||
+     value<=0||value>250){
+    alert("測定値を確認してください。");
+    return;
+  }
+
+  if(note.length>300){
+    alert("メモは300文字以内にしてください。");
+    return;
+  }
+
+  const ok=s10SaveChange(()=>{
+    s10Data().speeds.push({
+      date,
+      type,
+      value,
+      note,
+      created:Date.now()
+    });
+  });
+
+  if(!ok)return;
+
+  alert("⚾ 測定値を保存しました！");
+  render();
+};
+
+/* ==============================
+   ホーム画面をコンパクト化
+============================== */
+
+function s10Recent(){
+  const rows=Array.isArray(db.practice)
+    ?db.practice.slice(-5).reverse()
+    :[];
+
+  return `
+    <section class="s10-panel">
+      <h3>📖 最近の活動</h3>
+
+      ${rows.length?rows.map(x=>`
+        <div class="s10-record">
+          <b>${s10Safe(x.name)}</b>
+          <p>
+            ${s10Safe(x.date)}
+            ／
+            +${num(x.xp)} XP
+          </p>
+        </div>
+      `).join(""):
+      "<p>これからの活動がここに表示されます。</p>"}
+
+      <button class="s10-btn light"
+        onclick="go('training')">
+        ⚾ 練習記録を見る
+      </button>
+    </section>
+  `;
+}
+
+function s10PlayerHeader(){
+  const xp=num(db.xp);
+  const energy=num(db.energy);
+
+  return `
+    <section class="s10-hero">
+      <h2>⚾ 駿介 SUCCESS</h2>
+
+      <div class="s10-grid">
+        <div>
+          <small>PLAYER LEVEL</small>
+          <h2>Lv.${level()}</h2>
+        </div>
+
+        <div>
+          <small>累計経験値</small>
+          <h2>${xp} XP</h2>
+        </div>
+      </div>
+
+      <div class="s10-meter">
+        <span style="width:${xpRate()}%"></span>
+      </div>
+
+      <p>
+        ⚡ 元気度 ${energy}/100
+      </p>
+
+      <p>
+        昨日の自分を超える一歩を積み重ねよう！
+      </p>
+    </section>
+  `;
+}
+
+function s10QuickActions(){
+  return `
+    <section class="s10-panel">
+      <h3>⚾ 今日の活動</h3>
+
+      <div class="s10-actions">
+        <button class="s10-btn gold"
+          onclick="go('training')">
+          💪 練習を記録
+        </button>
+
+        <button class="s10-btn"
+          onclick="go('review2027')">
+          🌙 睡眠・体調
+        </button>
+
+        <button class="s10-btn"
+          onclick="go('food9')">
+          🍚 食事コーチ
+        </button>
+
+        <button class="s10-btn light"
+          onclick="go('plan')">
+          📝 計画・振り返り
+        </button>
+      </div>
+
+      <p class="s10-note">
+        練習日も休養日も、
+        自分の身体を大切にして記録しよう。
+      </p>
+    </section>
+  `;
+}
+
+function s10Home(){
+  let mode="";
+
+  // 第9弾の休養モードを再利用
+  if(typeof s9ModePanel==="function"){
+    mode=s9ModePanel();
+  }
+
+  let time="";
+
+  if(typeof s9Summary==="function"){
+    time=s9Summary();
+  }
+
+  return `
+    ${mode}
+
+    ${s10PlayerHeader()}
+
+    ${s10GoalsHome()}
+
+    ${s10SpeedHome()}
+
+    ${s10QuickActions()}
+
+    ${time}
+
+    ${s10Recent()}
+  `;
+}
+
+/* ==============================
+   ナビゲーション整理
+============================== */
+
+/*
+  内部のタブIDは変更しない。
+  表示する入口だけを整理する。
+  非表示タブも「その他」からアクセス可能。
+*/
+
+const S10_MAIN_IDS=[
+  "home",
+  "training",
+  "review2027",
+  "food9",
+  "goals10",
+  "speed10",
+  "game",
+  "games",
+  "growth",
+  "challenge29",
+  "profile"
+];
+
+const S10_MAIN_LABELS={
+  home:"🏠 ホーム",
+  training:"💪 練習",
+  review2027:"🌙 生活・分析",
+  food9:"🍚 食事",
+  goals10:"🎯 目標",
+  speed10:"🔥 速度",
+  game:"🏆 試合",
+  games:"🏆 試合",
+  growth:"📈 成長",
+  challenge29:"🏅 チャレンジ",
+  profile:"⚾ プロフィール"
+};
+
+let s10MoreOpen=false;
+
+function s10Nav(){
+  const main=tabs.filter(([id])=>
+    S10_MAIN_IDS.includes(id)
+  );
+
+  const others=tabs.filter(([id])=>
+    !S10_MAIN_IDS.includes(id)
+  );
+
+  const activeIsOther=others.some(
+    ([id])=>id===tab
+  );
+
+  const showOthers=s10MoreOpen||activeIsOther;
+
+  const button=([id,label])=>`
+    <button
+      class="${tab===id?"active":""}"
+      onclick="go('${id}')">
+      ${s10Safe(S10_MAIN_LABELS[id]||label)}
+    </button>
+  `;
+
+  return `
+    ${main.map(button).join("")}
+
+    <button
+      class="${showOthers?"active":""} s10-nav-more"
+      onclick="s10ToggleMore()">
+      ${showOthers?"▲ 閉じる":"☰ その他"}
+    </button>
+
+    ${showOthers?others.map(button).join(""):""}
+  `;
+}
+
+window.s10ToggleMore=function(){
+  s10MoreOpen=!s10MoreOpen;
+
+  const nav=document.getElementById("nav");
+
+  if(nav){
+    nav.innerHTML=s10Nav();
+  }
+};
+
+/* ==============================
+   タブ登録
+============================== */
+
+if(!tabs.some(x=>x[0]==="goals10")){
+  tabs.push([
+    "goals10",
+    "🎯 目標管理"
+  ]);
+}
+
+if(!tabs.some(x=>x[0]==="speed10")){
+  tabs.push([
+    "speed10",
+    "🔥 速度記録"
+  ]);
+}
+
+/* ==============================
+   既存画面との連携
+============================== */
+
+const s10PreviousRender=render;
+
+render=function(){
+  const view=document.getElementById("view");
+  const nav=document.getElementById("nav");
+
+  if(!view||!nav){
+    return s10PreviousRender();
+  }
+
+  // 新規画面と整理したホーム
+  if(tab==="home"){
+    view.innerHTML=s10Home();
+
+  }else if(tab==="goals10"){
+    view.innerHTML=s10GoalsScreen();
+
+  }else if(tab==="speed10"){
+    view.innerHTML=s10SpeedScreen();
+
+  }else{
+    // 既存画面の処理は変更しない
+    s10PreviousRender();
+
+    // プロフィール画面には速度情報を追加
+    if(tab==="profile"){
+      const currentView=document.getElementById("view");
+
+      if(currentView &&
+         !currentView.querySelector("#s10-profile-speed")){
+
+        const section=document.createElement("div");
+        section.id="s10-profile-speed";
+        section.innerHTML=s10SpeedHome();
+
+        currentView.appendChild(section);
+      }
+    }
+  }
+
+  // すべての画面で整理したナビを表示
+  const currentNav=document.getElementById("nav");
+
+  if(currentNav){
+    currentNav.innerHTML=s10Nav();
+  }
+};
+
+/* ==============================
+   起動
+============================== */
+
+// 起動時に保存済み記録を変更しない。
+// 新しい領域は必要になった時だけ作成。
+render();
+
+})();
+</script>
+<!-- ===== SUCCESS 第10弾 終了 ===== -->
 </body>
 </html>
