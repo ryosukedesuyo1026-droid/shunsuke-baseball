@@ -5787,5 +5787,244 @@ render();
 </script>
 <!-- ===== データ管理システム終了 ===== -->
 
+<!-- ===== SUCCESS 第7弾：データ管理安定化 ===== -->
+<script>
+(function(){
+"use strict";
+
+/*
+  第7弾
+  ・XPの二重減算を防止
+  ・残った練習から能力値を再計算
+  ・削除後の進化演出の誤判定を防止
+  ・保存後は再読み込みして状態を同期
+*/
+
+function s7SaveAndReload(before){
+  try{
+    localStorage.setItem(
+      K4,
+      JSON.stringify(db)
+    );
+
+    // 進化システムの内部状態も再初期化
+    window.location.reload();
+    return true;
+
+  }catch(e){
+    console.error(e);
+    db=JSON.parse(before);
+    alert(
+      "保存できませんでした。\n"+
+      "データは元に戻しました。"
+    );
+    return false;
+  }
+}
+
+function s7PracticeReplay(){
+  const abilities=Object.fromEntries(
+    AB.map(k=>[k,20])
+  );
+
+  const pitch=Object.fromEntries(
+    PB.map(k=>[k,20])
+  );
+
+  let energy=100;
+  const dayCounts={};
+
+  // practice配列は登録順に保存されている
+  for(const record of db.practice){
+    const date=String(record.date||"");
+    const count=dayCounts[date]||0;
+    dayCounts[date]=count+1;
+
+    const item=TRAINING_MENU.find(
+      x=>x[0]===record.name
+    );
+
+    if(!item)continue;
+
+    if(item[2]==="ケア"){
+      energy=cap(energy+10);
+      continue;
+    }
+
+    energy=cap(energy-5);
+
+    // 同じ日の4件目以降は能力上昇なし
+    if(count>=3)continue;
+
+    const target=PB.includes(item[2])
+      ?pitch:abilities;
+
+    if(target[item[2]]!==undefined){
+      target[item[2]]=cap(
+        num(target[item[2]],20)+1
+      );
+    }
+  }
+
+  db.abilities=abilities;
+  db.pitch=pitch;
+  db.energy=energy;
+}
+
+function s7Delete(type,index){
+  const extra=[
+    "quick","sleep","meals",
+    "condition","reviews"
+  ];
+
+  const valid=[
+    "practice","games","growth",
+    "pitchlog","plans","reflections",
+    "missionClaims",...extra
+  ];
+
+  if(!valid.includes(type))return;
+
+  const rows=extra.includes(type)
+    ?db.success2027?.[type]
+    :db[type];
+
+  if(!Array.isArray(rows) ||
+     !Number.isInteger(index) ||
+     index<0 || index>=rows.length){
+    alert("削除対象が見つかりません。");
+    return;
+  }
+
+  const record=rows[index];
+
+  const label=[
+    record.date||record.week||"",
+    record.name||record.opponent||
+      record.type||"",
+    record.text||record.note||""
+  ].filter(Boolean).join(" / ");
+
+  if(!confirm(
+    "この記録を削除しますか？\n\n"+
+    label+"\n\n"+
+    "削除した記録は元に戻せません。"
+  ))return;
+
+  const before=JSON.stringify(db);
+
+  try{
+    // 削除前のXPを保存
+    const oldXP=Math.max(0,num(db.xp));
+
+    // 対象記録を1件削除
+    rows.splice(index,1);
+
+    // 記録の種類ごとに取り消すXP
+    let removedXP=0;
+
+    if(type==="practice"){
+      removedXP=Math.max(0,num(record.xp));
+      s7PracticeReplay();
+
+      // 古い成長履歴は新しい能力値と
+      // 一致しない可能性があるためクリア
+      if(db.evolution){
+        db.evolution.history=[];
+      }
+
+    }else if(type==="games"){
+      removedXP=20;
+
+    }else if(type==="plans"){
+      removedXP=10;
+
+    }else if(type==="reflections"){
+      removedXP=10;
+
+    }else if(type==="missionClaims"){
+      removedXP=10;
+    }
+
+    // XPは削除対象の分だけ1回減算
+    db.xp=Math.max(
+      0,oldXP-removedXP
+    );
+
+    // 再読み込みでレベル・称号・分析・
+    // 進化システムを最新状態に統一
+    s7SaveAndReload(before);
+
+  }catch(e){
+    console.error(e);
+    db=JSON.parse(before);
+    alert("削除処理に失敗しました。");
+  }
+}
+
+function s7Reset(){
+  if(!confirm(
+    "すべての記録を初期化します。\n"+
+    "XP・能力・成長記録も初期状態に戻ります。\n\n"+
+    "続けますか？"
+  ))return;
+
+  const word=prompt(
+    "最終確認です。\n"+
+    "「初期化」と入力してください。"
+  );
+
+  if(word!=="初期化"){
+    alert("初期化を中止しました。");
+    return;
+  }
+
+  const before=JSON.stringify(db);
+
+  db=fresh();
+
+  db.success2027={
+    quick:[],
+    sleep:[],
+    meals:[],
+    condition:[],
+    reviews:[]
+  };
+
+  db.evolution={
+    history:[]
+  };
+
+  try{
+    // 先に新しい初期データを保存
+    localStorage.setItem(
+      K4,
+      JSON.stringify(db)
+    );
+
+    // 旧データの再移行を防止
+    localStorage.removeItem(K3);
+
+    // 進化システムも初期状態から起動
+    window.location.reload();
+
+  }catch(e){
+    console.error(e);
+    db=JSON.parse(before);
+    alert(
+      "初期化に失敗しました。\n"+
+      "保存状態を確認してください。"
+    );
+  }
+}
+
+// 既存ボタンの処理だけを差し替える
+window.dmRemove=s7Delete;
+window.dmResetAll=s7Reset;
+
+})();
+</script>
+<!-- ===== 第7弾 終了 ===== -->
+
 </body>
 </html>
