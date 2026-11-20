@@ -9362,5 +9362,690 @@ render();
 </script>
 <!-- ===== 第11弾 終了 ===== -->
 
+<!-- ===== 第12弾：野球ノート編集＆メニュー整理 ===== -->
+<style>
+.s12-tools{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+  margin-top:10px;
+}
+.s12-tools button{
+  border:1px solid #a9c6e3;
+  border-radius:9px;
+  padding:10px 4px;
+  font-size:13px;
+  font-weight:bold;
+  background:#eaf4ff;
+  color:#164775;
+}
+.s12-tools button.s12-danger{
+  background:#fff0f0;
+  color:#a32a2a;
+  border-color:#edb4b4;
+}
+.s12-overlay{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  background:rgba(0,15,35,.78);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px;
+}
+.s12-dialog{
+  background:#f2f8ff;
+  color:#183b5c;
+  border-radius:16px;
+  padding:18px;
+  width:min(100%,620px);
+  max-height:90vh;
+  overflow-y:auto;
+  box-sizing:border-box;
+}
+.s12-dialog h2{margin-top:0}
+.s12-dialog label{
+  display:block;
+  font-weight:bold;
+  margin:12px 0 5px;
+}
+.s12-dialog input,
+.s12-dialog select,
+.s12-dialog textarea{
+  box-sizing:border-box;
+  width:100%;
+  padding:11px;
+  font-size:16px;
+  border:1px solid #aac5df;
+  border-radius:9px;
+  background:white;
+  color:#183b5c;
+}
+.s12-dialog textarea{min-height:85px}
+.s12-analysis{
+  background:#f1f7ff;
+  border-radius:13px;
+  padding:15px;
+  margin:12px 0;
+  color:#173e67;
+}
+.s12-analysis button{
+  width:100%;
+  padding:15px;
+  margin:7px 0;
+  border:0;
+  border-radius:10px;
+  background:#145b9e;
+  color:white;
+  font-weight:bold;
+  font-size:15px;
+}
+.s12-back{
+  width:100%;
+  padding:12px;
+  margin:0 0 12px;
+  border:0;
+  border-radius:9px;
+  background:#ffd34d;
+  color:#173e67;
+  font-weight:bold;
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+const S12_HUB="s12AnalysisHub";
+const S12_LABEL="📊 振り返り・分析";
+
+const S12_CATEGORY=[
+  ["bat","🏏 バッティング"],
+  ["pitch","🔥 ピッチング"],
+  ["catch","🧤 キャッチング"],
+  ["throw","⚾ スローイング"],
+  ["field","🧢 フィールディング"],
+  ["cover","🏃 カバーリング"],
+  ["run","💨 ベースランニング"],
+  ["mind","🧠 判断・メンタル"],
+  ["body","🌱 身体・コンディション"]
+];
+
+function s12Esc(v){
+  return String(v==null?"":v)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
+
+function s12Notes(){
+  if(!db.baseballNotebook11 ||
+     !Array.isArray(db.baseballNotebook11.notes)){
+    return [];
+  }
+  return db.baseballNotebook11.notes;
+}
+
+function s12Find(pattern){
+  return tabs.find(x=>pattern.test(String(x[1]||"")));
+}
+
+/* ----- タブの整理 ----- */
+
+// 既存の分析・レポート画面を残したまま
+// ナビゲーション上では1つの入口にまとめる。
+const s12AnalysisTabs=tabs.filter(x=>
+  /努力.*分析|週間分析|4週間レポート|４週間レポート|週報|月間レポート/.test(
+    String(x[1]||"")
+  )
+);
+
+if(s12AnalysisTabs.length &&
+   !tabs.some(x=>x[0]===S12_HUB)){
+  tabs.push([S12_HUB,S12_LABEL]);
+}
+
+const s12Priority=[
+  /^🏠?\s*ホーム/,
+  /プロフィール/,
+  /試合/,
+  /^💪?\s*練習$/,
+  /野球ノート/,
+  /食事/,
+  /投手.*速度|速度.*投手/,
+  /^📈?\s*成長$/,
+  /自主計画/,
+  /振り返り・分析/,
+  /チャレンジ/,
+  /称号/,
+  /設定|データ管理/
+];
+
+function s12Rank(item){
+  const name=String(item[1]||"");
+  const index=s12Priority.findIndex(re=>re.test(name));
+  return index<0?100:index;
+}
+
+const s12OriginalOrder=new Map(
+  tabs.map((x,i)=>[x[0],i])
+);
+
+tabs.sort((a,b)=>
+  s12Rank(a)-s12Rank(b) ||
+  s12OriginalOrder.get(a[0])-
+  s12OriginalOrder.get(b[0])
+);
+
+function s12HiddenIds(){
+  return new Set(
+    s12AnalysisTabs.map(x=>x[0])
+  );
+}
+
+function s12VisibleTabs(){
+  const hidden=s12HiddenIds();
+  return tabs.filter(x=>!hidden.has(x[0]));
+}
+
+function s12UpdateNav(){
+  const nav=document.getElementById("nav");
+  if(!nav)return;
+
+  const visible=s12VisibleTabs();
+
+  // 既存のボタン要素を再利用することで、
+  // 元のイベント処理やデザインを維持する。
+  const existing=Array.from(nav.children);
+  const used=new Set();
+
+  visible.forEach(([id,name])=>{
+    let button=existing.find(el=>
+      !used.has(el) &&
+      el.getAttribute("onclick") &&
+      el.getAttribute("onclick").includes(
+        "'"+id+"'"
+      )
+    );
+
+    if(!button){
+      button=document.createElement("button");
+      button.setAttribute(
+        "onclick","go('"+id+"')"
+      );
+    }
+
+    button.textContent=name;
+    button.classList.toggle(
+      "active",tab===id
+    );
+
+    nav.appendChild(button);
+    used.add(button);
+  });
+
+  existing.forEach(el=>{
+    if(!used.has(el))el.remove();
+  });
+}
+
+/* ----- 野球ノートの編集 ----- */
+
+function s12Read(id){
+  const el=document.getElementById(id);
+  return el?el.value:"";
+}
+
+function s12Field(label,id,value,multiline){
+  return `
+    <label for="${id}">${label}</label>
+    ${multiline?
+      `<textarea id="${id}">${s12Esc(value)}</textarea>`:
+      `<input id="${id}" value="${s12Esc(value)}">`
+    }
+  `;
+}
+
+window.s12CloseEditor=function(){
+  const el=document.getElementById("s12Editor");
+  if(el)el.remove();
+};
+
+function s12OpenEditor(index,mode){
+  const note=s12Notes()[index];
+  if(!note)return;
+
+  window.s12CloseEditor();
+
+  const overlay=document.createElement("div");
+  overlay.className="s12-overlay";
+  overlay.id="s12Editor";
+
+  const categories=S12_CATEGORY.map(([id,name])=>`
+    <option value="${id}"
+      ${note.category===id?"selected":""}>
+      ${name}
+    </option>
+  `).join("");
+
+  overlay.innerHTML=`
+    <div class="s12-dialog" role="dialog"
+      aria-modal="true"
+      aria-label="野球ノート編集">
+
+      <h2>${mode==="append"?
+        "✏️ 野球ノートに追記":
+        "📓 野球ノートを編集"}</h2>
+
+      <p>
+        ${mode==="append"?
+          "練習後に気づいたことや、次に試したいことを追加しよう。":
+          "以前の記録を修正できます。"}
+      </p>
+
+      ${mode==="append"?`
+        ${s12Field(
+          "追加したいこと",
+          "s12AppendText","",true
+        )}
+      `:`
+        ${s12Field("日付","s12Date",
+          note.date||"",false)}
+
+        <label>練習・試合</label>
+        <select id="s12Scene">
+          ${["練習","練習試合","公式戦"].map(v=>`
+            <option ${note.scene===v?"selected":""}>
+              ${v}
+            </option>
+          `).join("")}
+        </select>
+
+        <label>技術の分類</label>
+        <select id="s12Category">
+          ${categories}
+        </select>
+
+        ${s12Field(
+          "今日の目標","s12Goal",
+          note.goal||"",true
+        )}
+
+        ${s12Field(
+          "練習・試合内容","s12Content",
+          note.content||"",true
+        )}
+
+        ${s12Field(
+          "意識したこと","s12Focus",
+          note.focus||"",true
+        )}
+
+        ${s12Field(
+          "結果・感覚","s12Result",
+          note.result||"",true
+        )}
+
+        ${s12Field(
+          "良かったこと","s12Good",
+          note.good||"",true
+        )}
+
+        ${s12Field(
+          "改善したいこと","s12Improve",
+          note.improve||"",true
+        )}
+
+        ${s12Field(
+          "次に試すこと","s12Next",
+          note.next||"",true
+        )}
+      `}
+
+      <button class="s11-btn"
+        onclick="s12SaveEditor(${index},
+          '${mode}')">
+        💾 保存する
+      </button>
+
+      <button class="s11-btn s11-blue"
+        onclick="s12CloseEditor()">
+        キャンセル
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+window.s12EditNote=function(index){
+  s12OpenEditor(index,"edit");
+};
+
+window.s12AppendNote=function(index){
+  s12OpenEditor(index,"append");
+};
+
+function s12Commit(mutator){
+  // 保存に失敗した場合は元の状態に戻す。
+  const snapshot=JSON.stringify(db);
+
+  try{
+    mutator();
+
+    const result=save();
+    if(result===false){
+      throw new Error("保存に失敗しました");
+    }
+
+    return true;
+  }catch(e){
+    try{
+      db=JSON.parse(snapshot);
+    }catch(ignore){}
+
+    alert(
+      "保存できませんでした。\n"+
+      "データ管理から空き容量などを確認してください。"
+    );
+    return false;
+  }
+}
+
+window.s12SaveEditor=function(index,mode){
+  const notes=s12Notes();
+  if(!notes[index])return;
+
+  if(mode==="append"){
+    const addition=s12Read("s12AppendText").trim();
+
+    if(!addition){
+      alert("追記する内容を入力してください。");
+      return;
+    }
+
+    const stamp=new Date().toLocaleDateString(
+      "ja-JP"
+    );
+
+    const ok=s12Commit(()=>{
+      const n=notes[index];
+      if(!Array.isArray(n.additions)){
+        n.additions=[];
+      }
+
+      n.additions.push({
+        date:stamp,
+        text:addition
+      });
+    });
+
+    if(!ok)return;
+  }else{
+    const date=s12Read("s12Date").trim();
+
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+      alert("日付を確認してください。");
+      return;
+    }
+
+    const ok=s12Commit(()=>{
+      Object.assign(notes[index],{
+        date:date,
+        scene:s12Read("s12Scene"),
+        category:s12Read("s12Category"),
+        goal:s12Read("s12Goal"),
+        content:s12Read("s12Content"),
+        focus:s12Read("s12Focus"),
+        result:s12Read("s12Result"),
+        good:s12Read("s12Good"),
+        improve:s12Read("s12Improve"),
+        next:s12Read("s12Next")
+      });
+    });
+
+    if(!ok)return;
+  }
+
+  window.s12CloseEditor();
+  alert("📓 野球ノートを保存しました！");
+  render();
+};
+
+window.s12DeleteNote=function(index){
+  const notes=s12Notes();
+  const n=notes[index];
+  if(!n)return;
+
+  const yes=confirm(
+    "この野球ノートを削除しますか？\n\n"+
+    "日付："+(n.date||"")+"\n"+
+    "目標："+(n.goal||"")+"\n\n"+
+    "削除すると元に戻せません。"
+  );
+
+  if(!yes)return;
+
+  const ok=s12Commit(()=>{
+    notes.splice(index,1);
+  });
+
+  if(!ok)return;
+
+  alert("野球ノートを削除しました。");
+  render();
+};
+
+function s12EnhanceNotes(){
+  if(tab!=="baseballNotebook11")return;
+
+  const notes=s12Notes();
+  const cards=document.querySelectorAll(
+    ".s11-note"
+  );
+
+  cards.forEach(card=>{
+    const copy=card.querySelector(
+      '[onclick^="s11CopyNote("]'
+    );
+
+    if(!copy)return;
+    if(card.querySelector(".s12-tools"))return;
+
+    const match=copy.getAttribute(
+      "onclick"
+    ).match(/\((\d+)\)/);
+
+    if(!match)return;
+
+    const index=Number(match[1]);
+    if(!notes[index])return;
+
+    const tools=document.createElement("div");
+    tools.className="s12-tools";
+
+    [
+      ["✏️ 編集","s12EditNote"],
+      ["➕ 追記","s12AppendNote"],
+      ["🗑️ 削除","s12DeleteNote"]
+    ].forEach(([label,fn],i)=>{
+      const button=document.createElement("button");
+      button.textContent=label;
+      if(i===2)button.className="s12-danger";
+      button.onclick=()=>window[fn](index);
+      tools.appendChild(button);
+    });
+
+    copy.insertAdjacentElement(
+      "afterend",tools
+    );
+
+    const additions=notes[index].additions;
+
+    if(Array.isArray(additions) &&
+       additions.length){
+      const block=document.createElement("div");
+      block.className="s11-note";
+
+      const title=document.createElement("b");
+      title.textContent="📝 あとから追記したこと";
+      block.appendChild(title);
+
+      additions.forEach(a=>{
+        const p=document.createElement("p");
+        p.textContent=
+          (a.date||"")+"： "+(a.text||"");
+        block.appendChild(p);
+      });
+
+      tools.insertAdjacentElement(
+        "beforebegin",block
+      );
+    }
+  });
+}
+
+/* ----- 振り返り・分析の入口 ----- */
+
+function s12AnalysisScreen(){
+  const cards=s12AnalysisTabs.map(([id,name])=>`
+    <button onclick="go('${id}')">
+      ${s12Esc(name)} を見る
+    </button>
+  `).join("");
+
+  return `
+    <section class="s11-hero">
+      <h2>📊 振り返り・分析</h2>
+      <p>
+        練習・生活・成長を振り返って、
+        次の目標につなげよう！
+      </p>
+    </section>
+
+    <section class="s12-analysis">
+      <h3>📈 分析メニュー</h3>
+      ${cards||"<p>分析記録はありません。</p>"}
+
+      <p>
+        過去の記録やレポートは
+        そのまま残っています。
+      </p>
+    </section>
+
+    <section class="s12-analysis">
+      <h3>📓 考える振り返り</h3>
+      <p>
+        数字で分かる成長と、
+        自分で感じた成長を比べてみよう。
+      </p>
+      <button onclick="go('baseballNotebook11')">
+        野球ノートを振り返る
+      </button>
+    </section>
+  `;
+}
+
+/* ----- 最新の描画処理に接続 ----- */
+
+const s12PreviousRender=render;
+
+render=function(){
+  if(tab===S12_HUB){
+    const requested=tab;
+
+    // 既存のホーム描画を利用して
+    // ナビゲーションを初期化する。
+    tab="home";
+
+    try{
+      s12PreviousRender();
+    }finally{
+      tab=requested;
+    }
+
+    const view=document.getElementById("view");
+    if(view)view.innerHTML=s12AnalysisScreen();
+
+    s12UpdateNav();
+    return;
+  }
+
+  s12PreviousRender();
+
+  s12UpdateNav();
+  s12EnhanceNotes();
+
+  // 統合した分析画面から元の詳細画面を開いた場合
+  if(s12HiddenIds().has(tab)){
+    const view=document.getElementById("view");
+
+    if(view && !document.getElementById(
+      "s12BackButton"
+    )){
+      const back=document.createElement("button");
+      back.id="s12BackButton";
+      back.className="s12-back";
+      back.textContent="← 振り返り・分析に戻る";
+      back.onclick=()=>go(S12_HUB);
+      view.prepend(back);
+    }
+  }
+};
+
+// 既存の野球ノートのコピー処理に追記内容を追加
+if(typeof window.s11CopyNote==="function"){
+  const oldCopy=window.s11CopyNote;
+
+  window.s11CopyNote=function(index){
+    const note=s12Notes()[index];
+
+    if(!note || !Array.isArray(note.additions) ||
+       !note.additions.length){
+      return oldCopy(index);
+    }
+
+    const lines=[
+      "【野球ノート】",
+      "日付："+(note.date||""),
+      "目標："+(note.goal||""),
+      "練習内容："+(note.content||""),
+      "意識したこと："+(note.focus||""),
+      "感覚："+(note.result||""),
+      "良かったこと："+(note.good||""),
+      "改善点："+(note.improve||""),
+      "次に試すこと："+(note.next||""),
+      "",
+      "【あとからの追記】",
+      ...note.additions.map(a=>
+        (a.date||"")+"："+(a.text||"")
+      )
+    ];
+
+    const text=lines.join("\n");
+
+    if(navigator.clipboard &&
+       navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text)
+        .then(()=>alert("ノートをコピーしました！"))
+        .catch(()=>prompt(
+          "こちらをコピーしてください",text
+        ));
+    }else{
+      prompt("こちらをコピーしてください",text);
+    }
+  };
+}
+
+render();
+
+})();
+</script>
+<!-- ===== 第12弾 終了 ===== -->
+
+
 </body>
 </html>
