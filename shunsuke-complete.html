@@ -4434,5 +4434,355 @@ render();
 <!-- ===== 能力成長システム終了 ===== -->
 
 
+<!-- ===== SUCCESS EVOLUTION 第4弾 ===== -->
+<style>
+.evo-panel{
+  background:linear-gradient(135deg,#082653,#176ac0);
+  border:2px solid #ffd44e;
+  border-radius:15px;
+  padding:17px;
+  color:white;
+  margin:12px 0;
+}
+.evo-panel h2{color:#ffd44e;margin:0 0 12px}
+.evo-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.evo-card{
+  background:#ffffff17;
+  border:1px solid #ffffff44;
+  border-radius:10px;
+  padding:12px;
+}
+.evo-card b{display:block;color:#ffd44e}
+.evo-card small{color:#e0edff}
+.evo-history{
+  border-bottom:1px solid #c5dbee;
+  padding:12px 4px;
+  font-size:13px;
+}
+.evo-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:#001b3ddf;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.evo-popup{
+  background:linear-gradient(145deg,#103c78,#1675c7);
+  border:3px solid #ffd44e;
+  border-radius:20px;
+  color:white;
+  padding:28px 18px;
+  text-align:center;
+  width:min(100%,380px);
+  box-shadow:0 12px 40px #0008;
+}
+.evo-popup h2{
+  color:#ffd44e;
+  font-size:30px;
+}
+.evo-popup .big{
+  font-size:56px;
+  font-weight:900;
+  color:#ffd44e;
+}
+.evo-popup button{
+  margin-top:15px;
+  padding:13px 25px;
+  border-radius:12px;
+  background:#ffd44e;
+  color:#12365c;
+  border:0;
+  font-weight:900;
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+const EVO_ID="evolution";
+let lastSnapshot=null;
+let pendingEvents=[];
+
+function snapshot(){
+  return {
+    xp:num(db.xp),
+    level:level(),
+    abilities:Object.fromEntries(
+      AB.map(k=>[k,num(db.abilities[k])])
+    ),
+    pitch:Object.fromEntries(
+      PB.map(k=>[k,num(db.pitch[k])])
+    )
+  };
+}
+
+function evolutionData(){
+  if(!db.evolution ||
+     typeof db.evolution!=="object" ||
+     Array.isArray(db.evolution)){
+    db.evolution={history:[]};
+  }
+  if(!Array.isArray(db.evolution.history)){
+    db.evolution.history=[];
+  }
+  return db.evolution;
+}
+
+function detectEvolution(before,after){
+  const changes=[];
+
+  if(after.level>before.level){
+    changes.push({
+      type:"level",
+      text:"Lv."+before.level+
+        " → Lv."+after.level
+    });
+  }
+
+  for(const k of AB){
+    if(after.abilities[k]>before.abilities[k]){
+      changes.push({
+        type:"ability",
+        text:k+" "+
+          before.abilities[k]+" → "+
+          after.abilities[k]
+      });
+    }
+  }
+
+  for(const k of PB){
+    if(after.pitch[k]>before.pitch[k]){
+      changes.push({
+        type:"ability",
+        text:k+" "+
+          before.pitch[k]+" → "+
+          after.pitch[k]
+      });
+    }
+  }
+
+  return changes;
+}
+
+// 既存の保存機能を利用し、
+// 保存が成功した場合だけ履歴を確定する
+const originalSave=save;
+
+save=function(){
+  const before=lastSnapshot;
+  const after=snapshot();
+  const changes=before?
+    detectEvolution(before,after):[];
+
+  let added=0;
+
+  if(changes.length){
+    const history=evolutionData().history;
+
+    for(const c of changes){
+      history.push({
+        date:today(),
+        type:c.type,
+        text:c.text
+      });
+      added++;
+    }
+  }
+
+  const ok=originalSave();
+
+  if(ok){
+    lastSnapshot=after;
+    pendingEvents.push(...changes);
+  }else if(added){
+    db.evolution.history.splice(-added,added);
+  }
+
+  return ok;
+};
+
+// 起動時の状態を基準とする。
+// 以前の記録を勝手に変更しない
+lastSnapshot=snapshot();
+
+function evolutionAchievements(){
+  const rules=[
+    ["🌱 努力の第一歩",
+      db.practice.length>=1,
+      "練習を1回記録"],
+    ["🔥 継続の力",
+      db.practice.length>=10,
+      "練習を10回記録"],
+    ["💪 努力の鉄人",
+      db.practice.length>=30,
+      "練習を30回記録"],
+    ["🏆 試合デビュー",
+      db.games.length>=1,
+      "試合を1回記録"],
+    ["🎯 投手への挑戦",
+      db.pitchlog.length>=1,
+      "投球記録を1回登録"],
+    ["🧠 考える野球人",
+      db.reflections.length>=5,
+      "振り返りを5回記録"],
+    ["📖 研究熱心",
+      count("野球ノート")>=5,
+      "野球ノートを5回記録"],
+    ["⭐ 成長する選手",
+      level()>=5,
+      "レベル5に到達"],
+    ["👑 サクセススター",
+      level()>=10,
+      "レベル10に到達"]
+  ];
+
+  return rules;
+}
+
+function evolutionScreen(){
+  const rules=evolutionAchievements();
+  const earned=rules.filter(x=>x[1]);
+  const history=(
+    db.evolution &&
+    Array.isArray(db.evolution.history)
+  )?db.evolution.history:[];
+
+  return `
+    <section class="evo-panel">
+      <h2>🏆 SUCCESS EVOLUTION</h2>
+      <p>昨日の自分を超えていこう！</p>
+      <div style="font-size:43px;font-weight:900;color:#ffd44e">
+        Lv.${level()}
+      </div>
+      <p>累計 ${num(db.xp)} XP</p>
+      <div class="bar">
+        <span style="width:${xpRate()}%"></span>
+      </div>
+      <p>獲得特殊称号 ${earned.length} / ${rules.length}</p>
+    </section>
+
+    ${box("⭐ 特殊能力・称号",`
+      <div class="evo-grid">
+        ${rules.map(x=>`
+          <div class="evo-card"
+            style="opacity:${x[1]?1:0.55}">
+            <b>${x[1]?"🏅":"🔒"} ${x[0]}</b>
+            <small>${x[2]}</small>
+            <p>${x[1]?"獲得済み":"未獲得"}</p>
+          </div>
+        `).join("")}
+      </div>
+    `)}
+
+    ${box("📈 能力成長の履歴",`
+      ${history.length?
+        history.slice(-30).reverse().map(x=>`
+          <div class="evo-history">
+            <b>${esc(x.date)}</b>
+            <p>${esc(x.text)}</p>
+          </div>
+        `).join(""):
+        `<p>これからの能力成長がここに記録されます。</p>`
+      }
+      <p class="muted">
+        この機能を追加した後の能力変化を
+        記録します。過去の変化は推測しません。
+      </p>
+    `)}
+
+    ${box("🩺 成長の約束",`
+      <p>
+        練習を増やすだけが成長ではありません。
+        休養・睡眠・食事・考える時間も大切です。
+      </p>
+      <p>
+        痛みがある日は無理をせず、
+        医師の指示を優先しましょう。
+      </p>
+    `)}
+  `;
+}
+
+function showEvolution(){
+  if(!pendingEvents.length)return;
+
+  const events=pendingEvents.splice(0);
+  const levelUp=events.find(x=>x.type==="level");
+
+  const overlay=document.createElement("div");
+  overlay.className="evo-overlay";
+
+  const title=levelUp?
+    "🎉 LEVEL UP!":"✨ ABILITY UP!";
+
+  overlay.innerHTML=`
+    <div class="evo-popup" role="dialog"
+      aria-modal="true">
+      <h2>${title}</h2>
+      <div class="big">
+        ${levelUp?"Lv."+level():"★"}
+      </div>
+      ${events.map(x=>`
+        <p>${esc(x.text)}</p>
+      `).join("")}
+      <button type="button">
+        成長を確認！
+      </button>
+    </div>
+  `;
+
+  overlay.querySelector("button")
+    .addEventListener("click",()=>{
+      overlay.remove();
+    });
+
+  document.body.appendChild(overlay);
+}
+
+// 既存のチャレンジや能力成長画面を維持
+if(!tabs.some(x=>x[0]===EVO_ID)){
+  tabs.push([
+    EVO_ID,"🏆 進化・特殊能力"
+  ]);
+}
+
+const oldRender=render;
+
+render=function(){
+  if(tab===EVO_ID){
+    document.getElementById("nav").innerHTML=
+      tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?"active":""}"
+          onclick="go('${id}')">
+          ${esc(name)}
+        </button>
+      `).join("");
+
+    document.getElementById("view").innerHTML=
+      evolutionScreen();
+  }else{
+    oldRender();
+  }
+
+  // 保存後に演出を表示
+  if(pendingEvents.length){
+    showEvolution();
+  }
+};
+
+render();
+})();
+</script>
+<!-- ===== SUCCESS EVOLUTION 終了 ===== -->
+
 </body>
 </html>
