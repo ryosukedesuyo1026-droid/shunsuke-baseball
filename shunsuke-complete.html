@@ -3864,5 +3864,330 @@ render=function(){
 render();
 </script>
 
+<!-- SUCCESS 2027 第3弾：サクセスチャレンジ -->
+<style>
+.s29-hero{
+  background:linear-gradient(135deg,#082b5b,#176ac0);
+  border:2px solid #ffd44e;
+  border-radius:14px;
+  padding:16px;
+  color:white;
+  margin:12px 0;
+}
+.s29-hero h2{
+  color:#ffd44e;
+  margin:0 0 12px;
+}
+.s29-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.s29-stat{
+  background:#ffffff18;
+  border:1px solid #ffffff40;
+  border-radius:10px;
+  padding:12px;
+}
+.s29-stat strong{
+  display:block;
+  font-size:26px;
+  color:#ffd44e;
+  margin-top:6px;
+}
+.s29-task{
+  background:#f0f7ff;
+  border:1px solid #a6c9e9;
+  border-radius:12px;
+  padding:13px;
+  margin:10px 0;
+}
+.s29-task.done{
+  background:#eaf8ee;
+  border-color:#9bd4a9;
+}
+.s29-task b{
+  display:block;
+  color:#153b6c;
+}
+.s29-task small{
+  display:block;
+  margin-top:5px;
+}
+.s29-progress{
+  height:12px;
+  border-radius:20px;
+  background:#d4e5f5;
+  overflow:hidden;
+  margin:12px 0;
+}
+.s29-progress span{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#1686d8,#ffd44e);
+}
+</style>
+
+<script>
+"use strict";
+
+/*
+ SUCCESS 2027 第3弾
+ 既存の保存データは読み取りのみ。
+ 新しい保存キーは作らない。
+ XP・能力値も変更しない。
+*/
+
+/* 記録した日付を集める */
+function s29recordDates(){
+  const dates=new Set();
+
+  function collect(rows){
+    if(!Array.isArray(rows))return;
+
+    rows.forEach(x=>{
+      if(x && /^\d{4}-\d{2}-\d{2}$/.test(
+        String(x.date||"")
+      )){
+        dates.add(x.date);
+      }
+    });
+  }
+
+  collect(db.practice);
+  collect(db.games);
+  collect(db.growth);
+  collect(db.pitchlog);
+  collect(db.plans);
+  collect(db.reflections);
+
+  const d=s27data();
+  collect(d.quick);
+  collect(d.sleep);
+  collect(d.meals);
+  collect(d.condition);
+
+  return dates;
+}
+
+/* 今日または昨日からの連続記録日数 */
+function s29streak(){
+  const dates=s29recordDates();
+  let day=today();
+
+  if(!dates.has(day)){
+    day=s27dateOffset(day,-1);
+  }
+
+  let streak=0;
+
+  while(dates.has(day) && streak<10000){
+    streak++;
+    day=s27dateOffset(day,-1);
+  }
+
+  return streak;
+}
+
+/* 今週のチャレンジ */
+function s29missions(){
+  const start=weekStart();
+  const end=s27dateOffset(start,6);
+  const d=s27data();
+
+  const inWeek=x=>
+    x && x.date>=start && x.date<=end;
+
+  const all=s27allPractice().filter(inWeek);
+
+  const notebook=all.some(x=>
+    x.name==="野球ノート"
+  );
+
+  const care=all.some(x=>
+    x.kind==="身体ケア"
+  );
+
+  const reflection=db.reflections.some(inWeek);
+
+  const sleepDays=new Set(
+    d.sleep.filter(inWeek)
+      .filter(x=>Number(x.hours)>0)
+      .map(x=>x.date)
+  ).size;
+
+  return [
+    {
+      title:"📖 考える野球",
+      description:"野球ノートを1回記録",
+      done:notebook
+    },
+    {
+      title:"🧘 身体を大切に",
+      description:"身体ケアを1回記録",
+      done:care
+    },
+    {
+      title:"✍️ 振り返り",
+      description:"今日の気づきを1回記録",
+      done:reflection
+    },
+    {
+      title:"🌙 睡眠習慣",
+      description:"睡眠を週3日記録",
+      done:sleepDays>=3,
+      progress:sleepDays+"/3日"
+    }
+  ];
+}
+
+/* チャレンジ画面 */
+function s29screen(){
+  const missions=s29missions();
+  const done=missions.filter(x=>x.done).length;
+  const pct=done/missions.length*100;
+  const streak=s29streak();
+
+  const totalDays=s29recordDates().size;
+
+  const message=done===missions.length?
+    "🏆 今週のチャレンジ達成！":
+    "自分のペースで一歩ずつ成長しよう！";
+
+  return `
+    <section class="s29-hero">
+      <h2>🏆 SUCCESS CHALLENGE</h2>
+      <p>努力・休養・考える力を育てよう！</p>
+
+      <div class="s29-grid">
+        <div class="s29-stat">
+          🔥 連続記録
+          <strong>${streak}日</strong>
+          <small>今日または昨日まで</small>
+        </div>
+
+        <div class="s29-stat">
+          ⭐ 今週の達成
+          <strong>${done}/${missions.length}</strong>
+          <small>チャレンジ</small>
+        </div>
+
+        <div class="s29-stat">
+          📅 累計記録日
+          <strong>${totalDays}日</strong>
+          <small>記録がある日数</small>
+        </div>
+
+        <div class="s29-stat">
+          ⚾ 現在のレベル
+          <strong>Lv.${level()}</strong>
+          <small>${num(db.xp)} XP</small>
+        </div>
+      </div>
+
+      <p>${message}</p>
+    </section>
+
+    ${box("🎯 今週のサクセスミッション",`
+      <p>
+        ${esc(weekStart())} からの1週間
+      </p>
+
+      <div class="s29-progress">
+        <span style="width:${pct}%"></span>
+      </div>
+
+      <p><b>達成率 ${Math.round(pct)}%</b></p>
+
+      ${missions.map(m=>`
+        <div class="s29-task ${m.done?"done":""}">
+          <b>${m.done?"✅":"🔒"} ${m.title}</b>
+          <small>${m.description}</small>
+          <small>
+            ${m.done?"達成！":
+              (m.progress||"これから挑戦")}
+          </small>
+        </div>
+      `).join("")}
+
+      <p class="muted">
+        ミッションは保存済み記録から
+        自動判定します。
+        報酬XPの重複付与はありません。
+      </p>
+    `)}
+
+    ${box("🌱 休むことも成長",`
+      <div class="notice">
+        記録の連続日数は練習日数ではありません。
+        睡眠・体調・食事の記録も含みます。
+        休養日に運動する必要はありません。
+      </div>
+
+      <p>
+        大切なのは、たくさん練習することより、
+        考えて取り組み、十分に回復すること。
+      </p>
+
+      <button class="btn blue full"
+        onclick="go('review2027')">
+        📊 睡眠・食事・体調を記録する
+      </button>
+    `)}
+
+    ${box("⚾ 次の挑戦",`
+      <button class="btn full"
+        onclick="go('training')">
+        💪 練習を記録する
+      </button>
+
+      <button class="btn blue full"
+        style="margin-top:10px"
+        onclick="go('plan')">
+        📝 計画と振り返り
+      </button>
+
+      <button class="btn ghost full"
+        style="margin-top:10px"
+        onclick="go('report28')">
+        📈 4週間の成長を見る
+      </button>
+    `)}
+  `;
+}
+
+/* ナビゲーション追加 */
+if(!tabs.some(x=>x[0]==="challenge29")){
+  tabs.splice(3,0,[
+    "challenge29","🏆 チャレンジ"
+  ]);
+}
+
+/* 既存画面を壊さず拡張 */
+const s29previousRender=render;
+
+render=function(){
+  if(tab==="challenge29"){
+    document.getElementById("nav").innerHTML=
+      tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?"active":""}"
+          onclick="go('${id}')">
+          ${name}
+        </button>
+      `).join("");
+
+    document.getElementById("view").innerHTML=
+      s29screen();
+    return;
+  }
+
+  s29previousRender();
+};
+
+/* 新しいタブを反映 */
+render();
+</script>
+
 </body>
 </html>
