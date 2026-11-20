@@ -5342,5 +5342,450 @@ render();
 </script>
 <!-- ===== 第6弾 終了 ===== -->
 
+<!-- ===== SUCCESS データ管理システム ===== -->
+<style>
+.dm-danger{
+  background:#fff1f1;
+  border:2px solid #e99;
+  border-radius:14px;
+  padding:15px;
+  margin:12px 0;
+}
+.dm-delete{
+  background:#b62936;
+  color:white;
+  border:0;
+  border-radius:9px;
+  padding:9px 13px;
+  font-weight:800;
+}
+.dm-item{
+  background:#f0f7ff;
+  border:1px solid #b6d3ee;
+  border-radius:10px;
+  padding:12px;
+  margin:8px 0;
+}
+.dm-item p{
+  margin:5px 0;
+  overflow-wrap:anywhere;
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+const DM_ID="dataManager";
+
+const DM_TYPES=[
+  ["practice","⚾ 練習"],
+  ["games","🏆 試合"],
+  ["pitchlog","🔥 投球"],
+  ["growth","📈 身体・生活"],
+  ["plans","📝 自主計画"],
+  ["reflections","✍️ 振り返り"],
+  ["missionClaims","🎯 ミッション報酬"],
+  ["quick","⚡ 旧ワンタッチ記録"],
+  ["sleep","🌙 睡眠"],
+  ["meals","🍚 食事"],
+  ["condition","🩺 コンディション"],
+  ["reviews","📋 週間レポート"]
+];
+
+let dmType="practice";
+
+function dmArray(type){
+  if(["quick","sleep","meals",
+      "condition","reviews"].includes(type)){
+    const s=db.success2027;
+    return s && Array.isArray(s[type])
+      ? s[type] : [];
+  }
+
+  return Array.isArray(db[type])
+    ? db[type] : [];
+}
+
+function dmLabel(x){
+  return [
+    x.date||x.week||"",
+    x.name||x.opponent||x.type||"",
+    x.text||x.note||"",
+    x.amount!==undefined
+      ? String(x.amount)+(x.unit||"") : "",
+    x.hours!==undefined
+      ? String(x.hours)+"時間" : ""
+  ].filter(Boolean).join(" / ");
+}
+
+function dmRebuildPractice(){
+  const rows=db.practice;
+
+  // 練習以外で獲得したXPは維持する
+  const previousPracticeXP=rows.reduce(
+    (s,x)=>s+Math.max(0,num(x.xp)),0
+  );
+
+  const otherXP=Math.max(
+    0,num(db.xp)-previousPracticeXP
+  );
+
+  const abilities=Object.fromEntries(
+    AB.map(k=>[k,20])
+  );
+  const pitch=Object.fromEntries(
+    PB.map(k=>[k,20])
+  );
+
+  let energy=100;
+  let practiceXP=0;
+  const perDay={};
+
+  // 記録した順番で能力値を再計算
+  rows.forEach(x=>{
+    const date=String(x.date||"");
+    const already=perDay[date]||0;
+    perDay[date]=already+1;
+
+    const item=TRAINING_MENU.find(
+      m=>m[0]===x.name
+    );
+
+    practiceXP+=Math.max(0,num(x.xp));
+
+    if(!item)return;
+
+    if(item[2]==="ケア"){
+      energy=cap(energy+10);
+      return;
+    }
+
+    energy=cap(energy-5);
+
+    if(already>=3)return;
+
+    const target=PB.includes(item[2])
+      ?pitch:abilities;
+
+    if(target[item[2]]!==undefined){
+      target[item[2]]=cap(
+        target[item[2]]+1
+      );
+    }
+  });
+
+  db.abilities=abilities;
+  db.pitch=pitch;
+  db.energy=energy;
+  db.xp=otherXP+practiceXP;
+}
+
+function dmDelete(type,index){
+  const rows=dmArray(type);
+
+  if(!Number.isInteger(index) ||
+     index<0 || index>=rows.length){
+    alert("削除対象が見つかりません。");
+    return;
+  }
+
+  const item=rows[index];
+
+  if(!confirm(
+    "この記録を削除しますか？\n\n"+
+    dmLabel(item)+"\n\n"+
+    "削除後は元に戻せません。"
+  ))return;
+
+  const before=JSON.stringify(db);
+
+  try{
+    rows.splice(index,1);
+
+    if(type==="practice"){
+      // 削除した練習のXPを先に取り消す
+      db.xp=Math.max(
+        0,num(db.xp)-Math.max(0,num(item.xp))
+      );
+
+      dmRebuildPractice();
+
+      // 過去の能力成長履歴は
+      // 再計算後の値と一致しなくなるためクリア
+      if(db.evolution &&
+         Array.isArray(db.evolution.history)){
+        db.evolution.history=[];
+      }
+    }
+
+    const rewards={
+      games:20,
+      plans:10,
+      reflections:10,
+      missionClaims:10
+    };
+
+    if(rewards[type]){
+      db.xp=Math.max(
+        0,num(db.xp)-rewards[type]
+      );
+    }
+
+    if(!save()){
+      db=JSON.parse(before);
+      return;
+    }
+
+    alert("記録を削除しました。");
+    render();
+
+  }catch(e){
+    db=JSON.parse(before);
+    console.error(e);
+    alert("削除処理でエラーが発生しました。");
+  }
+}
+
+function dmReset(){
+  if(!confirm(
+    "すべての入力データを初期化します。\n\n"+
+    "練習・試合・身長体重・睡眠・食事・"+
+    "XP・能力値・称号などが初期状態に戻ります。\n\n"+
+    "本当に実行しますか？"
+  ))return;
+
+  const word=prompt(
+    "最終確認です。\n"+
+    "初期化する場合は\n"+
+    "「初期化」と入力してください。"
+  );
+
+  if(word!=="初期化"){
+    alert("初期化を中止しました。");
+    return;
+  }
+
+  const before=JSON.stringify(db);
+
+  db=fresh();
+
+  // 追加機能の記録も空にする
+  db.success2027={
+    quick:[],
+    sleep:[],
+    meals:[],
+    condition:[],
+    reviews:[]
+  };
+
+  db.evolution={
+    history:[]
+  };
+
+  if(!save()){
+    db=JSON.parse(before);
+    return;
+  }
+
+  // 旧バージョンからの再移行を防ぐ
+  try{
+    localStorage.removeItem(K3);
+  }catch(e){
+    console.warn(e);
+  }
+
+  dmType="practice";
+  tab="home";
+
+  alert(
+    "初期化が完了しました！\n\n"+
+    "XP：0\n"+
+    "レベル：1\n"+
+    "練習記録：0件\n\n"+
+    "新しいサクセスを始めよう！"
+  );
+
+  render();
+  window.scrollTo(0,0);
+}
+
+function dmScreen(){
+  const rows=dmArray(dmType);
+  const typeName=DM_TYPES.find(
+    x=>x[0]===dmType
+  );
+
+  return `
+    ${box("🗂️ データ管理",`
+      <p>
+        間違えて入力した記録の削除や、
+        最初からの再スタートができます。
+      </p>
+      <div class="grid">
+        <div class="tile">
+          XP
+          <strong>${num(db.xp)}</strong>
+        </div>
+        <div class="tile">
+          レベル
+          <strong>${level()}</strong>
+        </div>
+        <div class="tile">
+          練習
+          <strong>${db.practice.length}</strong>
+        </div>
+        <div class="tile">
+          試合
+          <strong>${db.games.length}</strong>
+        </div>
+      </div>
+    `)}
+
+    ${box("💾 バックアップ",`
+      <p>
+        削除・初期化する前に、
+        必要な記録を保存してください。
+      </p>
+      <button class="btn blue full"
+        onclick="backup()">
+        📦 JSONバックアップを保存
+      </button>
+      <button class="btn ghost full"
+        style="margin-top:10px"
+        onclick="go('settings')">
+        📂 バックアップから復元
+      </button>
+    `)}
+
+    ${box("🗑️ 個別記録の削除",`
+      <label>削除する記録の種類</label>
+      <select id="dmType"
+        onchange="dmChoose(this.value)">
+        ${DM_TYPES.map(([id,name])=>`
+          <option value="${id}"
+            ${dmType===id?"selected":""}>
+            ${name}
+          </option>
+        `).join("")}
+      </select>
+
+      <p>
+        <b>${esc(typeName?typeName[1]:"記録")}</b>
+        ：${rows.length}件
+      </p>
+
+      ${rows.length?
+        rows.map((x,i)=>`
+          <div class="dm-item">
+            <b>記録 ${i+1}</b>
+            <p>${esc(dmLabel(x)||"詳細なし")}</p>
+            <button class="dm-delete"
+              onclick="dmRemove('${dmType}',${i})">
+              🗑️ この記録を削除
+            </button>
+          </div>
+        `).join(""):
+        "<p>この種類の記録はありません。</p>"
+      }
+    `)}
+
+    <section class="dm-danger">
+      <h3>⚠️ 全データ初期化</h3>
+      <p>
+        すべての入力記録を消去し、
+        XP・能力値・称号・チャレンジを
+        初期状態に戻します。
+      </p>
+      <p>
+        アプリの画面や機能は残ります。
+        削除したデータはバックアップが
+        なければ復元できません。
+      </p>
+      <button class="dm-delete full"
+        onclick="dmResetAll()">
+        🗑️ 全データを初期化する
+      </button>
+    </section>
+  `;
+}
+
+window.dmChoose=function(type){
+  if(!DM_TYPES.some(x=>x[0]===type))return;
+  dmType=type;
+  render();
+};
+
+window.dmRemove=dmDelete;
+window.dmResetAll=dmReset;
+
+// 第6弾の画面表示先を修正
+if(tabs.some(x=>x[0]==="success6")){
+  const previous=render;
+
+  render=function(){
+    if(tab==="success6"){
+      document.getElementById("nav").innerHTML=
+        tabs.map(([id,name])=>`
+          <button
+            class="${tab===id?"active":""}"
+            onclick="go('${id}')">
+            ${esc(name)}
+          </button>
+        `).join("");
+
+      document.getElementById("view").innerHTML=
+        s6ScreenBridge();
+      return;
+    }
+    previous();
+  };
+
+  function s6ScreenBridge(){
+    // 既存の第6弾はIIFE内にあるため、
+    // 画面本体を再利用できない場合の案内
+    return box("🎯 連動チャレンジ",`
+      <p>
+        練習記録・XP・称号は
+        他の画面と連動しています。
+      </p>
+      <button class="btn blue full"
+        onclick="go('challenge29')">
+        🏆 チャレンジを見る
+      </button>
+    `);
+  }
+}
+
+// データ管理タブを追加
+if(!tabs.some(x=>x[0]===DM_ID)){
+  tabs.push([DM_ID,"🗂️ データ管理"]);
+}
+
+const dmPreviousRender=render;
+
+render=function(){
+  if(tab!==DM_ID){
+    return dmPreviousRender();
+  }
+
+  document.getElementById("nav").innerHTML=
+    tabs.map(([id,name])=>`
+      <button
+        class="${tab===id?"active":""}"
+        onclick="go('${id}')">
+        ${esc(name)}
+      </button>
+    `).join("");
+
+  document.getElementById("view").innerHTML=
+    dmScreen();
+};
+
+render();
+})();
+</script>
+<!-- ===== データ管理システム終了 ===== -->
+
 </body>
 </html>
