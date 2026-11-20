@@ -4784,5 +4784,294 @@ render();
 </script>
 <!-- ===== SUCCESS EVOLUTION 終了 ===== -->
 
+<!-- ===== SUCCESS LINK SYSTEM 第5弾 ===== -->
+<style>
+.link-info{
+  background:linear-gradient(120deg,#082c60,#176fc4);
+  color:white;
+  border:2px solid #ffd44e;
+  border-radius:13px;
+  padding:14px;
+  margin:12px 0;
+}
+.link-info b{color:#ffd44e}
+.link-info small{color:#e2efff}
+.link-info .grid{margin-top:10px}
+.link-info .tile{
+  text-align:center;
+  font-size:12px;
+}
+.link-info .tile strong{font-size:22px}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/*
+ SUCCESS LINK SYSTEM
+ ・保存キーは変更しない
+ ・既存記録は削除しない
+ ・新しい練習は共通のpractice配列へ
+ ・既存のXPと能力値を引き継ぐ
+*/
+
+const LINK_LIMIT=3;
+const LINK_EXTRA_XP=5;
+
+function linkTodayCount(date){
+  return db.practice.filter(x=>x.date===date).length;
+}
+
+function linkItem(name){
+  return TRAINING_MENU.find(x=>x[0]===name);
+}
+
+function linkPractice(input){
+  const item=linkItem(input.name);
+
+  if(!item){
+    alert("練習メニューを確認してください。");
+    return false;
+  }
+
+  const date=input.date;
+  const amount=Number(input.amount);
+
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+     !Number.isFinite(amount) ||
+     amount<0 ||
+     amount>100000){
+    alert("日付・実施量を確認してください。");
+    return false;
+  }
+
+  const restOrStudy=
+    item[1]==="身体ケア" ||
+    item[1]==="自主学習" ||
+    item[0]==="配球研究" ||
+    item[0]==="走塁判断の研究" ||
+    item[0]==="送球研究" ||
+    item[0]==="打撃フォーム研究";
+
+  if(db.pain && !restOrStudy){
+    alert(
+      "現在は痛みありの設定です。\n"+
+      "運動を中止し、医師の指示を優先してください。"
+    );
+    return false;
+  }
+
+  const before=JSON.stringify(db);
+  const count=linkTodayCount(date);
+  const xp=count>=LINK_LIMIT?
+    LINK_EXTRA_XP:item[3];
+
+  const record={
+    date:date,
+    name:item[0],
+    kind:item[1],
+    xp:xp,
+    amount:amount,
+    unit:item[4],
+    minutes:Number(input.minutes)||0,
+    note:String(input.note||""),
+    source:input.source||"training"
+  };
+
+  db.practice.push(record);
+  db.xp=num(db.xp)+xp;
+
+  let abilityText="";
+
+  if(item[2]==="ケア"){
+    db.energy=cap(num(db.energy)+10);
+  }else if(!db.pain){
+    // 同じ日の4件目以降はXPのみ。
+    // 能力値の無制限な上昇を防ぐ。
+    if(count<LINK_LIMIT){
+      const target=PB.includes(item[2])?
+        db.pitch:db.abilities;
+
+      if(target[item[2]]!==undefined){
+        const old=num(target[item[2]],20);
+        const next=cap(old+1);
+        target[item[2]]=next;
+
+        if(next>old){
+          abilityText=item[2]+" "+old+" → "+next;
+        }
+      }
+    }
+
+    db.energy=cap(num(db.energy)-5);
+  }
+
+  if(!save()){
+    // 保存に失敗した場合は変更前に戻す
+    db=JSON.parse(before);
+    return false;
+  }
+
+  alert(
+    "⚾ 練習記録完了！\n"+
+    item[0]+"\n"+
+    "+"+xp+" XP\n"+
+    (abilityText?
+      "能力成長："+abilityText+"\n":"")+
+    "累計 "+num(db.xp)+" XP"
+  );
+
+  render();
+  return true;
+}
+
+/* ホームのワンタッチ入力を共通化 */
+s27quick=function(name,amount,unit,kind,minutes){
+  linkPractice({
+    date:today(),
+    name:name,
+    amount:amount,
+    minutes:minutes||0,
+    note:"",
+    source:"home"
+  });
+};
+
+/* 週間分析の詳しい練習入力を共通化 */
+s27saveQuickDetail=function(){
+  const name=document.getElementById("s27menu").value;
+  const date=document.getElementById("s27date").value;
+  const rawAmount=
+    document.getElementById("s27amount").value;
+  const rawMinutes=
+    document.getElementById("s27minutes").value;
+  const note=document.getElementById("s27note").value.trim();
+
+  const amount=rawAmount===""?0:Number(rawAmount);
+  const minutes=rawMinutes===""?0:Number(rawMinutes);
+
+  if(!Number.isFinite(minutes) ||
+     minutes<0 || minutes>1440){
+    alert("練習時間を確認してください。");
+    return;
+  }
+
+  if(name==="その他"){
+    alert(
+      "能力を正しく連動させるため、"+
+      "登録済みの練習メニューを選んでください。"
+    );
+    return;
+  }
+
+  linkPractice({
+    date:date,
+    name:name,
+    amount:amount,
+    minutes:minutes,
+    note:note,
+    source:"review"
+  });
+};
+
+/* 通常の練習画面も共通処理を利用 */
+addPractice=function(){
+  const name=document.getElementById("trainingMenu").value;
+  const date=document.getElementById("trainingDate").value;
+  const pain=document.getElementById("trainingPain").value==="yes";
+  const raw=document.getElementById("trainingAmount").value;
+  const amount=raw===""?0:Number(raw);
+  const note=document.getElementById("trainingNote").value.trim();
+
+  if(pain){
+    db.pain=true;
+    if(!save())return;
+
+    alert(
+      "痛みありを記録しました。\n"+
+      "運動を中止し、休養や医師の指示を優先してください。"
+    );
+    render();
+    return;
+  }
+
+  linkPractice({
+    date:date,
+    name:name,
+    amount:amount,
+    minutes:0,
+    note:note,
+    source:"training"
+  });
+};
+
+/* 共通記録からXPと能力の連動状況を表示 */
+function linkDashboard(){
+  const records=db.practice;
+  const recent=records.slice(-5).reverse();
+
+  return `
+    <section class="link-info">
+      <b>⚡ SUCCESS LINK ACTIVE</b>
+      <p>努力が能力・経験値・称号につながる！</p>
+
+      <div class="grid">
+        <div class="tile">
+          累計XP
+          <strong>${num(db.xp)}</strong>
+        </div>
+        <div class="tile">
+          レベル
+          <strong>${level()}</strong>
+        </div>
+        <div class="tile">
+          練習記録
+          <strong>${records.length}</strong>
+        </div>
+        <div class="tile">
+          獲得称号
+          <strong>${badges().length}</strong>
+        </div>
+      </div>
+
+      <small>
+        新しく記録した練習は
+        共通の履歴・分析・称号に反映されます。
+      </small>
+    </section>
+
+    ${box("⚾ 最近の連動記録",`
+      ${recent.map(x=>`
+        <div class="listitem">
+          <b>${esc(x.date)} ${esc(x.name)}</b>
+          <p>
+            ${num(x.amount)} ${esc(x.unit||"")}
+            / +${num(x.xp)} XP
+          </p>
+          <small>
+            ${esc(x.note||"")}
+          </small>
+        </div>
+      `).join("")||
+      "<p>練習を記録するとここに表示されます。</p>"}
+    `)}
+  `;
+}
+
+/* ホームの表示を拡張 */
+const linkOldHome=home;
+
+home=function(){
+  return linkOldHome()+linkDashboard();
+};
+
+/* 初回起動時はデータを上書きしない */
+render();
+
+})();
+</script>
+<!-- ===== SUCCESS LINK SYSTEM 終了 ===== -->
+
 </body>
 </html>
