@@ -6026,5 +6026,465 @@ window.dmResetAll=s7Reset;
 </script>
 <!-- ===== 第7弾 終了 ===== -->
 
+<!-- ===== SUCCESS 練習時間対応 第8弾 ===== -->
+<style>
+.st8-summary{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:12px 0;
+}
+.st8-card{
+  background:linear-gradient(135deg,#103b78,#176fc4);
+  border:2px solid #ffd44e;
+  border-radius:12px;
+  padding:14px;
+  color:white;
+}
+.st8-card strong{
+  display:block;
+  font-size:25px;
+  color:#ffd44e;
+  margin:7px 0;
+}
+.st8-record{
+  background:#f0f7ff;
+  border:1px solid #b5d2ee;
+  border-radius:10px;
+  padding:12px;
+  margin:10px 0;
+}
+.st8-record p{
+  margin:7px 0;
+  font-size:13px;
+}
+.st8-edit{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.st8-edit input{
+  margin:5px 0;
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/*
+  SUCCESS 第8弾
+  ・通常練習に時間入力を追加
+  ・回数と時間を同時保存
+  ・過去の記録の時間を修正
+  ・既存データを初期化しない
+  ・XPと能力値のルールは維持
+*/
+
+function st8Minutes(record){
+  const value=Number(record.minutes);
+  return Number.isFinite(value) && value>0
+    ?value:0;
+}
+
+function st8Format(minutes){
+  const m=Math.round(minutes);
+  const h=Math.floor(m/60);
+  const rest=m%60;
+
+  if(h===0)return rest+"分";
+  if(rest===0)return h+"時間";
+  return h+"時間"+rest+"分";
+}
+
+function st8Totals(){
+  const rows=typeof s27allPractice==="function"
+    ?s27allPractice()
+    :db.practice;
+
+  const start=weekStart();
+  const end=s27dateOffset(start,6);
+
+  let all=0;
+  let week=0;
+
+  rows.forEach(x=>{
+    const m=st8Minutes(x);
+    all+=m;
+
+    if(x.date>=start && x.date<=end){
+      week+=m;
+    }
+  });
+
+  return {all,week};
+}
+
+function st8Summary(){
+  const t=st8Totals();
+
+  return box("⏱️ 練習時間の記録",`
+    <div class="st8-summary">
+      <div class="st8-card">
+        今週の練習時間
+        <strong>${st8Format(t.week)}</strong>
+      </div>
+      <div class="st8-card">
+        累計練習時間
+        <strong>${st8Format(t.all)}</strong>
+      </div>
+    </div>
+    <p class="muted">
+      入力済みの時間だけを集計します。
+      過去の未入力記録は、下から修正できます。
+      睡眠・休養の時間は練習時間に含めません。
+    </p>
+  `);
+}
+
+/* 練習時間の編集画面 */
+
+function st8History(){
+  const rows=db.practice;
+
+  const items=rows.map((x,i)=>({
+    record:x,
+    index:i
+  })).reverse();
+
+  return box("📝 過去の練習時間を修正",`
+    <p>
+      以前の練習にも時間を追加できます。
+      ここで時間を変更しても、
+      XPや能力値は変わりません。
+    </p>
+
+    ${items.length?items.map(({record:x,index:i})=>`
+      <div class="st8-record">
+        <b>${esc(x.date)} ${esc(x.name)}</b>
+        <p>
+          実施量：
+          ${num(x.amount)}
+          ${esc(x.unit||"")}
+        </p>
+        <p>
+          記録時間：
+          <b>${st8Format(st8Minutes(x))}</b>
+        </p>
+
+        <div class="st8-edit">
+          <div>
+            <label>時間</label>
+            <input
+              id="st8h${i}"
+              type="number"
+              min="0"
+              max="24"
+              step="1"
+              value="${Math.floor(st8Minutes(x)/60)}">
+          </div>
+          <div>
+            <label>分</label>
+            <input
+              id="st8m${i}"
+              type="number"
+              min="0"
+              max="59"
+              step="1"
+              value="${st8Minutes(x)%60}">
+          </div>
+        </div>
+
+        <button class="btn blue full"
+          onclick="st8Update(${i})">
+          ⏱️ この練習時間を保存
+        </button>
+      </div>
+    `).join(""):
+    "<p>まだ練習記録がありません。</p>"}
+  `);
+}
+
+function st8ReadTime(hourId,minuteId){
+  const h=document.getElementById(hourId);
+  const m=document.getElementById(minuteId);
+
+  if(!h||!m)return null;
+
+  if(h.value===""||m.value===""){
+    alert("時間と分を入力してください。");
+    return null;
+  }
+
+  const hours=Number(h.value);
+  const minutes=Number(m.value);
+
+  if(!Number.isInteger(hours) ||
+     !Number.isInteger(minutes) ||
+     hours<0 || hours>24 ||
+     minutes<0 || minutes>59 ||
+     hours*60+minutes>1440){
+    alert("練習時間を確認してください。");
+    return null;
+  }
+
+  return hours*60+minutes;
+}
+
+window.st8Update=function(index){
+  if(!Number.isInteger(index) ||
+     index<0 || index>=db.practice.length){
+    alert("対象の記録が見つかりません。");
+    return;
+  }
+
+  const minutes=st8ReadTime(
+    "st8h"+index,
+    "st8m"+index
+  );
+
+  if(minutes===null)return;
+
+  const record=db.practice[index];
+  const previous=record.minutes;
+
+  record.minutes=minutes;
+
+  if(!save()){
+    if(previous===undefined){
+      delete record.minutes;
+    }else{
+      record.minutes=previous;
+    }
+    return;
+  }
+
+  alert(
+    "練習時間を保存しました！\n"+
+    st8Format(minutes)
+  );
+
+  render();
+};
+
+/* 通常の練習画面に時間入力を追加 */
+
+const st8OldTraining=training;
+
+training=function(){
+  let html=st8OldTraining();
+
+  const timeFields=`
+    <div class="st8-record">
+      <b>⏱️ 練習時間</b>
+      <p class="muted">
+        回数・球数とは別に入力してください。
+        例：素振り100回・20分
+      </p>
+
+      <div class="st8-edit">
+        <div>
+          <label>時間</label>
+          <input
+            id="st8TrainingHours"
+            type="number"
+            min="0"
+            max="24"
+            step="1"
+            value="0">
+        </div>
+        <div>
+          <label>分</label>
+          <input
+            id="st8TrainingMinutes"
+            type="number"
+            min="0"
+            max="59"
+            step="1"
+            value="0">
+        </div>
+      </div>
+    </div>
+  `;
+
+  html=html.replace(
+    '<label>今日意識したこと</label>',
+    timeFields+
+    '<label>今日意識したこと</label>'
+  );
+
+  return st8Summary()+html+st8History();
+};
+
+/* 練習の保存処理を時間対応に変更 */
+
+addPractice=function(){
+  const get=id=>document.getElementById(id);
+
+  const menu=get("trainingMenu");
+  const dateInput=get("trainingDate");
+  const painInput=get("trainingPain");
+  const amountInput=get("trainingAmount");
+  const noteInput=get("trainingNote");
+
+  if(!menu||!dateInput||!painInput||
+     !amountInput||!noteInput){
+    alert("練習画面を開き直してください。");
+    return;
+  }
+
+  const item=TRAINING_MENU.find(
+    x=>x[0]===menu.value
+  );
+
+  if(!item){
+    alert("練習メニューを確認してください。");
+    return;
+  }
+
+  const date=dateInput.value;
+  const pain=painInput.value==="yes";
+  const raw=amountInput.value;
+  const amount=raw===""?0:Number(raw);
+  const note=noteInput.value.trim();
+
+  const minutes=st8ReadTime(
+    "st8TrainingHours",
+    "st8TrainingMinutes"
+  );
+
+  if(minutes===null)return;
+
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+    alert("練習日を確認してください。");
+    return;
+  }
+
+  if(!Number.isFinite(amount) ||
+     amount<0 || amount>100000){
+    alert("実施量を確認してください。");
+    return;
+  }
+
+  if(amount===0 && minutes===0){
+    alert(
+      "実施量または練習時間を入力してください。"
+    );
+    return;
+  }
+
+  const restOrStudy=
+    item[1]==="身体ケア" ||
+    item[1]==="自主学習" ||
+    [
+      "配球研究",
+      "走塁判断の研究",
+      "送球研究",
+      "打撃フォーム研究"
+    ].includes(item[0]);
+
+  if(pain){
+    db.pain=true;
+    save();
+    alert(
+      "痛みありを記録しました。\n"+
+      "運動を中止し、医師の指示を優先してください。"
+    );
+    render();
+    return;
+  }
+
+  if(db.pain && !restOrStudy){
+    alert(
+      "現在は痛みありの設定です。\n"+
+      "医師の指示を優先してください。"
+    );
+    return;
+  }
+
+  const before=JSON.stringify(db);
+
+  const already=db.practice.filter(
+    x=>x.date===date
+  ).length;
+
+  const xp=already>=3?5:item[3];
+
+  const record={
+    date:date,
+    name:item[0],
+    kind:item[1],
+    xp:xp,
+    amount:amount,
+    unit:item[4],
+    minutes:minutes,
+    note:note,
+    source:"training"
+  };
+
+  db.practice.push(record);
+  db.xp=num(db.xp)+xp;
+
+  let abilityText="";
+
+  if(item[2]==="ケア"){
+    db.energy=cap(num(db.energy)+10);
+  }else{
+    if(already<3){
+      const target=PB.includes(item[2])
+        ?db.pitch:db.abilities;
+
+      if(target[item[2]]!==undefined){
+        const old=num(target[item[2]],20);
+        const next=cap(old+1);
+        target[item[2]]=next;
+
+        if(next>old){
+          abilityText=
+            item[2]+" "+old+" → "+next;
+        }
+      }
+    }
+
+    db.energy=cap(num(db.energy)-5);
+  }
+
+  if(!save()){
+    db=JSON.parse(before);
+    return;
+  }
+
+  alert(
+    "⚾ 練習記録完了！\n"+
+    item[0]+"\n"+
+    "実施量："+amount+item[4]+"\n"+
+    "練習時間："+st8Format(minutes)+"\n"+
+    "+"+xp+" XP\n"+
+    (abilityText?
+      "能力成長："+abilityText+"\n":"")+
+    "累計 "+num(db.xp)+" XP"
+  );
+
+  render();
+};
+
+/* ワンタッチ記録は既存処理を維持。
+   時間は従来どおり0分として保存する。 */
+
+/* ホームにも練習時間を表示 */
+
+const st8OldHome=home;
+
+home=function(){
+  return st8OldHome()+st8Summary();
+};
+
+/* 起動済み画面を更新 */
+render();
+
+})();
+</script>
+<!-- ===== 第8弾 終了 ===== -->
+
 </body>
 </html>
