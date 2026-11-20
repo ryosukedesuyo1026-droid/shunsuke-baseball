@@ -4189,5 +4189,250 @@ render=function(){
 render();
 </script>
 
+<!-- ===== SUCCESS 能力成長システム ===== -->
+<style>
+.success-level {
+  background:linear-gradient(135deg,#092653,#176bc0);
+  color:white;
+  border:2px solid #ffd44e;
+  border-radius:15px;
+  padding:17px;
+  margin:12px 0;
+}
+.success-level h2 {
+  color:#ffd44e;
+  margin:0 0 12px;
+}
+.success-level .level-number {
+  font-size:42px;
+  font-weight:900;
+  color:#ffd44e;
+}
+.success-level .level-track {
+  height:16px;
+  background:#ffffff33;
+  border-radius:20px;
+  overflow:hidden;
+}
+.success-level .level-fill {
+  height:100%;
+  background:linear-gradient(90deg,#3bb4ff,#ffd44e);
+}
+.success-ability {
+  background:#eef6ff;
+  padding:12px;
+  border:1px solid #a9c9e8;
+  border-radius:10px;
+  margin:8px 0;
+}
+.success-ability .row {
+  margin-bottom:7px;
+}
+.success-rank {
+  color:#1764b6;
+  font-size:20px;
+  font-weight:900;
+}
+.success-advice {
+  background:#fff4d5;
+  border-left:5px solid #ffc13c;
+  border-radius:8px;
+  padding:13px;
+  margin:12px 0;
+  line-height:1.7;
+}
+</style>
+
+<script>
+(function(){
+  "use strict";
+
+  // 保存データは読み取りのみ。
+  // XP・能力・成長記録は変更しません。
+
+  const screenId = "abilitySuccess";
+
+  function average(names, source){
+    if(!names.length) return 0;
+    return Math.round(
+      names.reduce((sum,name)=>
+        sum+num(source[name],20),0
+      )/names.length
+    );
+  }
+
+  function abilityCard(name,value){
+    const v=cap(value);
+    return `
+      <div class="success-ability">
+        <div class="row">
+          <b>${esc(name)}</b>
+          <span class="success-rank">
+            ${rank(v)} ${v}
+          </span>
+        </div>
+        <div class="bar">
+          <span style="width:${v}%"></span>
+        </div>
+      </div>
+    `;
+  }
+
+  function advice(){
+    const all=[
+      ...AB.map(name=>({
+        name,value:num(db.abilities[name],20)
+      })),
+      ...PB.map(name=>({
+        name,value:num(db.pitch[name],20)
+      }))
+    ];
+
+    all.sort((a,b)=>a.value-b.value);
+
+    const lowest=all[0];
+    const highest=all[all.length-1];
+
+    return `
+      <div class="success-advice">
+        <b>🌟 現在の強み</b>
+        <p>
+          ${esc(highest.name)}：
+          ${highest.value}
+        </p>
+        <b>🎯 これからの成長テーマ</b>
+        <p>
+          ${esc(lowest.name)}：
+          ${lowest.value}
+        </p>
+        <small>
+          能力値はアプリ内のゲーム指標です。
+          実際の技術評価ではありません。
+          苦手を無理に鍛える必要はなく、
+          休養と身体の状態を優先しましょう。
+        </small>
+      </div>
+    `;
+  }
+
+  function abilityScreen(){
+    const currentLevel=level();
+    const xp=Math.max(0,num(db.xp));
+    const start=100*(currentLevel-1)**2;
+    const end=100*currentLevel**2;
+    const gained=xp-start;
+    const needed=end-start;
+
+    const hitter=average(AB,db.abilities);
+    const pitcher=average(PB,db.pitch);
+
+    return `
+      <section class="success-level">
+        <h2>⚾ PLAYER SUCCESS</h2>
+        <p>努力を積み重ねて成長しよう！</p>
+
+        <div class="level-number">
+          Lv.${currentLevel}
+        </div>
+
+        <p>累計 ${xp} XP</p>
+
+        <div class="level-track">
+          <div class="level-fill"
+            style="width:${xpRate()}%">
+          </div>
+        </div>
+
+        <p>
+          次のレベルまで
+          あと ${Math.max(0,end-xp)} XP
+        </p>
+        <small>
+          現在のレベル内：
+          ${gained} / ${needed} XP
+        </small>
+      </section>
+
+      ${box("🏏 野手総合力",`
+        <h2>${rank(hitter)} ${hitter}</h2>
+        ${AB.map(name=>
+          abilityCard(name,db.abilities[name])
+        ).join("")}
+      `)}
+
+      ${box("🔥 投手総合力",`
+        <h2>${rank(pitcher)} ${pitcher}</h2>
+        ${PB.map(name=>
+          abilityCard(name,db.pitch[name])
+        ).join("")}
+      `)}
+
+      ${box("🧠 成長アドバイス",
+        advice()
+      )}
+
+      ${box("🏆 これまでの努力",`
+        <div class="grid">
+          <div class="tile">
+            練習記録
+            <strong>${db.practice.length}</strong>
+            件
+          </div>
+          <div class="tile">
+            試合記録
+            <strong>${db.games.length}</strong>
+            件
+          </div>
+          <div class="tile">
+            投球記録
+            <strong>${db.pitchlog.length}</strong>
+            件
+          </div>
+          <div class="tile">
+            成長記録
+            <strong>${db.growth.length}</strong>
+            件
+          </div>
+        </div>
+        <p class="muted">
+          これまでの記録を読み取って表示しています。
+        </p>
+      `)}
+    `;
+  }
+
+  // 既存の画面とチャレンジ機能を残す
+  if(!tabs.some(x=>x[0]===screenId)){
+    tabs.push([
+      screenId,"⚡ 能力成長"
+    ]);
+  }
+
+  const previousRender=render;
+
+  render=function(){
+    if(tab!==screenId){
+      return previousRender();
+    }
+
+    document.getElementById("nav").innerHTML=
+      tabs.map(([id,name])=>`
+        <button
+          class="${tab===id?"active":""}"
+          onclick="go('${id}')">
+          ${esc(name)}
+        </button>
+      `).join("");
+
+    document.getElementById("view").innerHTML=
+      abilityScreen();
+  };
+
+  render();
+})();
+</script>
+<!-- ===== 能力成長システム終了 ===== -->
+
+
 </body>
 </html>
