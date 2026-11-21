@@ -12315,5 +12315,255 @@ render();
 })();
 </script>
 <!-- ===== 第15弾 終了 ===== -->
+<!-- ===== 第16弾：81マス目標達成シート・デザイン改良 ===== -->
+
+<style>
+
+/* 全体のスクロール領域 */
+.m15-scroll{
+  overflow-x:auto;
+  padding:12px 4px 16px;
+  background:#eaf1f8;
+  border-radius:14px;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* 81マス全体 */
+.m15-grid{
+  display:grid;
+  grid-template-columns:repeat(9,minmax(0,1fr));
+  gap:0;
+  width:100%;
+  min-width:810px;
+  border:4px solid #173c65;
+  border-radius:8px;
+  overflow:hidden;
+  box-sizing:border-box;
+}
+
+/* 基本マス */
+.m15-cell{
+  position:relative;
+  min-height:85px;
+  padding:7px 5px;
+  border:1px solid rgba(25,55,90,.24);
+  border-radius:0;
+  background:var(--cell-light,#fff);
+  color:#173a60;
+  font-size:12px;
+  font-weight:650;
+  line-height:1.45;
+  text-align:center;
+  overflow-wrap:anywhere;
+  white-space:normal;
+  cursor:pointer;
+  transition:background .15s;
+}
+
+/* テーマ中央マス */
+.m15-cell.theme{
+  background:var(--cell-dark,#24649a);
+  color:white;
+  font-size:13px;
+  font-weight:900;
+  border-color:rgba(0,0,0,.18);
+}
+
+/* 真ん中の夢 */
+.m15-cell.center{
+  background:linear-gradient(
+    135deg,
+    #102e5d,
+    #175b9d
+  );
+  color:#ffe17b;
+  border:3px solid #f3c344;
+  font-size:14px;
+  font-weight:900;
+  text-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+
+/* 達成したマス */
+.m15-cell.done:not(.theme):not(.center){
+  background:#d5f5dc;
+  color:#155c37;
+  font-weight:850;
+}
+
+/* 達成マーク */
+.m15-cell.done:not(.theme):not(.center)::after{
+  content:"✓";
+  position:absolute;
+  top:2px;
+  right:4px;
+  color:#168447;
+  font-size:15px;
+  font-weight:900;
+}
+
+/* 3列ごとの太い境界線 */
+.m15-cell:nth-child(9n+3),
+.m15-cell:nth-child(9n+6){
+  border-right:4px solid #173c65;
+}
+
+/* 3行ごとの太い境界線 */
+.m15-cell:nth-child(n+19):nth-child(-n+27),
+.m15-cell:nth-child(n+46):nth-child(-n+54){
+  border-bottom:4px solid #173c65;
+}
+
+/* タップ時 */
+.m15-cell:focus-visible{
+  outline:3px solid #f3b928;
+  outline-offset:-4px;
+  z-index:2;
+}
+
+/* PCでは少し大きく */
+@media(min-width:1000px){
+  .m15-grid{
+    min-width:0;
+  }
+
+  .m15-cell{
+    min-height:95px;
+    font-size:13px;
+  }
+
+  .m15-cell.theme{
+    font-size:14px;
+  }
+}
+
+/* スマホ・iPad */
+@media(max-width:700px){
+  .m15-grid{
+    min-width:810px;
+  }
+
+  .m15-cell{
+    min-height:82px;
+    font-size:12px;
+  }
+}
+
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/*
+ 81マスの9ブロックを
+ テーマごとに色分けする。
+
+ 既存の目標・保存データは変更しない。
+*/
+
+const M16_COLORS=[
+  ["#e0efff","#2468b1"], // バッティング：青
+  ["#e1f4e7","#27834d"], // 守備：緑
+  ["#fff0d7","#d78b27"], // 走塁：オレンジ
+  ["#f0e6ff","#8652b5"], // 体力づくり：紫
+  ["#ffe1e1","#b94545"], // ピッチング：赤
+  ["#e0f6f4","#278b88"], // 人間性：青緑
+  ["#fff7cf","#a78621"], // 勉強：黄色
+  ["#fce5f2","#ad4d88"]  // 食事：ピンク
+];
+
+/*
+ 第15弾の配置に合わせた
+ 3×3ブロックのテーマ番号。
+
+ 中央のブロックは
+ 8テーマ＋夢の構成。
+*/
+
+function m16ThemeIndex(index){
+
+  const row=Math.floor(index/9);
+  const col=index%9;
+
+  const blockRow=Math.floor(row/3);
+  const blockCol=Math.floor(col/3);
+
+  const group=blockRow*3+blockCol;
+
+  if(group===4){
+
+    const innerRow=row%3;
+    const innerCol=col%3;
+    const inner=innerRow*3+innerCol;
+
+    if(inner===4)return -1;
+
+    return inner<4?inner:inner-1;
+  }
+
+  return group<4?group:group-1;
+}
+
+function m16Apply(){
+
+  const grid=document.querySelector(
+    ".m15-grid"
+  );
+
+  if(!grid)return;
+
+  const cells=grid.querySelectorAll(
+    ".m15-cell"
+  );
+
+  cells.forEach((cell,index)=>{
+
+    const theme=m16ThemeIndex(index);
+
+    if(theme<0)return;
+
+    const colors=M16_COLORS[theme];
+
+    if(!colors)return;
+
+    cell.style.setProperty(
+      "--cell-light",
+      colors[0]
+    );
+
+    cell.style.setProperty(
+      "--cell-dark",
+      colors[1]
+    );
+
+    // 各ブロックの所属を明確化
+    cell.dataset.theme=String(theme);
+
+  });
+
+}
+
+/*
+ 第15弾の描画後に色分けする。
+*/
+
+const m16PreviousRender=render;
+
+render=function(){
+
+  m16PreviousRender.apply(this,arguments);
+
+  if(tab==="mandala15"){
+    m16Apply();
+  }
+
+};
+
+render();
+
+})();
+</script>
+
+<!-- ===== 第16弾 終了 ===== -->
 </body>
 </html>
