@@ -11329,6 +11329,991 @@ render();
 })();
 </script>
 <!-- ===== 第14弾 終了 ===== -->
+<!-- ===== 第15弾：81マス目標達成・毎日の3つの約束 ===== -->
+<style>
+.m15-panel{
+  background:#f0f7ff;
+  color:#173a60;
+  border:2px solid #7caad4;
+  border-radius:16px;
+  padding:15px;
+  margin:13px 0;
+  line-height:1.6;
+}
+.m15-panel h2,.m15-panel h3{
+  color:#15558f;
+  margin:0 0 10px;
+}
+.m15-dream{
+  background:linear-gradient(115deg,#123c77,#176fb2);
+  color:#fff;
+  border:2px solid #f6c94d;
+  border-radius:14px;
+  padding:17px;
+  text-align:center;
+  font-size:22px;
+  font-weight:900;
+}
+.m15-grid{
+  display:grid;
+  grid-template-columns:repeat(9,minmax(0,1fr));
+  gap:2px;
+}
+.m15-cell{
+  font-size:10px;
+  min-height:53px;
+  padding:3px 2px;
+  overflow-wrap:anywhere;
+  background:#fff;
+  border:1px solid #bfd4e8;
+  color:#173a60;
+  cursor:pointer;
+}
+.m15-cell.theme{
+  background:#ffe5a2;
+  font-weight:bold;
+}
+.m15-cell.center{
+  background:#154f8c;
+  color:#fff;
+  font-weight:bold;
+}
+.m15-cell.done{
+  background:#d5f2dd;
+}
+.m15-cell:focus{
+  outline:3px solid #e8a927;
+}
+.m15-actions{
+  display:grid;
+  gap:9px;
+}
+.m15-item{
+  background:white;
+  border:1px solid #c3d7e9;
+  border-radius:10px;
+  padding:10px;
+}
+.m15-item label{
+  display:flex;
+  gap:9px;
+  align-items:flex-start;
+}
+.m15-item input[type=checkbox]{
+  width:23px;
+  height:23px;
+  flex-shrink:0;
+}
+.m15-panel button{
+  border:0;
+  border-radius:9px;
+  padding:11px;
+  background:#175f9e;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+}
+.m15-panel button.alt{
+  background:#e1ecf6;
+  color:#17466f;
+}
+.m15-panel input[type=text],
+.m15-panel textarea,
+.m15-panel select{
+  box-sizing:border-box;
+  width:100%;
+  font-size:16px;
+  padding:10px;
+  border:1px solid #a6c5df;
+  border-radius:8px;
+  background:white;
+  color:#173a60;
+}
+.m15-panel textarea{
+  min-height:65px;
+}
+.m15-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.m15-row>*{
+  flex:1;
+}
+.m15-muted{
+  font-size:13px;
+  color:#58758e;
+}
+.m15-progress{
+  height:12px;
+  border-radius:20px;
+  background:#cddfea;
+  overflow:hidden;
+}
+.m15-progress span{
+  display:block;
+  height:100%;
+  background:#34a67b;
+}
+.m15-home{
+  margin-top:0;
+}
+@media(max-width:600px){
+  .m15-grid{
+    min-width:720px;
+  }
+  .m15-scroll{
+    overflow-x:auto;
+  }
+  .m15-cell{
+    font-size:9px;
+    min-height:58px;
+  }
+}
+</style>
 
+<script>
+(function(){
+'use strict';
+
+const KEY='mandala15';
+
+const THEMES=[
+  [
+    'バッティング',
+    [
+      '素振りを毎日30回する',
+      '置きティーをする',
+      '一球一球丁寧に打つ'
+    ]
+  ],
+  [
+    '守備',
+    [
+      'キャッチボールを丁寧にする',
+      'グローブをきれいにする'
+    ]
+  ],
+  [
+    '走塁',
+    [
+      'ラダーをする',
+      'ダッシュをする',
+      'なわとびをする',
+      'スライディングをする'
+    ]
+  ],
+  [
+    '体力づくり',
+    [
+      'ストレッチを毎日する',
+      '10時間以上寝る',
+      'ランニングをする'
+    ]
+  ],
+  [
+    'ピッチング',
+    [
+      'シャドーピッチングをする',
+      'なわとびをする',
+      'キャッチボールを丁寧にする'
+    ]
+  ],
+  [
+    '人間性を高める',
+    [
+      'ゴミを拾う',
+      'あいさつをする',
+      '返事をする',
+      '人に優しくする'
+    ]
+  ],
+  [
+    '勉強',
+    [
+      '忘れ物をしない',
+      '宿題をする',
+      '先生の話をよく聞く'
+    ]
+  ],
+  [
+    '食事',
+    [
+      '朝にバナナを食べる',
+      '毎日おかわりを1回以上する',
+      'お菓子ばかり食べない'
+    ]
+  ]
+];
+
+const esc15=v=>String(v??'')
+  .replace(/&/g,'&amp;')
+  .replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;')
+  .replace(/'/g,'&#39;');
+
+const date15=()=>{
+  const d=new Date();
+  const z=n=>String(n).padStart(2,'0');
+
+  return [
+    d.getFullYear(),
+    z(d.getMonth()+1),
+    z(d.getDate())
+  ].join('-');
+};
+
+function store(){
+  if(
+    !db[KEY] ||
+    typeof db[KEY]!=='object' ||
+    Array.isArray(db[KEY])
+  ){
+    db[KEY]={};
+  }
+
+  const s=db[KEY];
+
+  if(!Array.isArray(s.themes)){
+    s.themes=THEMES.map(([name,actions])=>({
+      name,
+      actions:Array.from(
+        {length:8},
+        (_,i)=>actions[i]||''
+      )
+    }));
+  }
+
+  if(!s.daily || typeof s.daily!=='object'){
+    s.daily={};
+  }
+
+  if(!Array.isArray(s.history)){
+    s.history=[];
+  }
+
+  if(typeof s.dream!=='string'){
+    s.dream=String(
+      db.goal||'プロ野球選手になる！'
+    );
+  }
+
+  if(typeof s.medium!=='string'){
+    s.medium='';
+  }
+
+  if(typeof s.short!=='string'){
+    s.short='';
+  }
+
+  return s;
+}
+
+function persist(fn){
+  const before=JSON.stringify(db);
+
+  try{
+    fn();
+
+    if(save()===false){
+      throw Error('保存失敗');
+    }
+
+    return true;
+
+  }catch(e){
+    db=JSON.parse(before);
+
+    alert(
+      '保存できませんでした。' +
+      'データ管理から保存容量を確認してください。'
+    );
+
+    return false;
+  }
+}
+
+function entries(){
+  return store().themes.flatMap(
+    (t,ti)=>t.actions.map((a,ai)=>({
+      id:`${ti}-${ai}`,
+      theme:t.name,
+      text:a
+    }))
+  ).filter(x=>x.text.trim());
+}
+
+function day(){
+  const s=store();
+  const d=date15();
+
+  if(!s.daily[d]){
+    s.daily[d]={
+      chosen:[],
+      checked:[],
+      reflection:'',
+      rest:false
+    };
+  }
+
+  return s.daily[d];
+}
+
+function progress(){
+  const d=day();
+
+  return d.chosen.length
+    ?Math.round(
+      d.chosen.filter(
+        id=>d.checked.includes(id)
+      ).length/d.chosen.length*100
+    )
+    :0;
+}
+
+function todayPanel(){
+  const s=store();
+  const d=day();
+  const all=entries();
+
+  const chosen=d.chosen
+    .map(id=>all.find(x=>x.id===id))
+    .filter(Boolean);
+
+  return `
+    <section class="m15-panel m15-home">
+
+      <div class="m15-dream">
+        🏆 ${esc15(s.dream)}
+      </div>
+
+      <h3 style="margin-top:15px">
+        🌟 今日の3つの約束
+      </h3>
+
+      <p class="m15-muted">
+        自分で決めて、自分で振り返ろう。
+        休養日には無理をしないことも大切。
+      </p>
+
+      ${
+        chosen.length
+        ?`
+          <div class="m15-actions">
+            ${chosen.map(x=>`
+              <div class="m15-item">
+                <label>
+                  <input
+                    type="checkbox"
+                    ${
+                      d.checked.includes(x.id)
+                      ?'checked'
+                      :''
+                    }
+                    onchange="m15Check(
+                      '${x.id}',this.checked
+                    )"
+                  >
+
+                  <span>
+                    <b>${esc15(x.theme)}</b>：
+                    ${esc15(x.text)}
+                  </span>
+                </label>
+              </div>
+            `).join('')}
+          </div>
+
+          <p>達成 ${progress()}%</p>
+
+          <div class="m15-progress">
+            <span style="width:${progress()}%">
+            </span>
+          </div>
+        `
+        :`
+          <p>
+            今日はまだ約束を選んでいないよ。
+          </p>
+        `
+      }
+
+      <div
+        class="m15-row"
+        style="margin-top:12px"
+      >
+        <button onclick="go('mandala15')">
+          🎯 約束を選ぶ・81マスを見る
+        </button>
+
+        <button
+          class="alt"
+          onclick="m15Reflect()"
+        >
+          🌙 今日の振り返り
+        </button>
+      </div>
+
+      ${
+        d.rest
+        ?`
+          <p>
+            💚 今日は休養日。
+            身体を大切にする選択も立派だよ。
+          </p>
+        `
+        :''
+      }
+
+    </section>
+  `;
+}
+
+function grid(){
+  const s=store();
+  const cells=[];
+
+  for(let by=0;by<3;by++){
+    for(let iy=0;iy<3;iy++){
+
+      const row=[];
+
+      for(let bx=0;bx<3;bx++){
+        for(let ix=0;ix<3;ix++){
+
+          const group=by*3+bx;
+          const inner=iy*3+ix;
+
+          if(group===4){
+
+            if(inner===4){
+              row.push({
+                text:s.dream,
+                kind:'center'
+              });
+
+            }else{
+              const k=inner<4
+                ?inner
+                :inner-1;
+
+              row.push({
+                text:s.themes[k].name,
+                kind:'theme',
+                ti:k
+              });
+            }
+
+          }else{
+            const ti=group<4
+              ?group
+              :group-1;
+
+            if(inner===4){
+              row.push({
+                text:s.themes[ti].name,
+                kind:'theme',
+                ti
+              });
+
+            }else{
+              const ai=inner<4
+                ?inner
+                :inner-1;
+
+              row.push({
+                text:s.themes[ti].actions[ai],
+                kind:'action',
+                ti,
+                ai
+              });
+            }
+          }
+        }
+      }
+
+      cells.push(...row);
+    }
+  }
+
+  const d=day();
+
+  return `
+    <div class="m15-scroll">
+      <div class="m15-grid">
+
+        ${cells.map(c=>`
+          <button
+            type="button"
+            class="m15-cell ${c.kind} ${
+              c.kind==='action' &&
+              d.checked.includes(
+                `${c.ti}-${c.ai}`
+              )
+              ?'done'
+              :''
+            }"
+            onclick="m15Edit(
+              ${c.ti??-1},
+              ${c.ai??-1}
+            )"
+            title="タップして編集"
+          >
+            ${esc15(c.text||'＋')}
+          </button>
+        `).join('')}
+
+      </div>
+    </div>
+  `;
+}
+
+function screen(){
+  const s=store();
+  const d=day();
+  const all=entries();
+
+  return `
+    <section class="m15-panel">
+
+      <h2>🏆 夢をかなえる81マス</h2>
+
+      <p>
+        真ん中に夢、周囲に8つのテーマ、
+        さらに各8つの行動。
+        マスをタップして編集できます。
+      </p>
+
+      ${grid()}
+
+      <p class="m15-muted">
+        横にスクロールして全81マスを
+        確認できます。
+        空白のマスも自由に追加できます。
+      </p>
+
+    </section>
+
+    <section class="m15-panel">
+
+      <h3>🎯 長期・中期・短期目標</h3>
+
+      <label>
+        長期目標（81マスの中心と共通）
+
+        <input
+          id="m15Dream"
+          type="text"
+          value="${esc15(s.dream)}"
+        >
+      </label>
+
+      <label>
+        中期目標
+
+        <input
+          id="m15Medium"
+          type="text"
+          value="${esc15(s.medium)}"
+          placeholder="例：中学校で主力選手になる"
+        >
+      </label>
+
+      <label>
+        短期目標
+
+        <input
+          id="m15Short"
+          type="text"
+          value="${esc15(s.short)}"
+          placeholder="例：今月は捕球の準備を意識する"
+        >
+      </label>
+
+      <button
+        style="margin-top:10px"
+        onclick="m15SaveGoals()"
+      >
+        💾 目標を保存
+      </button>
+
+    </section>
+
+    <section class="m15-panel">
+
+      <h3>☀️ 今日の3つの約束を選ぶ</h3>
+
+      <p>
+        下の行動から最大3つ選んで保存しよう。
+        毎日選び直せます。
+      </p>
+
+      <div class="m15-actions">
+
+        ${all.map(x=>`
+          <div class="m15-item">
+            <label>
+
+              <input
+                type="checkbox"
+                class="m15-pick"
+                value="${x.id}"
+                ${
+                  d.chosen.includes(x.id)
+                  ?'checked'
+                  :''
+                }
+              >
+
+              <span>
+                <b>${esc15(x.theme)}</b>：
+                ${esc15(x.text)}
+              </span>
+
+            </label>
+          </div>
+        `).join('')}
+
+      </div>
+
+      <button
+        style="margin-top:12px"
+        onclick="m15Choose()"
+      >
+        ⭐ 今日の約束を保存
+      </button>
+
+      <p class="m15-muted">
+        選び直しても同じ日の
+        達成済み記録は維持されます。
+      </p>
+
+    </section>
+
+    ${todayPanel()}
+
+    <section class="m15-panel">
+
+      <h3>🌙 今日の振り返り</h3>
+
+      <label>
+        <input
+          type="checkbox"
+          id="m15Rest"
+          ${d.rest?'checked':''}
+        >
+        今日は休養・回復を優先した
+      </label>
+
+      <textarea
+        id="m15Reflection"
+        placeholder="できたこと、気づいたこと、明日試したいこと"
+      >${esc15(d.reflection)}</textarea>
+
+      <button onclick="m15SaveReflection()">
+        📓 振り返りを保存
+      </button>
+
+    </section>
+
+    <section class="m15-panel">
+
+      <h3>📅 最近の積み重ね</h3>
+
+      ${
+        Object.keys(s.daily)
+          .sort()
+          .reverse()
+          .slice(0,14)
+          .map(date=>{
+
+            const x=s.daily[date];
+
+            const completed=(x.checked||[])
+              .filter(
+                id=>(x.chosen||[]).includes(id)
+              ).length;
+
+            return `
+              <div class="m15-item">
+
+                <b>${esc15(date)}</b>
+
+                ${x.rest?'💚休養 ':''}
+
+                ${completed}/${(x.chosen||[]).length}
+                達成
+
+                <p>
+                  ${esc15(x.reflection||'')}
+                </p>
+
+              </div>
+            `;
+          }).join('')
+          ||
+          '<p>これから記録を増やしていこう！</p>'
+      }
+
+    </section>
+  `;
+}
+
+window.m15Edit=(ti,ai)=>{
+  const s=store();
+
+  if(ti<0){
+    const v=prompt(
+      '中心の夢を入力',
+      s.dream
+    );
+
+    if(
+      v!==null &&
+      v.trim() &&
+      persist(()=>{
+        s.dream=v.trim();
+        db.goal=s.dream;
+
+        s.history.push({
+          date:date15(),
+          type:'dream',
+          value:v.trim()
+        });
+      })
+    ){
+      render();
+    }
+
+    return;
+  }
+
+  const item=s.themes[ti];
+  const isTheme=ai<0;
+
+  const old=isTheme
+    ?item.name
+    :item.actions[ai];
+
+  const v=prompt(
+    isTheme
+      ?'テーマ名を編集'
+      :'行動目標を編集（空欄も可）',
+    old
+  );
+
+  if(
+    v!==null &&
+    persist(()=>{
+
+      if(isTheme){
+        item.name=v.trim();
+      }else{
+        item.actions[ai]=v.trim();
+      }
+
+      s.history.push({
+        date:date15(),
+        type:isTheme?'theme':'action',
+        id:`${ti}-${ai}`,
+        before:old,
+        after:v.trim()
+      });
+    })
+  ){
+    render();
+  }
+};
+
+window.m15SaveGoals=()=>{
+  const s=store();
+
+  const dream=document
+    .getElementById('m15Dream')
+    .value.trim();
+
+  if(!dream){
+    alert('夢を入力してね');
+    return;
+  }
+
+  if(persist(()=>{
+
+    s.dream=dream;
+
+    s.medium=document
+      .getElementById('m15Medium')
+      .value.trim();
+
+    s.short=document
+      .getElementById('m15Short')
+      .value.trim();
+
+    db.goal=dream;
+
+    s.history.push({
+      date:date15(),
+      type:'goals',
+      dream,
+      medium:s.medium,
+      short:s.short
+    });
+
+  })){
+    render();
+  }
+};
+
+window.m15Choose=()=>{
+  const selected=[
+    ...document.querySelectorAll(
+      '.m15-pick:checked'
+    )
+  ].map(x=>x.value);
+
+  if(selected.length>3){
+    alert('約束は3つまで選んでね');
+    return;
+  }
+
+  if(persist(()=>{
+    day().chosen=selected;
+  })){
+    render();
+  }
+};
+
+window.m15Check=(id,on)=>{
+  if(persist(()=>{
+
+    const d=day();
+
+    if(
+      on &&
+      !d.checked.includes(id)
+    ){
+      d.checked.push(id);
+    }
+
+    if(!on){
+      d.checked=d.checked.filter(
+        x=>x!==id
+      );
+    }
+
+  })){
+    render();
+  }
+};
+
+window.m15SaveReflection=()=>{
+  if(persist(()=>{
+
+    day().reflection=document
+      .getElementById('m15Reflection')
+      .value.trim();
+
+    day().rest=document
+      .getElementById('m15Rest')
+      .checked;
+
+  })){
+    alert(
+      '今日の振り返りを保存したよ！'
+    );
+
+    render();
+  }
+};
+
+window.m15Reflect=()=>{
+  go('mandala15');
+};
+
+if(
+  !tabs.some(x=>x[0]==='mandala15')
+){
+  tabs.push([
+    'mandala15',
+    '🌟 81マス目標'
+  ]);
+}
+
+const previousRender=render;
+
+render=function(){
+
+  if(tab==='mandala15'){
+
+    const requested=tab;
+
+    tab='home';
+
+    try{
+      previousRender.call(this);
+    }finally{
+      tab=requested;
+    }
+
+    const v=document.getElementById(
+      'view'
+    );
+
+    if(v){
+      v.innerHTML=screen();
+    }
+
+    const nav=document.getElementById(
+      'nav'
+    );
+
+    if(
+      nav &&
+      !nav.querySelector(
+        '[onclick*=mandala15]'
+      )
+    ){
+      nav.insertAdjacentHTML(
+        'beforeend',
+        `
+          <button
+            class="active"
+            onclick="go('mandala15')"
+          >
+            🌟 81マス目標
+          </button>
+        `
+      );
+    }
+
+    return;
+  }
+
+  previousRender.call(this);
+
+  if(tab==='home'){
+
+    const v=document.getElementById(
+      'view'
+    );
+
+    if(
+      v &&
+      !v.querySelector('.m15-home')
+    ){
+      v.insertAdjacentHTML(
+        'afterbegin',
+        todayPanel()
+      );
+    }
+  }
+};
+
+render();
+
+})();
+</script>
+<!-- ===== 第15弾 終了 ===== -->
 </body>
 </html>
