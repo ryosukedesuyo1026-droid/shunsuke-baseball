@@ -18422,5 +18422,432 @@ document.getElementById(
 </script>
 <!-- ===== XP修復 終了 ===== -->
 
+<!-- ===== 駿介 XP修正 v18 ===== -->
+<style>
+#sx18-open{
+ position:fixed;right:12px;bottom:18px;
+ z-index:30000;background:#126a4b;color:white;
+ border:2px solid #ffd76b;border-radius:24px;
+ padding:13px 17px;font-weight:900;
+}
+#sx18-overlay{
+ display:none;position:fixed;inset:0;
+ z-index:30001;background:#071a30ed;
+ overflow:auto;padding:12px;
+}
+#sx18-panel{
+ max-width:700px;margin:18px auto;padding:18px;
+ background:white;color:#173a60;
+ border-radius:16px;font-family:system-ui,sans-serif;
+}
+#sx18-panel *{box-sizing:border-box}
+#sx18-panel button{
+ padding:12px;margin:5px 3px;border:0;
+ border-radius:9px;background:#17649a;
+ color:white;font-weight:bold;
+}
+#sx18-panel .summary{
+ background:#e8f4ec;padding:14px;
+ border-radius:12px;line-height:1.9;
+}
+#sx18-panel .record{
+ padding:10px 0;border-bottom:1px solid #ddd;
+}
+#sx18-panel .warning{
+ background:#fff2d8;padding:12px;
+ border-radius:10px;
+}
+</style>
+
+<button id="sx18-open" type="button">
+ ⚾ XP正常化
+</button>
+
+<div id="sx18-overlay">
+ <div id="sx18-panel">
+  <h2>⚾ 駿介 XP正常化</h2>
+  <p>練習履歴を削除せず、XP上限を撤廃します。</p>
+  <div id="sx18-summary"></div>
+  <div id="sx18-records"></div>
+  <button id="sx18-apply" type="button">
+   ✅ 修正を確定
+  </button>
+  <button id="sx18-close" type="button">
+   閉じる
+  </button>
+ </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const VERSION='sx18-no-cap-v1';
+const BACKUP='shunsuke_sx18_original_backup';
+const $=id=>document.getElementById(id);
+
+function n(v,def=0){
+ if(v===null||v===undefined||v==='')return def;
+ const x=Number(v);
+ return Number.isFinite(x)?x:def;
+}
+
+function escapeText(v){
+ return String(v??'').replace(
+  /[&<>"']/g,
+  c=>({
+   '&':'&amp;','<':'&lt;',
+   '>':'&gt;','"':'&quot;',
+   "'":'&#39;'
+  }[c])
+ );
+}
+
+function currentData(){
+ try{return db;}catch(e){return null;}
+}
+
+function menuOf(p){
+ try{
+  return MENU.find(m=>m[0]===p.name);
+ }catch(e){return null;}
+}
+
+/*
+ 元のメニューに設定された基準XPを使用。
+ 件数上限・日別上限は設けない。
+*/
+function xpFor(p){
+ const m=menuOf(p);
+
+ if(m){
+  return Math.max(1,Math.round(n(m[3],5)));
+ }
+
+ // メニュー未登録の記録は、
+ // 既存の正のXPを保護する。
+ return Math.max(1,Math.round(n(p.xp,5)));
+}
+
+function sumXP(rows){
+ return rows.reduce((s,p)=>s+n(p.xp),0);
+}
+
+function preview(){
+ const d=currentData();
+ if(!d||!Array.isArray(d.practice)){
+  throw Error('練習履歴を読み取れません');
+ }
+
+ const rows=d.practice.map((p,index)=>({
+  index,
+  name:p.name,
+  date:p.date,
+  amount:p.amount,
+  unit:p.unit,
+  minutes:p.minutes,
+  before:n(p.xp),
+  after:xpFor(p)
+ }));
+
+ const oldPractice=sumXP(d.practice);
+ const newPractice=rows.reduce(
+  (s,r)=>s+r.after,0
+ );
+
+ const oldTotal=n(d.xp);
+ const other=oldTotal-oldPractice;
+
+ return {
+  rows,
+  oldPractice,
+  newPractice,
+  oldTotal,
+  other,
+  newTotal:other+newPractice
+ };
+}
+
+function showPreview(){
+ try{
+  const x=preview();
+
+  $('sx18-summary').innerHTML=`
+   <div class="summary">
+    練習記録：<b>${x.rows.length}件</b><br>
+    現在の累計：${x.oldTotal} XP<br>
+    現在の練習XP：${x.oldPractice} XP<br>
+    修正後の練習XP：
+    <b>${x.newPractice} XP</b><br>
+    練習以外の差額：
+    ${x.other} XP<br>
+    <strong>
+     修正後の累計：${x.newTotal} XP
+    </strong>
+   </div>
+   <p class="warning">
+    差額は睡眠・休養等のXPと推定しています。
+    内訳は未確定のため、そのまま保護します。
+    能力値は今回変更しません。
+   </p>
+  `;
+
+  $('sx18-records').innerHTML=`
+   <h3>練習別XP</h3>
+   ${x.rows.map(r=>`
+    <div class="record">
+     <b>${escapeText(r.name)}</b>
+     <small>${escapeText(r.date)}</small><br>
+     ${escapeText(r.amount??'')}
+     ${escapeText(r.unit??'')}<br>
+     ${r.before} XP
+     → <strong>${r.after} XP</strong>
+    </div>
+   `).join('')}
+  `;
+
+  return x;
+ }catch(e){
+  $('sx18-summary').textContent=e.message;
+  return null;
+ }
+}
+
+/*
+ 元の保存キーKを使用する。
+ 後続の複数のsaveラッパーを通さない。
+*/
+function writeDirect(){
+ localStorage.setItem(K,JSON.stringify(db));
+}
+
+/*
+ 修復後に新しい練習が追加された場合、
+ 旧処理で計算されたXPとの差を補正する。
+*/
+function normalizeNewRecords(){
+ if(!db.sx18Applied)return;
+
+ let previous;
+ try{
+  previous=JSON.parse(
+   localStorage.getItem(K)
+  );
+ }catch(e){
+  previous=null;
+ }
+
+ if(!previous ||
+    !Array.isArray(previous.practice))return;
+
+ const oldCount=previous.practice.length;
+ const newCount=db.practice.length;
+
+ if(newCount<=oldCount)return;
+
+ for(let i=oldCount;i<newCount;i++){
+  const p=db.practice[i];
+  const old=n(p.xp);
+  const corrected=xpFor(p);
+
+  p.xp=corrected;
+  p.sx18Calculated=true;
+
+  db.xp=n(db.xp)+corrected-old;
+ }
+}
+
+/*
+ save()を最終的に一本化する。
+ 元のsave()を繰り返し呼び出さない。
+*/
+save=function(){
+ try{
+  normalizeNewRecords();
+  writeDirect();
+  return true;
+ }catch(e){
+  alert('保存に失敗しました。記録を確認してください。');
+  console.error(e);
+  return false;
+ }
+};
+
+/*
+ 練習登録処理を置き換える。
+ 4件目以降の0 XP処理を使用しない。
+*/
+addPractice=function(){
+ const menuEl=$('menu');
+ const m=MENU.find(
+  x=>x[0]===menuEl?.value
+ );
+ if(!m)return;
+
+ const pain=$('pain')?.value==='yes';
+
+ if(pain &&
+    m[1]!=='自主学習' &&
+    m[0]!=='睡眠・休養'){
+  alert(
+   '痛みがある日は運動を中止し、'+
+   '保護者や主治医に相談してください。'
+  );
+  return;
+ }
+
+ const raw=$('amount')?.value??'';
+
+ if(raw!==''&&
+    (!Number.isFinite(Number(raw))||
+     Number(raw)<0)){
+  alert('実施量を確認してください。');
+  return;
+ }
+
+ const minutesRaw=
+  $('trainingMinutes')?.value ??
+  $('careMinutes')?.value ??
+  '';
+
+ const minutes=minutesRaw===''
+  ?(m[4]==='分'?n(raw):0)
+  :Number(minutesRaw);
+
+ if(!Number.isFinite(minutes)||
+    minutes<0||minutes>1440){
+  alert('練習時間を確認してください。');
+  return;
+ }
+
+ const entry={
+  date:today(),
+  name:m[0],
+  kind:m[1],
+  amount:raw===''?null:Number(raw),
+  unit:m[4],
+  minutes,
+  note:$('memo')?.value.trim()||'',
+  xp:Math.max(1,Math.round(n(m[3],5))),
+  sx18Calculated:true
+ };
+
+ const snapshot=JSON.stringify(db);
+
+ db.practice.push(entry);
+ db.xp=n(db.xp)+entry.xp;
+ db.pain=pain;
+
+ if(m[2]==='ケア'){
+  db.energy=cap(n(db.energy)+10);
+ }else{
+  db.energy=cap(n(db.energy)-5);
+
+  const target=PB.includes(m[2])
+   ?db.pitch:db.abilities;
+
+  if(target &&
+     Object.prototype.hasOwnProperty.call(
+      target,m[2]
+     )){
+   target[m[2]]=cap(n(target[m[2]],20)+1);
+  }
+ }
+
+ if(!save()){
+  db=JSON.parse(snapshot);
+  return;
+ }
+
+ alert(
+  '練習を記録しました！ +'+
+  entry.xp+' XP'
+ );
+
+ const todays=db.practice.filter(
+  p=>p.date===today()
+ );
+
+ const totalMinutes=todays.reduce(
+  (s,p)=>s+n(p.minutes),0
+ );
+
+ if(totalMinutes>=120){
+  alert(
+   '⚠️ 今日は記録された活動時間が'+
+   totalMinutes+'分です。\n'+
+   '練習内容や疲労を確認し、'+
+   '休息・水分補給を大切にしましょう。'+
+   '\n※120分は医学的な安全基準ではありません。'
+  );
+ }
+
+ render();
+};
+
+/*
+ 修復は利用者が確認した場合のみ実行。
+*/
+function apply(){
+ const x=preview();
+ if(!x)return;
+
+ if(!confirm(
+  '練習'+x.rows.length+'件を残したまま、'+
+  '累計XPを'+x.oldTotal+'から'+
+  x.newTotal+'へ変更します。\n'+
+  '実行しますか？'
+ ))return;
+
+ const snapshot=JSON.stringify(db);
+
+ try{
+  if(!localStorage.getItem(BACKUP)){
+   localStorage.setItem(BACKUP,snapshot);
+  }
+
+  x.rows.forEach(r=>{
+   db.practice[r.index].xp=r.after;
+   db.practice[r.index].sx18Calculated=true;
+  });
+
+  db.xp=x.newTotal;
+  db.sx18Applied=VERSION;
+
+  writeDirect();
+
+  alert(
+   '修復完了！\n'+
+   '練習履歴：'+db.practice.length+'件\n'+
+   '累計：'+db.xp+' XP'
+  );
+
+  $('sx18-overlay').style.display='none';
+  render();
+
+ }catch(e){
+  db=JSON.parse(snapshot);
+  alert(
+   '修復できませんでした。'+
+   '元のデータを保持しています。'
+  );
+ }
+}
+
+$('sx18-open').onclick=function(){
+ $('sx18-overlay').style.display='block';
+ showPreview();
+};
+
+$('sx18-close').onclick=function(){
+ $('sx18-overlay').style.display='none';
+};
+
+$('sx18-apply').onclick=apply;
+
+})();
+</script>
+<!-- ===== XP修正 v18 終了 ===== -->
+
 </body>
 </html>
