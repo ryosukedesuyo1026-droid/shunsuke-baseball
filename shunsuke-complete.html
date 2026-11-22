@@ -18003,5 +18003,424 @@ document.getElementById(
 </script>
 <!-- ===== XP修復 第1段階 終了 ===== -->
 
+<!-- ===== XP修復：履歴保持・再計算 ===== -->
+<style>
+#xpfix-btn{
+ position:fixed;right:12px;bottom:80px;
+ z-index:25000;background:#136b4e;color:white;
+ border:2px solid #ffd66c;border-radius:25px;
+ padding:13px;font-weight:900;
+}
+#xpfix-panel{
+ display:none;position:fixed;inset:0;
+ z-index:25001;background:#06192ded;
+ overflow:auto;padding:12px;
+}
+#xpfix-box{
+ max-width:720px;margin:15px auto;
+ padding:18px;border-radius:16px;
+ background:white;color:#173a60;
+ font-family:system-ui,sans-serif;
+}
+#xpfix-box button{
+ margin:5px;padding:12px;
+ background:#17659a;color:white;
+ border:0;border-radius:9px;font-weight:bold;
+}
+#xpfix-box button:disabled{opacity:.45}
+#xpfix-box .item{
+ padding:10px 0;border-bottom:1px solid #ddd;
+}
+#xpfix-box .summary{
+ padding:14px;background:#eaf4ff;
+ border-radius:10px;line-height:1.9;
+}
+</style>
+
+<button id="xpfix-btn" type="button">
+ ⚾ XP修復
+</button>
+
+<div id="xpfix-panel">
+ <div id="xpfix-box">
+  <h2>⚾ 駿介 XP修復センター</h2>
+  <p>
+   過去の練習を削除せず、
+   XPと能力値を再計算します。
+  </p>
+  <div id="xpfix-summary"></div>
+  <h3>📖 練習別の再計算結果</h3>
+  <div id="xpfix-list"></div>
+  <button id="xpfix-apply" type="button">
+   ✅ 確認して修復を反映
+  </button>
+  <button id="xpfix-close" type="button">
+   閉じる
+  </button>
+ </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const FIX_KEY='shunsuke_xp_repair_v1';
+const BACKUP_KEY='shunsuke_xp_before_repair_v1';
+const MAIN_KEY='shunsuke_success_complete';
+const DAILY_CAP=60;
+
+let latest=null;
+let busy=false;
+
+function number(x,def=0){
+ const n=Number(x);
+ return x===null||x===undefined||
+        x===''||!Number.isFinite(n)
+        ?def:n;
+}
+
+function safe(x){
+ return String(x??'').replace(
+  /[&<>"']/g,
+  c=>({
+   '&':'&amp;','<':'&lt;',
+   '>':'&gt;','"':'&quot;',
+   "'":'&#39;'
+  }[c])
+ );
+}
+
+function data(){
+ try{
+  return typeof db!=='undefined'?db:null;
+ }catch(e){return null}
+}
+
+function menuFor(p){
+ try{
+  return MENU.find(m=>m[0]===p.name)||null;
+ }catch(e){return null}
+}
+
+function dateOf(p){
+ return String(p.date||'').slice(0,10);
+}
+
+/*
+ 基準XPと実施量を用いる統一計算。
+ 元の基準量が保存されていないため、
+ 量による増加は控えめに設定する。
+*/
+function baseXP(p){
+ const m=menuFor(p);
+ const standard=m?number(m[3],5):5;
+
+ if(p.name==='睡眠・休養'){
+  return 0;
+ }
+
+ const amount=number(p.amount,0);
+ const minutes=number(p.minutes,0);
+
+ let score=standard;
+
+ if(amount>0){
+  const unit=String(p.unit||m?.[4]||'');
+
+  let reference=100;
+
+  if(unit==='分')reference=30;
+  else if(unit==='球')reference=100;
+  else if(unit==='回')reference=100;
+
+  const ratio=amount/reference;
+  score=Math.round(
+   standard*Math.min(
+    1.25,
+    Math.max(.25,Math.sqrt(ratio))
+   )
+  );
+ }else if(minutes>0){
+  score=Math.round(
+   standard*Math.min(
+    1.25,
+    Math.max(.25,Math.sqrt(minutes/30))
+   )
+  );
+ }
+
+ return Math.max(1,score);
+}
+
+function calculate(){
+ const d=data();
+ if(!d||!Array.isArray(d.practice)){
+  throw Error('練習履歴を取得できません');
+ }
+
+ const rows=d.practice.map((p,index)=>({
+  index,
+  p,
+  date:dateOf(p),
+  before:number(p.xp),
+  raw:baseXP(p),
+  after:0
+ }));
+
+ /*
+ 同じ日の練習は登録順に計算。
+ 同じメニューを複数回実施した場合も
+ 別々の履歴として保持。
+*/
+ const daily={};
+
+ for(const row of rows){
+  const key=row.date||'日付不明';
+  const used=daily[key]||0;
+  row.after=Math.max(
+   0,Math.min(row.raw,DAILY_CAP-used)
+  );
+  daily[key]=used+row.after;
+ }
+
+ const beforePractice=rows.reduce(
+  (s,r)=>s+r.before,0
+ );
+ const afterPractice=rows.reduce(
+  (s,r)=>s+r.after,0
+ );
+
+ const currentXP=number(d.xp);
+
+ /*
+ 現在の練習以外のXPを保護。
+ 内訳未確認のため推定値として扱う。
+*/
+ const otherXP=currentXP-beforePractice;
+ const newTotal=Math.max(
+  0,otherXP+afterPractice
+ );
+
+ /*
+ 能力値は既存値を勝手に下げない。
+ 練習履歴からの参考値を別途算出。
+*/
+ const abilities={};
+ const pitch={};
+
+ for(const key of AB)abilities[key]=20;
+ for(const key of PB)pitch[key]=20;
+
+ const growthCount={};
+
+ for(const row of rows){
+  const m=menuFor(row.p);
+  if(!m||row.after<=0)continue;
+
+  const target=m[2];
+  if(target==='ケア')continue;
+
+  const k=row.date+'|'+target;
+  const used=growthCount[k]||0;
+
+  if(used>=3)continue;
+  growthCount[k]=used+1;
+
+  if(Object.hasOwn(pitch,target)){
+   pitch[target]=Math.min(
+    100,pitch[target]+1
+   );
+  }else if(Object.hasOwn(abilities,target)){
+   abilities[target]=Math.min(
+    100,abilities[target]+1
+   );
+  }
+ }
+
+ return {
+  rows,
+  beforePractice,
+  afterPractice,
+  currentXP,
+  otherXP,
+  newTotal,
+  abilities,
+  pitch
+ };
+}
+
+function preview(){
+ try{
+  latest=calculate();
+
+  const x=latest;
+
+  const oldAbilities=data().abilities||{};
+  const oldPitch=data().pitch||{};
+
+  const abilityText=AB.map(k=>
+   `${k}：現在${number(oldAbilities[k],20)}
+   ／履歴参考${x.abilities[k]}`
+  ).join('<br>');
+
+  const pitchText=PB.map(k=>
+   `${k}：現在${number(oldPitch[k],20)}
+   ／履歴参考${x.pitch[k]}`
+  ).join('<br>');
+
+  document.getElementById(
+   'xpfix-summary'
+  ).innerHTML=`
+   <div class="summary">
+    <strong>練習記録：${x.rows.length}件</strong><br>
+    修復前の累計：${x.currentXP} XP<br>
+    修復前の練習XP：${x.beforePractice} XP<br>
+    再計算した練習XP：
+    <b>${x.afterPractice} XP</b><br>
+    保護する練習以外のXP：
+    ${x.otherXP} XP（暫定）<br>
+    <strong>
+     修復後の累計：${x.newTotal} XP
+    </strong>
+   </div>
+
+   <h3>野手能力</h3>
+   <p>${abilityText}</p>
+   <h3>投手能力</h3>
+   <p>${pitchText}</p>
+   <p>
+    ※能力の履歴参考値は比較用です。
+    この修復では既存の能力値を
+    自動変更しません。
+   </p>
+  `;
+
+  document.getElementById(
+   'xpfix-list'
+  ).innerHTML=x.rows.map(r=>`
+   <div class="item">
+    <strong>${safe(r.p.name)}</strong><br>
+    ${safe(r.date)}
+    ／${safe(r.p.amount??'')}
+    ${safe(r.p.unit??'')}<br>
+    以前：${r.before} XP
+    → <strong>${r.after} XP</strong>
+    ${r.after===0?
+      '<br><small>1日の上限等による0 XP</small>':''}
+   </div>
+  `).join('');
+
+  document.getElementById(
+   'xpfix-apply'
+  ).disabled=false;
+
+ }catch(e){
+  latest=null;
+  document.getElementById(
+   'xpfix-summary'
+  ).textContent=e.message;
+  document.getElementById(
+   'xpfix-apply'
+  ).disabled=true;
+ }
+}
+
+function applyRepair(){
+ if(busy)return;
+ busy=true;
+
+ try{
+  const d=data();
+  if(!d)throw Error('データがありません');
+
+  const x=calculate();
+
+  const ok=confirm(
+   '練習'+x.rows.length+'件を保持して、'+
+   '累計XPを'+x.currentXP+'から'+
+   x.newTotal+'へ修正します。'+
+   '\n\n既存の能力値は変更しません。'+
+   '\n実行しますか？'
+  );
+
+  if(!ok)return;
+
+  /*
+   修復前データを端末内に保存。
+   保存できなければ修復を中止。
+  */
+  if(!localStorage.getItem(BACKUP_KEY)){
+   localStorage.setItem(
+    BACKUP_KEY,
+    JSON.stringify(d)
+   );
+  }
+
+  const snapshot=JSON.stringify(d);
+
+  try{
+   x.rows.forEach(r=>{
+    d.practice[r.index].xp=r.after;
+   });
+
+   d.xp=x.newTotal;
+
+   d.xpRepairVersion=FIX_KEY;
+   d.xpRepairOther=x.otherXP;
+
+   localStorage.setItem(
+    MAIN_KEY,
+    JSON.stringify(d)
+   );
+
+  }catch(e){
+   Object.assign(d,JSON.parse(snapshot));
+   throw e;
+  }
+
+  alert(
+   'XP修復を保存しました。\n'+
+   '累計：'+d.xp+' XP\n'+
+   '練習履歴：'+d.practice.length+'件'
+  );
+
+  preview();
+
+  try{
+   if(typeof render==='function')render();
+  }catch(e){}
+
+ }catch(e){
+  alert('修復を中止しました：'+e.message);
+ }finally{
+  busy=false;
+ }
+}
+
+document.getElementById(
+ 'xpfix-btn'
+).addEventListener('click',()=>{
+ document.getElementById(
+  'xpfix-panel'
+ ).style.display='block';
+ preview();
+});
+
+document.getElementById(
+ 'xpfix-close'
+).addEventListener('click',()=>{
+ document.getElementById(
+  'xpfix-panel'
+ ).style.display='none';
+});
+
+document.getElementById(
+ 'xpfix-apply'
+).addEventListener('click',applyRepair);
+
+})();
+</script>
+<!-- ===== XP修復 終了 ===== -->
+
 </body>
 </html>
