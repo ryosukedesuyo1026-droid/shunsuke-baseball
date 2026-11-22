@@ -18849,5 +18849,518 @@ $('sx18-apply').onclick=apply;
 </script>
 <!-- ===== XP修正 v18 終了 ===== -->
 
+<!-- ===== 駿介 XP一本化・最終修正 v19 ===== -->
+<style>
+#sx19button{
+ position:fixed;right:12px;bottom:15px;
+ z-index:99998;border:2px solid #fff;
+ border-radius:22px;background:#147957;
+ color:#fff;padding:12px;font-weight:900;
+}
+#sx19modal{
+ display:none;position:fixed;inset:0;
+ z-index:99999;background:#06172ce8;
+ overflow:auto;padding:14px;
+}
+#sx19inner{
+ max-width:650px;margin:20px auto;
+ background:#fff;color:#17304d;
+ border-radius:16px;padding:18px;
+ line-height:1.7;
+}
+#sx19inner button{
+ padding:12px;margin:4px;border:0;
+ border-radius:9px;background:#1559ac;
+ color:#fff;font-weight:bold;
+}
+#sx19inner pre{
+ white-space:pre-wrap;
+ overflow-wrap:anywhere;
+ background:#edf4ff;
+ padding:12px;border-radius:9px;
+}
+</style>
+
+<button id="sx19button" type="button">
+ ⚾ XP最終修正
+</button>
+
+<div id="sx19modal">
+ <div id="sx19inner">
+  <h2>⚾ XP計算の一本化</h2>
+  <p>
+   練習記録を保持し、時間・回数・球数に
+   応じたXPに再計算します。
+   1日のXP上限はありません。
+  </p>
+  <div id="sx19info"></div>
+  <button id="sx19apply" type="button">
+   この内容で修正を確定
+  </button>
+  <button id="sx19close" type="button">
+   閉じる
+  </button>
+ </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const VERSION='sx19-quantity-v2';
+const BACKUP='shunsuke_xp_v19_backup_original';
+const $=id=>document.getElementById(id);
+
+const n=(v,d=0)=>
+ v===''||v==null?d:
+ (Number.isFinite(Number(v))?Number(v):d);
+
+const refs={
+ '素振り':50,
+ '羽打ち':30,
+ '置きティー':50,
+ 'フリーバッティング':50,
+ 'シャドーピッチング':50,
+ 'キャッチボール':30,
+ '制球練習':30,
+ '配球研究':20,
+ '投手フィールディング':30,
+ '牽制の判断研究':20,
+ 'ノック':30,
+ '捕球練習':30,
+ '送球研究':20,
+ 'ラダートレーニング':20,
+ 'ベースランニング':20,
+ '走塁判断の研究':20,
+ 'ストレッチ':10,
+ '体幹・姿勢ケア':10,
+ '野球ノート':10,
+ '試合動画の研究':20,
+ '睡眠・休養':8
+};
+
+function correctMissingStretch(p){
+ if(
+  p.date==='2026-11-20' &&
+  p.name==='ストレッチ' &&
+  n(p.minutes)===0 &&
+  n(p.amount)===0
+ ){
+  p.minutes=10;
+  if(p.unit==='分')p.amount=10;
+  p.sx19TimeCorrected=true;
+ }
+}
+
+function calc(p){
+ const menu=(
+  typeof MENU!=='undefined'?MENU:[]
+ ).find(m=>m[0]===p.name);
+
+ const base=menu
+  ?Math.max(1,n(menu[3],10))
+  :Math.max(1,n(p.xp,8));
+
+ const unit=String(
+  p.unit||menu?.[4]||''
+ );
+
+ const rest=p.name==='睡眠・休養';
+
+ let q;
+
+ if(rest){
+  q=unit==='時間'
+   ?n(p.amount)
+   :n(p.minutes)/60;
+
+  if(!q)q=n(p.amount);
+
+ }else if(unit==='分'){
+  q=n(p.minutes)>0
+   ?n(p.minutes)
+   :n(p.amount);
+
+ }else{
+  q=n(p.amount);
+ }
+
+ if(!(q>0)){
+  return {
+   xp:Math.max(
+    1,Math.round(n(p.xp,base))
+   ),
+   missing:true
+  };
+ }
+
+ const reference=refs[p.name]||
+  (unit==='分'?20:30);
+
+ const xp=rest
+  ?Math.round(
+    base*Math.min(1,q/reference)
+   )
+  :Math.round(
+    base*Math.sqrt(q/reference)
+   );
+
+ return {
+  xp:Math.max(1,xp),
+  missing:false
+ };
+}
+
+function sum(a){
+ return a.reduce(
+  (s,p)=>s+n(p.xp),0
+ );
+}
+
+function snapshot(){
+ return JSON.stringify(db);
+}
+
+function directSave(){
+ localStorage.setItem(
+  K,snapshot()
+ );
+}
+
+function plan(){
+ const rows=db.practice.map((original,i)=>{
+  const p={...original};
+
+  correctMissingStretch(p);
+
+  return {
+   i,
+   p,
+   old:n(original.xp),
+   ...calc(p)
+  };
+ });
+
+ const before=sum(db.practice);
+
+ const after=rows.reduce(
+  (s,r)=>s+r.xp,0
+ );
+
+ const other=n(db.xp)-before;
+
+ return {
+  rows,
+  before,
+  after,
+  other,
+  total:n(db.xp),
+  next:other+after
+ };
+}
+
+function show(){
+ const a=plan();
+
+ const out=document.createElement('pre');
+
+ out.textContent=
+  '履歴：'+a.rows.length+'件\n'+
+  '現在：'+a.total+' XP\n'+
+  '練習XP：'+a.before+
+  ' → '+a.after+' XP\n'+
+  '練習以外の差額（内訳未確定）：'+
+  a.other+' XP\n'+
+  '修正後：'+a.next+' XP\n\n'+
+  a.rows.map(r=>
+   r.p.date+' '+r.p.name+
+   ' '+r.old+' → '+r.xp+' XP'+
+   (r.p.sx19TimeCorrected
+    ?'【ストレッチ10分に訂正】'
+    :'')+
+   (r.missing
+    ?' ※実施量未入力'
+    :'')
+  ).join('\n');
+
+ $('sx19info').replaceChildren(out);
+
+ return a;
+}
+
+/*
+ 保存処理を一本化する。
+ 新規追加分だけXPを補正する。
+*/
+save=function(){
+ try{
+  const previous=JSON.parse(
+   localStorage.getItem(K)||'null'
+  );
+
+  const oldRows=
+   Array.isArray(previous?.practice)
+   ?previous.practice:[];
+
+  for(
+   let i=oldRows.length;
+   i<db.practice.length;
+   i++
+  ){
+   const p=db.practice[i];
+
+   if(p.sx19Calculated)continue;
+
+   const old=n(p.xp);
+   const result=calc(p);
+
+   p.xp=result.xp;
+   p.sx19Calculated=true;
+
+   db.xp=n(db.xp)+result.xp-old;
+  }
+
+  directSave();
+  return true;
+
+ }catch(e){
+  console.error(e);
+  alert('保存できません。');
+  return false;
+ }
+};
+
+/*
+ 通常練習のXPを一度だけ付与する。
+*/
+addPractice=function(){
+ const m=MENU.find(
+  x=>x[0]===$('menu')?.value
+ );
+
+ if(!m)return;
+
+ const pain=
+  $('pain')?.value==='yes';
+
+ if(
+  pain &&
+  m[1]!=='自主学習' &&
+  m[0]!=='睡眠・休養'
+ ){
+  alert(
+   '痛みがある日は運動を中止し、'+
+   '保護者や医療者に相談してください。'
+  );
+  return;
+ }
+
+ const raw=$('amount')?.value??'';
+
+ if(
+  raw!=='' &&
+  (!Number.isFinite(Number(raw))||
+   Number(raw)<0)
+ ){
+  alert('実施量を確認してください');
+  return;
+ }
+
+ const timeEl=
+  $('trainingMinutes')||
+  $('careMinutes');
+
+ const timeRaw=timeEl?.value??'';
+
+ if(
+  timeRaw!=='' &&
+  (!Number.isFinite(Number(timeRaw))||
+   Number(timeRaw)<0||
+   Number(timeRaw)>1440)
+ ){
+  alert('練習時間を確認してください');
+  return;
+ }
+
+ const minutes=timeRaw!==''
+  ?Number(timeRaw)
+  :(m[4]==='分'?n(raw):0);
+
+ const entry={
+  date:today(),
+  name:m[0],
+  kind:m[1],
+  amount:raw===''?null:Number(raw),
+  unit:m[4],
+  minutes,
+  note:$('memo')?.value?.trim()||'',
+  xp:0
+ };
+
+ const result=calc(entry);
+
+ if(result.missing){
+  alert(
+   '実施時間・回数・球数を'+
+   '入力してください。'
+  );
+  return;
+ }
+
+ const before=snapshot();
+
+ entry.xp=result.xp;
+ entry.sx19Calculated=true;
+
+ db.practice.push(entry);
+ db.xp=n(db.xp)+entry.xp;
+ db.pain=pain;
+
+ if(m[2]==='ケア'){
+  db.energy=cap(
+   n(db.energy)+10
+  );
+
+ }else{
+  db.energy=cap(
+   n(db.energy)-5
+  );
+
+  const target=PB.includes(m[2])
+   ?db.pitch:db.abilities;
+
+  if(
+   target &&
+   Object.prototype.hasOwnProperty.call(
+    target,m[2]
+   )
+  ){
+   target[m[2]]=cap(
+    n(target[m[2]],20)+1
+   );
+  }
+ }
+
+ if(!save()){
+  db=JSON.parse(before);
+  return;
+ }
+
+ alert(
+  '練習を記録しました！ +'+
+  entry.xp+' XP\n'+
+  '累計 '+db.xp+' XP'
+ );
+
+ const todays=db.practice.filter(
+  p=>p.date===today() &&
+  p.name!=='睡眠・休養'
+ );
+
+ const total=todays.reduce(
+  (s,p)=>s+n(p.minutes),0
+ );
+
+ if(total>=120){
+  alert(
+   '⚠️ 今日の記録時間は合計'+
+   total+'分です。\n'+
+   '疲労や痛みを確認し、'+
+   '休息を優先してください。\n'+
+   '※120分は医学的な安全基準ではありません。'
+  );
+ }
+
+ render();
+};
+
+$('sx19button').onclick=()=>{
+ $('sx19modal').style.display='block';
+ show();
+};
+
+$('sx19close').onclick=()=>{
+ $('sx19modal').style.display='none';
+};
+
+$('sx19apply').onclick=()=>{
+ const a=show();
+
+ if(db.sx19Applied===VERSION){
+  alert('この修正は適用済みです');
+  return;
+ }
+
+ if(!confirm(
+  a.rows.length+'件を保持し、'+
+  '累計XPを'+a.total+'から'+
+  a.next+'へ変更します。\n'+
+  'よろしいですか？'
+ ))return;
+
+ const original=snapshot();
+
+ try{
+  if(!localStorage.getItem(BACKUP)){
+   localStorage.setItem(
+    BACKUP,original
+   );
+  }
+
+  for(const r of a.rows){
+   const p=db.practice[r.i];
+
+   if(r.p.sx19TimeCorrected){
+    p.minutes=10;
+    if(p.unit==='分')p.amount=10;
+    p.sx19TimeCorrected=true;
+   }
+
+   p.xp=r.xp;
+   p.sx19Calculated=true;
+  }
+
+  db.xp=a.next;
+  db.sx19Applied=VERSION;
+
+  directSave();
+
+  $('sx19modal').style.display='none';
+  render();
+
+  alert(
+   '修正完了！\n'+
+   '練習記録：'+
+   db.practice.length+'件\n'+
+   '累計：'+db.xp+' XP'
+  );
+
+ }catch(e){
+  db=JSON.parse(original);
+  alert(
+   '修正に失敗しました。'+
+   '元の記録を保持しています。'
+  );
+ }
+};
+
+/*
+ 以前の修復ボタンを非表示にする。
+*/
+const style=document.createElement('style');
+
+style.textContent=
+ '#xpfix-btn,'+
+ '#xpfix-panel,'+
+ '#sx18-open,'+
+ '#sx18-overlay{'+
+ 'display:none!important}';
+
+document.head.appendChild(style);
+
+})();
+</script>
+<!-- ===== XP一本化・最終修正 終了 ===== -->
+
 </body>
 </html>
