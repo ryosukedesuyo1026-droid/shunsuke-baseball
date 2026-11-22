@@ -1,0 +1,853 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071b41">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>駿介 BASEBALL SUCCESS</title>
+<style>
+:root{
+ --navy:#071b41;--blue:#1455a0;--gold:#ffd34d;
+ --ink:#18304d;--muted:#63748a;--green:#16845b;
+}
+*{box-sizing:border-box}
+body{
+ margin:0;font-family:-apple-system,BlinkMacSystemFont,
+ "Hiragino Kaku Gothic ProN",sans-serif;
+ background:linear-gradient(160deg,#07152e,#103e7a);
+ color:white;min-height:100vh;
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+header{
+ padding:18px 15px;background:#06152e;
+ border-bottom:2px solid var(--gold);
+ position:sticky;top:0;z-index:10;
+}
+header .brand{font-size:19px;font-weight:900}
+header small{color:#c8d8f5}
+main{max-width:850px;margin:auto;padding:15px 12px 90px}
+.panel{
+ background:#fff;color:var(--ink);
+ padding:17px;margin-bottom:15px;
+ border-radius:17px;box-shadow:0 5px 18px #0002;
+}
+.panel h2{margin:0 0 14px;font-size:19px}
+.panel h3{margin:17px 0 9px;font-size:16px}
+.hero{
+ background:linear-gradient(135deg,#123c83,#081d42);
+ color:white;border:1px solid #6384ba;
+}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{
+ padding:18px 8px;min-height:94px;
+ border:1px solid #577bb4;border-radius:15px;
+ background:linear-gradient(135deg,#174f96,#0b2c60);
+ color:white;font-weight:900;text-align:center;
+}
+.tile b{display:block;font-size:28px;margin-bottom:6px}
+.btn{
+ border:0;border-radius:11px;padding:12px 15px;
+ background:var(--blue);color:white;font-weight:800;
+}
+.btn.gold{background:var(--gold);color:#162c48}
+.btn.green{background:var(--green)}
+.btn.red{background:#b43b48}
+.btn.gray{background:#62748b}
+.btn:disabled{opacity:.5}
+.full{width:100%}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wrap{display:flex;flex-wrap:wrap;gap:8px}
+.field{margin:12px 0}
+label{display:block;font-weight:800;margin-bottom:6px}
+input,select,textarea{
+ width:100%;border:1px solid #b9c9d8;border-radius:10px;
+ padding:12px;background:#fff;color:#172c48;
+}
+textarea{min-height:90px;resize:vertical}
+.bar{height:12px;border-radius:20px;background:#dce5ef;overflow:hidden}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,#27a9d5,#ffd34d)}
+.stat{margin:11px 0}
+.rank{display:inline-block;background:#ffd34d;color:#18304d;
+ border-radius:7px;padding:3px 8px;margin-right:8px;font-weight:900}
+.muted{color:var(--muted);font-size:13px}
+.record{padding:12px 0;border-bottom:1px solid #e1e8ef}
+.record:last-child{border:0}
+.pill{display:inline-block;background:#e7f0ff;border-radius:20px;
+ padding:5px 10px;margin:3px;color:#204e88;font-size:12px;font-weight:800}
+.big{font-size:30px;font-weight:900;color:var(--gold)}
+.small{font-size:12px}
+.back{margin-bottom:13px}
+.notice{background:#fff5d8;color:#725313;border-radius:11px;padding:12px}
+.mandala{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:2px}
+.mandala button{
+ min-width:0;min-height:43px;padding:2px;border:1px solid #ccd6e3;
+ background:#f4f7fc;color:#19375c;font-size:9px;overflow-wrap:anywhere;
+}
+.mandala button.center{background:#ffdb72;font-weight:900}
+.mandala button.done{background:#bcebd0}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.days div{text-align:center;padding:7px 2px;background:#e8f1fc;
+ border-radius:6px;font-size:11px}
+canvas{max-width:100%;width:100%;height:180px}
+footer{text-align:center;color:#b9cbe7;font-size:11px;padding:25px}
+@media(max-width:370px){.tile{font-size:13px}.mandala button{font-size:8px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand">⚾ 駿介 BASEBALL SUCCESS</div>
+ <small>夢に向かって、今日の一歩を積み重ねよう</small>
+</header>
+<main id="app"></main>
+<footer>BASEBALL SUCCESS • 家族と育てる成長記録</footer>
+
+<script>
+"use strict";
+
+/* ===== 基本設定 ===== */
+const KEY="shunsuke_success_complete";
+const OLD_KEYS=[
+ "shunsuke_success_v4",
+ "shunsuke_success_v3_new"
+];
+const EXTRA_KEYS=[
+ "shunsuke_evaluation_v172"
+];
+const AB=["ミート","パワー","走力","肩力","守備力","捕球"];
+const PB=["球威","制球力","スタミナ","投球術","投手守備","メンタル"];
+const DAYS=["月","火","水","木","金","土","日"];
+
+const MENU=[
+ ["素振り","打撃","ミート",15,"回",50],
+ ["羽打ち","打撃","ミート",18,"回",30],
+ ["置きティー","打撃","ミート",20,"回",50],
+ ["フリーバッティング","打撃","パワー",20,"球",50],
+ ["シャドーピッチング","投手","投球術",20,"回",50],
+ ["キャッチボール","投手","制球力",20,"球",30],
+ ["制球練習","投手","制球力",20,"球",30],
+ ["配球研究","投手","投球術",20,"分",20],
+ ["投手フィールディング","投手","投手守備",20,"分",30],
+ ["牽制の判断研究","投手","投球術",20,"分",20],
+ ["ノック","守備","守備力",20,"分",30],
+ ["捕球練習","守備","捕球",15,"分",30],
+ ["送球研究","守備","肩力",15,"分",20],
+ ["ラダートレーニング","走塁","走力",18,"分",20],
+ ["ベースランニング","走塁","走力",18,"分",20],
+ ["走塁判断の研究","走塁","走力",18,"分",20],
+ ["ストレッチ","身体ケア","ケア",25,"分",10],
+ ["体幹・姿勢ケア","身体ケア","ケア",25,"分",10],
+ ["野球ノート","自主学習","投球術",20,"分",10],
+ ["試合動画の研究","自主学習","投球術",20,"分",20],
+ ["睡眠・休養","身体ケア","ケア",16,"時間",8]
+];
+
+const $=id=>document.getElementById(id);
+const today=()=>{
+ const d=new Date();
+ return d.getFullYear()+"-"+
+ String(d.getMonth()+1).padStart(2,"0")+"-"+
+ String(d.getDate()).padStart(2,"0");
+};
+const n=(v,d=0)=>v==null||v===""?d:
+ (Number.isFinite(Number(v))?Number(v):d);
+const arr=v=>Array.isArray(v)?v:[];
+const clamp=(v,a=0,b=100)=>Math.max(a,Math.min(b,n(v)));
+const esc=v=>String(v??"").replace(/[&<>"']/g,
+ c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
+ '"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const input=id=>$(id)?.value??"";
+const field=(label,id,type="text",value="")=>
+ `<div class="field"><label for="${id}">${label}</label>
+ <input id="${id}" type="${type}" value="${esc(value)}"></div>`;
+const area=(label,id,value="")=>
+ `<div class="field"><label for="${id}">${label}</label>
+ <textarea id="${id}">${esc(value)}</textarea></div>`;
+const panel=(title,content)=>
+ `<section class="panel"><h2>${title}</h2>${content}</section>`;
+const btn=(text,fn,style="")=>
+ `<button class="btn ${style}" onclick="${fn}">${text}</button>`;
+const record=(title,body)=>
+ `<div class="record"><strong>${title}</strong><div>${body}</div></div>`;
+
+/* ===== 保存と移行 ===== */
+function fresh(){
+ return {
+  version:4,name:"駿介",hand:"右投右打",
+  positions:["投手","一塁手","三塁手"],
+  xp:0,energy:100,pain:false,
+  abilities:Object.fromEntries(AB.map(x=>[x,20])),
+  pitch:Object.fromEntries(PB.map(x=>[x,20])),
+  practice:[],games:[],growth:[],pitchlog:[],
+  plans:[],reflections:[],week:Array(7).fill("休養"),
+  goal:"",father:"自分で考え、自分で挑戦しよう！",
+  missionClaims:[],notes:[],nutrition:[],sleep:[],
+  challenges:[],mandala15:null,created:today()
+ };
+}
+function read(k){
+ try{return JSON.parse(localStorage.getItem(k)||"null")}
+ catch(e){return null}
+}
+function normalize(o){
+ const d=fresh();
+ if(!o||typeof o!=="object")return d;
+ Object.assign(d,o);
+ for(const k of ["practice","games","growth","pitchlog",
+ "plans","reflections","missionClaims","notes",
+ "nutrition","sleep","challenges"]){
+  d[k]=arr(d[k]);
+ }
+ d.abilities={...fresh().abilities,...(o.abilities||{})};
+ d.pitch={...fresh().pitch,...(o.pitch||{})};
+ d.week=Array.isArray(o.week)?
+  Array.from({length:7},(_,i)=>String(o.week[i]||"休養")):
+  fresh().week;
+ return d;
+}
+let sourceKey=KEY;
+function load(){
+ let x=read(KEY);
+ if(x&&typeof x==="object")return normalize(x);
+ for(const k of OLD_KEYS){
+  x=read(k);
+  if(x&&typeof x==="object"){
+   sourceKey=k;
+   return normalize(x);
+  }
+ }
+ sourceKey="new";
+ return fresh();
+}
+let db=load();
+let screen="home";
+let selectedNote=-1;
+let lastMessage="";
+
+function save(){
+ try{
+  localStorage.setItem(KEY,JSON.stringify(db));
+  return true;
+ }catch(e){
+  alert("保存できません。ブラウザの保存容量を確認してください。");
+  return false;
+ }
+}
+function commit(mutator,message){
+ const before=JSON.stringify(db);
+ try{
+  mutator();
+  if(!save())throw Error("保存できません");
+  lastMessage=message||"保存しました";
+  render();
+  return true;
+ }catch(e){
+  db=JSON.parse(before);
+  alert("変更を保存できませんでした："+e.message);
+  return false;
+ }
+}
+function backupRaw(){
+ const keys=[KEY,...OLD_KEYS,...EXTRA_KEYS,
+  "shunsuke_success_v3_new"];
+ const obj={exportedAt:new Date().toISOString(),
+  data:{},source:sourceKey};
+ for(const k of keys){
+  const v=localStorage.getItem(k);
+  if(v!==null)obj.data[k]=v;
+ }
+ return obj;
+}
+function download(name,data){
+ const blob=new Blob([data],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;a.download=name;a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportAll(){
+ download("shunsuke-backup-"+today()+".json",
+  JSON.stringify(backupRaw(),null,2));
+}
+function importAll(){
+ const f=$("importFile")?.files?.[0];
+ if(!f)return alert("ファイルを選んでください");
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const o=JSON.parse(reader.result);
+   const data=o.data?.[KEY]?
+    JSON.parse(o.data[KEY]):o;
+   if(!data||typeof data!=="object"||
+      !Array.isArray(data.practice)){
+    throw Error("対応するバックアップではありません");
+   }
+   if(!confirm("現在のデータをバックアップに置き換えますか？"))return;
+   const old=localStorage.getItem(KEY);
+   if(old!==null)localStorage.setItem(
+    "shunsuke_before_import_"+Date.now(),old);
+   db=normalize(data);
+   if(!save())throw Error("保存に失敗しました");
+   go("home");
+  }catch(e){alert("読み込み失敗："+e.message)}
+ };
+ reader.readAsText(f);
+}
+
+/* ===== XP・能力 ===== */
+function level(){
+ return Math.floor(Math.sqrt(Math.max(0,n(db.xp))/100))+1;
+}
+function levelProgress(){
+ const l=level(),a=100*(l-1)**2,b=100*l*l;
+ return clamp((n(db.xp)-a)/(b-a)*100);
+}
+function xpFor(menu,quantity){
+ const base=menu[3],reference=menu[5];
+ if(menu[0]==="睡眠・休養"){
+  return Math.max(1,Math.round(base*Math.min(1,quantity/reference)));
+ }
+ return Math.max(1,Math.round(base*Math.sqrt(quantity/reference)));
+}
+function award(xp,target,kind){
+ db.xp=n(db.xp)+xp;
+ if(target==="ケア"){
+  db.energy=clamp(n(db.energy,100)+8);
+  return;
+ }
+ db.energy=clamp(n(db.energy,100)-4);
+ const group=PB.includes(target)?db.pitch:db.abilities;
+ if(group&&Object.prototype.hasOwnProperty.call(group,target)){
+  group[target]=clamp(n(group[target],20)+1);
+ }
+}
+function stat(name,value){
+ const v=clamp(value);
+ const rank=v>=90?"S":v>=80?"A":v>=65?"B":
+ v>=50?"C":v>=35?"D":"E";
+ return `<div class="stat"><div class="row">
+ <b>${esc(name)}</b><b>${rank} ${v}</b></div>
+ <div class="bar"><span style="width:${v}%"></span></div></div>`;
+}
+function newest(fieldName){
+ return [...db.growth].sort((a,b)=>
+  String(b.date).localeCompare(String(a.date)))
+  .find(x=>n(x[fieldName])>0)?.[fieldName]??"—";
+}
+function countToday(){
+ return db.practice.filter(p=>p.date===today()).length;
+}
+
+/* ===== 画面移動 ===== */
+function go(s){
+ screen=s;
+ selectedNote=-1;
+ render();
+ window.scrollTo(0,0);
+}
+function homeButton(){
+ return `<button class="btn back" onclick="go('home')">🏠 ホームに戻る</button>`;
+}
+function menuTile(icon,title,id){
+ return `<button class="tile" onclick="go('${id}')">
+ <b>${icon}</b>${title}</button>`;
+}
+function home(){
+ const xp=n(db.xp),l=level();
+ return `
+ <section class="panel hero">
+ <div class="row"><div>
+ <div class="small">⚾ BASEBALL PLAYER</div>
+ <h1 style="margin:7px 0">${esc(db.name)}</h1>
+ <div>右投右打 ・ 夢に向かって成長中</div>
+ </div><div style="font-size:50px">⚾</div></div>
+ <div style="margin-top:18px" class="row">
+ <div><div class="small">LEVEL</div><div class="big">${l}</div></div>
+ <div><div class="small">TOTAL XP</div><div class="big">${xp}</div></div>
+ </div>
+ <div class="bar"><span style="width:${levelProgress()}%"></span></div>
+ <p class="small">次のレベルまで成長を積み重ねよう</p>
+ </section>
+ ${panel("📅 今日の記録",`
+ <div class="grid">
+ <div><b>${countToday()}件</b><div class="muted">今日の練習</div></div>
+ <div><b>${n(db.energy,100)} / 100</b><div class="muted">コンディション</div></div>
+ <div><b>${newest("height")}cm</b><div class="muted">最新身長</div></div>
+ <div><b>${newest("weight")}kg</b><div class="muted">最新体重</div></div>
+ </div>
+ ${db.pain?'<p class="notice">⚠️ 痛みあり。運動を控え、保護者や医療者と確認してください。</p>':""}
+ `)}
+ ${panel("⚾ 成長メニュー",`
+ <div class="grid">
+ ${menuTile("💪","練習記録","practice")}
+ ${menuTile("📓","野球ノート","notes")}
+ ${menuTile("🔥","投手・球速","pitch")}
+ ${menuTile("🏆","試合記録","games")}
+ ${menuTile("📈","身体の成長","growth")}
+ ${menuTile("🥗","食事・睡眠","health")}
+ ${menuTile("📅","週間計画","week")}
+ ${menuTile("🎯","目標・マンダラ","goals")}
+ ${menuTile("⭐","能力・称号","stats")}
+ ${menuTile("📊","成長分析","analysis")}
+ ${menuTile("👨‍👦","親子メッセージ","family")}
+ ${menuTile("⚙️","設定・バックアップ","settings")}
+ </div>`)}
+ ${panel("🎯 今の目標",`
+ <p>${esc(db.goal||"目標を設定してみよう！")}</p>
+ ${btn("目標を設定する","go('goals')","gold")}
+ `)}
+ ${lastMessage?panel("✅ 最新の操作",esc(lastMessage)):""}
+ `;
+}
+
+/* ===== 練習記録 ===== */
+function practice(){
+ const options=MENU.map((m,i)=>
+ `<option value="${i}">${esc(m[0])}（${m[4]}）</option>`).join("");
+ return panel("💪 練習を記録",`
+ <div class="field"><label>練習メニュー</label>
+ <select id="practiceMenu" onchange="menuChanged()">
+ ${options}</select></div>
+ <div id="menuInfo"></div>
+ ${field("実施量","practiceAmount","number","")}
+ ${field("練習時間（分・任意）","practiceMinutes","number","")}
+ ${field("日付","practiceDate","date",today())}
+ <div class="field"><label>痛みの状態</label>
+ <select id="practicePain">
+ <option value="no">痛みなし</option>
+ <option value="yes">痛みあり</option></select></div>
+ ${area("今日の気づき","practiceMemo")}
+ ${btn("⚾ 練習を保存","addPractice()","green full")}
+ <p class="muted">同じ日の練習も別々に記録。XPに日別上限はありません。</p>
+ `)+panel("📖 練習履歴",history(db.practice,
+ p=>`${esc(p.name)} ・ +${n(p.xp)} XP`,
+ p=>`${esc(p.date)} ／ ${esc(p.amount??"—")}${esc(p.unit||"")}
+ ${p.minutes?" ／ "+n(p.minutes)+"分":""}
+ ${p.note?"<p>"+esc(p.note)+"</p>":""}`));
+}
+function menuChanged(){
+ const m=MENU[n(input("practiceMenu"))];
+ if($("menuInfo"))$("menuInfo").innerHTML=
+ `<p class="pill">${esc(m[1])} ・ 基準 ${m[3]} XP / ${m[5]}${m[4]}</p>
+ <p class="muted">実施量の単位：${m[4]}</p>`;
+}
+function addPractice(){
+ const m=MENU[n(input("practiceMenu"))];
+ if(!m)return alert("メニューを選んでください");
+ const quantity=n(input("practiceAmount"));
+ const minutes=n(input("practiceMinutes"));
+ const pain=input("practicePain")==="yes";
+ if(!(quantity>0)||quantity>100000)return alert("実施量を正しく入力してください");
+ if(minutes<0||minutes>1440)return alert("時間を確認してください");
+ if(pain&&m[1]!=="自主学習"&&m[0]!=="睡眠・休養"){
+  return alert("痛みがある場合、運動は記録せず休養を優先してください。");
+ }
+ const xp=xpFor(m,quantity);
+ const p={
+  id:uid(),date:input("practiceDate")||today(),
+  name:m[0],kind:m[1],amount:quantity,unit:m[4],
+  minutes:minutes||(m[4]==="分"?quantity:0),
+  note:input("practiceMemo").trim(),xp,
+  sx19Calculated:true,unifiedCalculated:true
+ };
+ commit(()=>{
+  db.practice.push(p);
+  db.pain=pain;
+  award(xp,m[2],m[1]);
+ },`${m[0]}を保存！ +${xp} XP`);
+}
+
+/* ===== 野球ノート ===== */
+function allNotes(){
+ const old=arr(db.baseballNotebook11?.notes);
+ const oldRef=arr(db.reflections);
+ return [...arr(db.notes),...old,...oldRef];
+}
+function notes(){
+ return panel("📓 野球ノート",`
+ ${field("日付","noteDate","date",today())}
+ ${area("今日できたこと","noteGood")}
+ ${area("課題・改善点","noteProblem")}
+ ${area("次に挑戦すること","noteNext")}
+ ${area("自由メモ","noteText")}
+ ${btn("📓 ノートを保存","saveNote()","green full")}
+ <p class="muted">記録することで、自分で考える力を育てよう。</p>
+ `)+panel("📚 過去の野球ノート",
+ history(allNotes(),p=>
+ esc(p.date||p.created||"野球ノート"),
+ p=>`<p>${esc(p.good||p.answer1||p.text||p.note||"")}</p>
+ <p>${esc(p.problem||p.answer2||"")}</p>
+ <p>${esc(p.next||p.answer3||"")}</p>
+ ${arr(p.additions).map(a=>`<p>${esc(a.text||a)}</p>`).join("")}
+ ${arr(p.deepDives).map(a=>`<p>${esc(a.answer||a.text||"")}</p>`).join("")}`));
+}
+function saveNote(){
+ const p={
+  id:uid(),date:input("noteDate")||today(),
+  good:input("noteGood").trim(),
+  problem:input("noteProblem").trim(),
+  next:input("noteNext").trim(),
+  text:input("noteText").trim(),additions:[],deepDives:[]
+ };
+ if(![p.good,p.problem,p.next,p.text].some(Boolean))
+  return alert("内容を入力してください");
+ commit(()=>{
+  db.notes.push(p);
+  db.xp=n(db.xp)+10;
+ },"野球ノートを保存！ +10 XP");
+}
+
+/* ===== 投手・球速 ===== */
+function pitch(){
+ const old=arr(db.baseballNotebook11?.speeds);
+ const rows=[...arr(db.pitchlog),...old];
+ return panel("🔥 投手・球速の記録",`
+ ${field("日付","pitchDate","date",today())}
+ ${field("球速（km/h）","pitchSpeed","number")}
+ ${field("投球数","pitchCount","number")}
+ ${area("フォーム・制球・気づき","pitchMemo")}
+ ${btn("投手記録を保存","savePitch()","green full")}
+ <p class="notice">球速を上げることより、フォーム・痛みの有無・休養を優先してください。</p>
+ `)+panel("📖 投手記録",history(rows,
+ p=>`${esc(p.date||"")} ${esc(p.speed||p.kmh||"—")} km/h`,
+ p=>`投球数 ${esc(p.count||p.pitches||"—")} 球
+ <p>${esc(p.note||p.memo||"")}</p>`));
+}
+function savePitch(){
+ const speed=n(input("pitchSpeed")),count=n(input("pitchCount"));
+ if(speed<=0&&count<=0)return alert("球速か投球数を入力してください");
+ commit(()=>db.pitchlog.push({
+  id:uid(),date:input("pitchDate")||today(),
+  speed,count,note:input("pitchMemo")
+ }),"投手記録を保存しました");
+}
+
+/* ===== 試合 ===== */
+function games(){
+ return panel("🏆 試合を記録",`
+ ${field("試合日","gameDate","date",today())}
+ ${field("対戦相手","opponent")}
+ ${field("打席数","pa","number")}
+ ${field("安打数","hits","number")}
+ ${field("本塁打","hr","number")}
+ ${field("打点","rbi","number")}
+ ${field("投球数","gamePitches","number")}
+ ${area("試合の振り返り","gameMemo")}
+ ${btn("試合を保存","saveGame()","green full")}
+ `)+panel("📖 試合履歴",history(db.games,
+ p=>`${esc(p.date)} vs ${esc(p.opponent||p.rival||"対戦相手")}`,
+ p=>`安打 ${esc(p.hits??"—")} ／ 本塁打 ${esc(p.hr??"—")}
+ <p>${esc(p.note||p.memo||"")}</p>`));
+}
+function saveGame(){
+ if(!input("opponent").trim())return alert("対戦相手を入力してください");
+ commit(()=>db.games.push({
+  id:uid(),date:input("gameDate")||today(),
+  opponent:input("opponent"),pa:n(input("pa")),
+  hits:n(input("hits")),hr:n(input("hr")),
+  rbi:n(input("rbi")),pitches:n(input("gamePitches")),
+  note:input("gameMemo")
+ }),"試合記録を保存しました");
+}
+
+/* ===== 身体の成長 ===== */
+function growth(){
+ return panel("📈 身体の成長記録",`
+ ${field("測定日","growthDate","date",today())}
+ ${field("身長（cm）","height","number")}
+ ${field("体重（kg）","weight","number")}
+ ${area("体調・成長メモ","growthMemo")}
+ ${btn("成長記録を保存","saveGrowth()","green full")}
+ `)+panel("📊 測定履歴",history(db.growth,
+ p=>esc(p.date),
+ p=>`身長 ${esc(p.height??"—")} cm
+ ／ 体重 ${esc(p.weight??"—")} kg
+ <p>${esc(p.note||"")}</p>`));
+}
+function saveGrowth(){
+ const height=n(input("height")),weight=n(input("weight"));
+ if(height<=0&&weight<=0)return alert("身長か体重を入力してください");
+ commit(()=>db.growth.push({
+  id:uid(),date:input("growthDate")||today(),
+  height:height||null,weight:weight||null,
+  note:input("growthMemo")
+ }),"成長記録を保存しました");
+}
+
+/* ===== 食事・睡眠 ===== */
+function health(){
+ return panel("🥗 食事記録",`
+ ${field("日付","foodDate","date",today())}
+ <div class="field"><label>食事</label>
+ <select id="meal"><option>朝食</option><option>昼食</option>
+ <option>夕食</option><option>間食</option></select></div>
+ ${area("食べたもの","foodText")}
+ ${btn("食事を保存","saveFood()","green full")}
+ `)+panel("🌙 睡眠・休養",`
+ ${field("日付","sleepDate","date",today())}
+ ${field("睡眠時間（時間）","sleepHours","number")}
+ ${area("体調・睡眠メモ","sleepMemo")}
+ ${btn("睡眠を保存してXP獲得","saveSleep()","green full")}
+ <p class="muted">睡眠は成長と回復の大切な時間です。</p>
+ `)+panel("📖 食事・睡眠履歴",`
+ <h3>食事</h3>${history(db.nutrition,
+ p=>`${esc(p.date)} ${esc(p.meal||"")}`,
+ p=>esc(p.text||p.food||""))}
+ <h3>睡眠</h3>${history(db.sleep,
+ p=>`${esc(p.date)} ${esc(p.hours)}時間`,
+ p=>esc(p.note||""))}
+ `);
+}
+function saveFood(){
+ if(!input("foodText").trim())return alert("食事内容を入力してください");
+ commit(()=>db.nutrition.push({
+  id:uid(),date:input("foodDate")||today(),
+  meal:input("meal"),text:input("foodText")
+ }),"食事を保存しました");
+}
+function saveSleep(){
+ const hours=n(input("sleepHours"));
+ if(hours<=0||hours>24)return alert("睡眠時間を確認してください");
+ const menu=MENU.find(m=>m[0]==="睡眠・休養");
+ const xp=xpFor(menu,hours);
+ commit(()=>{
+  db.sleep.push({
+   id:uid(),date:input("sleepDate")||today(),
+   hours,note:input("sleepMemo"),xp
+  });
+  db.practice.push({
+   id:uid(),date:input("sleepDate")||today(),
+   name:"睡眠・休養",kind:"身体ケア",
+   amount:hours,unit:"時間",minutes:0,
+   note:input("sleepMemo"),xp,
+   unifiedCalculated:true
+  });
+  award(xp,"ケア","身体ケア");
+ },`睡眠を記録！ +${xp} XP`);
+}
+
+/* ===== 週間計画 ===== */
+function week(){
+ const content=DAYS.map((day,i)=>`
+ <div class="field"><label>${day}曜日</label>
+ <select id="week${i}">
+ ${["休養","チーム練習","試合","打撃","投手","守備",
+ "走塁","自主学習","身体ケア"].map(x=>
+ `<option ${db.week[i]===x?"selected":""}>${x}</option>`).join("")}
+ </select></div>`).join("");
+ return panel("📅 1週間の計画",`
+ <p class="muted">練習だけでなく、休養日も計画に入れよう。</p>
+ ${content}
+ ${btn("週間計画を保存","saveWeek()","green full")}
+ `)+panel("📅 現在の予定",`
+ <div class="days">${DAYS.map((x,i)=>
+ `<div><b>${x}</b><br>${esc(db.week[i])}</div>`).join("")}</div>
+ `);
+}
+function saveWeek(){
+ commit(()=>db.week=DAYS.map((_,i)=>input("week"+i)),
+ "週間計画を保存しました");
+}
+
+/* ===== 目標・マンダラ ===== */
+function mandala(){
+ if(!db.mandala15||typeof db.mandala15!=="object")
+  db.mandala15={dream:"",medium:"",short:"",
+   themes:Array(81).fill(""),daily:[],history:[]};
+ if(!Array.isArray(db.mandala15.themes))
+  db.mandala15.themes=Array(81).fill("");
+ return db.mandala15;
+}
+function goals(){
+ const m=mandala();
+ return panel("🎯 夢と目標",`
+ ${field("大きな夢","dream","text",m.dream)}
+ ${field("中期目標","medium","text",m.medium)}
+ ${field("短期目標","short","text",m.short)}
+ ${field("今の目標","goal","text",db.goal)}
+ ${btn("目標を保存","saveGoals()","green full")}
+ `)+panel("🌟 81マス目標達成シート",`
+ <p class="muted">マスをタップすると内容を編集できます。</p>
+ <div class="mandala">${Array.from({length:81},(_,i)=>
+ `<button class="${i===40?"center":""}"
+ onclick="editMandala(${i})">${esc(m.themes[i]||(
+ i===40?"中心目標":"＋"))}</button>`).join("")}</div>
+ <p class="muted">中心のマスは40番です。保存は自動で行います。</p>
+ `)+panel("🤝 今日の3つの約束",`
+ ${[0,1,2].map(i=>field(`約束 ${i+1}`,"promise"+i,
+ "text",m.daily?.[i]||"")).join("")}
+ ${btn("約束を保存","savePromises()","green full")}
+ `);
+}
+function saveGoals(){
+ commit(()=>{
+  const m=mandala();
+  m.dream=input("dream");m.medium=input("medium");
+  m.short=input("short");db.goal=input("goal");
+ },"目標を保存しました");
+}
+function editMandala(i){
+ const m=mandala();
+ const v=prompt("このマスの目標を入力",m.themes[i]||"");
+ if(v===null)return;
+ commit(()=>m.themes[i]=v.trim(),"マンダラを保存しました");
+}
+function savePromises(){
+ commit(()=>mandala().daily=[0,1,2].map(i=>input("promise"+i)),
+ "今日の約束を保存しました");
+}
+
+/* ===== 能力・称号 ===== */
+function stats(){
+ const titles=[];
+ if(db.practice.length>=1)titles.push("⚾ はじめの一歩");
+ if(db.practice.length>=10)titles.push("💪 継続する挑戦者");
+ if(db.practice.length>=50)titles.push("🔥 努力の達人");
+ if(db.games.length>=1)titles.push("🏆 試合に挑む選手");
+ if(allNotes().length>=5)titles.push("📓 考える野球人");
+ if(level()>=5)titles.push("⭐ 成長の星");
+ return panel("⭐ 選手能力",`
+ <h3>野手能力</h3>
+ ${AB.map(x=>stat(x,db.abilities[x])).join("")}
+ <h3>投手能力</h3>
+ ${PB.map(x=>stat(x,db.pitch[x])).join("")}
+ `)+panel("🏅 獲得称号",titles.length?
+ titles.map(x=>`<span class="pill">${x}</span>`).join(""):
+ "最初の練習を記録して称号を獲得しよう！")
+ +panel("⚡ 選手ステータス",`
+ <p>レベル：${level()}</p>
+ <p>累計XP：${n(db.xp)}</p>
+ <p>コンディション：${n(db.energy,100)}/100</p>
+ <p class="muted">能力値はゲーム内の成長指標です。実際の野球能力の医学的・競技的な評価ではありません。</p>
+ `);
+}
+
+/* ===== 成長分析 ===== */
+function analysis(){
+ const total=db.practice.length;
+ const by={};
+ let minutes=0;
+ for(const p of db.practice){
+  const name=p.name||"その他";
+  by[name]=(by[name]||0)+1;
+  if(name!=="睡眠・休養")minutes+=n(p.minutes);
+ }
+ const top=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+ const gamesCount=db.games.length;
+ const hits=db.games.reduce((s,x)=>s+n(x.hits),0);
+ const hr=db.games.reduce((s,x)=>s+n(x.hr),0);
+ return panel("📊 成長分析",`
+ <div class="grid">
+ <div><h2>${total}</h2><span class="muted">練習記録</span></div>
+ <div><h2>${minutes}分</h2><span class="muted">記録された活動時間</span></div>
+ <div><h2>${gamesCount}</h2><span class="muted">試合数</span></div>
+ <div><h2>${allNotes().length}</h2><span class="muted">野球ノート</span></div>
+ </div>
+ <h3>練習メニュー別回数</h3>
+ ${top.map(([k,v])=>record(esc(k),v+"回")).join("")||"まだ記録がありません"}
+ <h3>試合成績の累計</h3>
+ <p>安打：${hits} ／ 本塁打：${hr}</p>
+ <h3>成長の記録</h3>
+ <p>最新身長：${newest("height")}cm</p>
+ <p>最新体重：${newest("weight")}kg</p>
+ <p class="muted">時間や回数の多さだけでなく、技術・体調・休養のバランスを確認しよう。</p>
+ `);
+}
+
+/* ===== 親子 ===== */
+function family(){
+ return panel("👨‍👦 親子のメッセージ",`
+ ${area("お父さんから駿介へ","father",db.father)}
+ ${btn("メッセージを保存","saveFather()","green full")}
+ `)+panel("🌱 成長を応援",`
+ <p>練習・試合・勉強・休養。どれも成長に必要な時間です。</p>
+ <p>自分で目標を決めて、挑戦して、振り返る。</p>
+ <p>小さな努力を積み重ねていこう！</p>
+ `);
+}
+function saveFather(){
+ commit(()=>db.father=input("father"),
+ "メッセージを保存しました");
+}
+
+/* ===== 設定 ===== */
+function settings(){
+ return panel("⚙️ 選手プロフィール",`
+ ${field("選手名","playerName","text",db.name)}
+ ${field("投打","playerHand","text",db.hand)}
+ ${field("ポジション（自由入力）","playerPosition","text",
+ arr(db.positions).join("、"))}
+ ${btn("プロフィールを保存","saveProfile()","green full")}
+ `)+panel("💾 データのバックアップ",`
+ <p>現在の保存元：<b>${esc(sourceKey)}</b></p>
+ <p class="muted">データはこのブラウザ内に保存されます。機種変更や別端末との共有は自動では行われません。</p>
+ ${btn("📥 JSONバックアップを保存","exportAll()","gold full")}
+ <div class="field"><label>バックアップを読み込む</label>
+ <input id="importFile" type="file" accept=".json,application/json"></div>
+ ${btn("📤 バックアップを復元","importAll()","gray full")}
+ <p class="notice">バックアップの復元は現在のデータを置き換えます。必ず先にバックアップを取得してください。</p>
+ `)+panel("🔒 データ保護",`
+ <p>旧アプリの練習履歴やXPを、起動時に勝手に再計算・削除しません。</p>
+ <p>同じGitHub Pagesドメインで開いた場合に、旧アプリの保存データを読み取ります。</p>
+ `);
+}
+function saveProfile(){
+ commit(()=>{
+  db.name=input("playerName").trim()||"駿介";
+  db.hand=input("playerHand");
+  db.positions=input("playerPosition").split(/[、,]/)
+   .map(x=>x.trim()).filter(Boolean);
+ },"プロフィールを保存しました");
+}
+
+/* ===== 共通履歴 ===== */
+function history(items,title,body){
+ const rows=[...arr(items)].reverse().slice(0,100);
+ if(!rows.length)return '<p class="muted">まだ記録がありません。</p>';
+ return rows.map(p=>record(title(p),body(p))).join("");
+}
+
+/* ===== 描画 ===== */
+const pages={
+ home,practice,notes,pitch,games,growth,
+ health,week,goals,stats,analysis,family,settings
+};
+function render(){
+ const fn=pages[screen]||home;
+ $("app").innerHTML=
+ (screen==="home"?"":homeButton())+fn();
+ if(screen==="practice")menuChanged();
+}
+
+/* ===== 初回起動 ===== */
+(function init(){
+ try{
+  const raw=localStorage.getItem(KEY);
+  if(raw!==null&&!localStorage.getItem(
+   "shunsuke_unified_original_backup")){
+   localStorage.setItem("shunsuke_unified_original_backup",raw);
+  }
+  if(sourceKey!==KEY&&sourceKey!=="new"){
+   const old=localStorage.getItem(sourceKey);
+   if(old!==null&&!localStorage.getItem(
+    "shunsuke_unified_legacy_backup")){
+    localStorage.setItem("shunsuke_unified_legacy_backup",old);
+   }
+  }
+  const evaluation=read("shunsuke_evaluation_v172");
+  if(evaluation&&!db.legacyEvaluation172)
+   db.legacyEvaluation172=evaluation;
+  if(sourceKey!=="new"&&!localStorage.getItem(KEY)){
+   save();
+  }
+ }catch(e){
+  console.warn("バックアップ確認:",e);
+ }
+ render();
+})();
+</script>
+</body>
+</html>
