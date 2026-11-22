@@ -12878,5 +12878,616 @@ console.log(
 </script>
 <!-- ===== 第17弾① 終了 ===== -->
 
+<!-- ===== 第17弾②：能力評価・コンディション管理 ===== -->
+<style>
+#v172-launch{
+  position:fixed;
+  right:12px;
+  bottom:82px;
+  z-index:9000;
+  border:2px solid #f2ca57;
+  background:#123d70;
+  color:white;
+  border-radius:30px;
+  padding:12px 16px;
+  font-size:14px;
+  font-weight:bold;
+  box-shadow:0 4px 14px #0004;
+}
+#v172-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9001;
+  background:#0009;
+  overflow-y:auto;
+  padding:12px;
+}
+#v172-overlay.open{display:block}
+#v172-app{
+  max-width:650px;
+  margin:20px auto;
+  padding:18px;
+  background:#f4f8fd;
+  color:#17395c;
+  border-radius:18px;
+  font-family:system-ui,sans-serif;
+}
+#v172-app h2,#v172-app h3{
+  color:#174c82;
+  margin:12px 0;
+}
+#v172-app .v172-card{
+  background:white;
+  padding:13px;
+  border:1px solid #c7d9ea;
+  border-radius:12px;
+  margin:12px 0;
+}
+#v172-app label{
+  display:block;
+  margin:10px 0;
+  font-weight:600;
+}
+#v172-app input,
+#v172-app select,
+#v172-app textarea{
+  display:block;
+  box-sizing:border-box;
+  width:100%;
+  margin-top:5px;
+  padding:10px;
+  font-size:16px;
+  border:1px solid #a8bfd5;
+  border-radius:8px;
+  background:white;
+  color:#17395c;
+}
+#v172-app button{
+  padding:11px 14px;
+  border:0;
+  border-radius:9px;
+  background:#175e9c;
+  color:white;
+  font-weight:bold;
+  margin:5px 4px 5px 0;
+}
+#v172-app .v172-muted{
+  font-size:13px;
+  color:#60758b;
+}
+#v172-app .v172-rank{
+  font-size:30px;
+  font-weight:900;
+  color:#1262a0;
+}
+#v172-app .v172-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+#v172-app .v172-bar{
+  height:10px;
+  background:#dbe6f0;
+  border-radius:20px;
+  overflow:hidden;
+}
+#v172-app .v172-fill{
+  height:100%;
+  background:#269a75;
+}
+</style>
+
+<button id="v172-launch" type="button">
+  📊 成長評価
+</button>
+
+<div id="v172-overlay">
+  <div id="v172-app"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const KEY='shunsuke_evaluation_v172';
+
+const ABILITIES=[
+  'ミート',
+  'パワー',
+  '走力',
+  '肩力',
+  '守備力',
+  '捕球',
+  '球威',
+  '制球力',
+  'スタミナ',
+  '投球術'
+];
+
+const RANKS=['G','F','E','D','C','B','A'];
+
+function escapeHTML(v){
+  return String(v??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function localDate(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return [
+    d.getFullYear(),
+    p(d.getMonth()+1),
+    p(d.getDate())
+  ].join('-');
+}
+
+function fresh(){
+  return {
+    version:1,
+    school:'elementary',
+    evaluations:[],
+    conditions:[],
+    notes:[]
+  };
+}
+
+function readData(){
+  try{
+    const x=JSON.parse(localStorage.getItem(KEY));
+    if(!x||typeof x!=='object')return fresh();
+    return {
+      ...fresh(),
+      ...x,
+      evaluations:Array.isArray(x.evaluations)
+        ?x.evaluations:[],
+      conditions:Array.isArray(x.conditions)
+        ?x.conditions:[],
+      notes:Array.isArray(x.notes)
+        ?x.notes:[]
+    };
+  }catch(e){
+    return fresh();
+  }
+}
+
+let state=readData();
+
+function persist(){
+  try{
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(state)
+    );
+    return true;
+  }catch(e){
+    alert('保存できませんでした。容量を確認してください。');
+    return false;
+  }
+}
+
+/*
+ 評価ランクは測定者が登録する。
+ 自動的に能力が上がったと断定しない。
+
+ 進学時は3ランク下の表示基準とする。
+ 実際の測定値・評価履歴は変更しない。
+*/
+function schoolPenalty(){
+  if(state.school==='middle')return 3;
+  if(state.school==='high')return 6;
+  return 0;
+}
+
+function latestEvaluation(name){
+  return [...state.evaluations]
+    .filter(x=>x.ability===name)
+    .sort((a,b)=>
+      String(a.date).localeCompare(String(b.date))
+    )
+    .at(-1)||null;
+}
+
+function displayedRank(x){
+  if(!x)return '未評価';
+
+  const original=RANKS.indexOf(x.rank);
+  if(original<0)return '未評価';
+
+  /*
+   入力されたランクは小学生基準の
+   比較用ランクとして保持する。
+
+   中学・高校での実力を科学的に
+   推定するものではない。
+  */
+  return RANKS[
+    Math.max(0,original-schoolPenalty())
+  ];
+}
+
+function abilityCards(){
+  return ABILITIES.map(name=>{
+    const x=latestEvaluation(name);
+    const rank=displayedRank(x);
+
+    return `
+      <div class="v172-card">
+        <div class="v172-row">
+          <strong>${escapeHTML(name)}</strong>
+          <span class="v172-rank">
+            ${escapeHTML(rank)}
+          </span>
+        </div>
+
+        ${
+          x
+          ?`
+            <p class="v172-muted">
+              最終評価：${escapeHTML(x.date)}
+              ／基準評価 ${escapeHTML(x.rank)}
+            </p>
+            <p>${escapeHTML(x.memo)}</p>
+          `
+          :`
+            <p class="v172-muted">
+              まだ評価されていません。
+              測定や実戦を通じて記録しましょう。
+            </p>
+          `
+        }
+      </div>
+    `;
+  }).join('');
+}
+
+function conditionSummary(){
+  const recent=[...state.conditions]
+    .sort((a,b)=>
+      String(a.date).localeCompare(String(b.date))
+    )
+    .slice(-7);
+
+  if(!recent.length){
+    return '<p>まだ体調記録はありません。</p>';
+  }
+
+  const average=key=>{
+    const values=recent
+      .map(x=>Number(x[key]))
+      .filter(Number.isFinite);
+
+    return values.length
+      ?(
+        values.reduce((a,b)=>a+b,0)/
+        values.length
+      ).toFixed(1)
+      :'—';
+  };
+
+  const pain=recent.filter(x=>x.pain!=='none').length;
+
+  return `
+    <p>直近${recent.length}回の記録</p>
+    <p>😊 楽しさ平均：${average('fun')} / 5</p>
+    <p>💪 きつさ平均：${average('effort')} / 5</p>
+    <p>🛌 睡眠平均：${average('sleep')} 時間</p>
+    <p>🩹 痛みの報告：${pain}回</p>
+    <p class="v172-muted">
+      この集計は状態の振り返り用です。
+      練習の安全性を保証するものではありません。
+    </p>
+  `;
+}
+
+function renderPanel(){
+  const schoolNames={
+    elementary:'小学生',
+    middle:'中学生',
+    high:'高校生'
+  };
+
+  document.getElementById('v172-app').innerHTML=`
+    <div class="v172-row">
+      <h2>⚾ 駿介 成長評価</h2>
+      <button type="button" onclick="v172Close()">
+        ✕ 閉じる
+      </button>
+    </div>
+
+    <div class="v172-card">
+      <h3>🎓 現在の評価ステージ</h3>
+
+      <select id="v172School">
+        ${Object.entries(schoolNames).map(([id,name])=>`
+          <option
+            value="${id}"
+            ${state.school===id?'selected':''}
+          >${name}</option>
+        `).join('')}
+      </select>
+
+      <button onclick="v172SetSchool()">
+        ステージを変更
+      </button>
+
+      <p class="v172-muted">
+        進学時の3ランクダウンはゲーム上の
+        表示ルールです。実際の能力低下を
+        意味しません。
+      </p>
+    </div>
+
+    <div class="v172-card">
+      <h3>📈 能力の評価記録</h3>
+
+      <label>能力項目
+        <select id="v172Ability">
+          ${ABILITIES.map(x=>`
+            <option>${escapeHTML(x)}</option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>基準評価ランク
+        <select id="v172Rank">
+          ${RANKS.map(x=>`
+            <option
+              value="${x}"
+              ${x==='G'?'selected':''}
+            >${x}</option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>測定・試合で確認したこと
+        <textarea id="v172Memo"
+          placeholder="例：正面のゴロ10球中9球を捕球。送球は8球成功。"
+        ></textarea>
+      </label>
+
+      <button onclick="v172SaveEvaluation()">
+        📊 評価を記録
+      </button>
+
+      <p class="v172-muted">
+        ランクは現時点では保護者・指導者の
+        暫定評価です。実測データが蓄積するまで、
+        全国水準との比較とは扱いません。
+      </p>
+    </div>
+
+    <h3>🏅 現在の能力評価</h3>
+    ${abilityCards()}
+
+    <div class="v172-card">
+      <h3>❤️ 今日のコンディション</h3>
+
+      <label>練習のきつさ（1〜5）
+        <select id="v172Effort">
+          ${[1,2,3,4,5].map(x=>`
+            <option value="${x}"
+              ${x===3?'selected':''}
+            >${x}</option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>野球の楽しさ（1〜5）
+        <select id="v172Fun">
+          ${[1,2,3,4,5].map(x=>`
+            <option value="${x}"
+              ${x===4?'selected':''}
+            >${x}</option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>昨夜の睡眠時間
+        <input
+          id="v172Sleep"
+          type="number"
+          min="0"
+          max="24"
+          step="0.5"
+          value="9"
+        >
+      </label>
+
+      <label>痛みの状態
+        <select id="v172Pain">
+          <option value="none">痛みなし</option>
+          <option value="mild">少し痛い</option>
+          <option value="strong">強い痛み・動作時痛</option>
+        </select>
+      </label>
+
+      <label>身体ケア・気づいたこと
+        <textarea id="v172Care"
+          placeholder="例：ストレッチ10分。腰に痛みなし。"
+        ></textarea>
+      </label>
+
+      <button onclick="v172SaveCondition()">
+        💾 今日の体調を保存
+      </button>
+
+      <p class="v172-muted">
+        痛みがある場合は練習を無理に続けず、
+        保護者・指導者に伝えてください。
+        必要に応じて医療者に相談してください。
+      </p>
+    </div>
+
+    <div class="v172-card">
+      <h3>📅 最近のコンディション</h3>
+      ${conditionSummary()}
+    </div>
+
+    <div class="v172-card">
+      <h3>🔒 データについて</h3>
+      <p class="v172-muted">
+        この画面の記録は端末内に保存されます。
+        別のiPhoneやiPadとは自動同期されません。
+        既存の練習XP・能力値・履歴は変更しません。
+      </p>
+    </div>
+  `;
+}
+
+window.v172Open=function(){
+  state=readData();
+  renderPanel();
+  document.getElementById('v172-overlay')
+    .classList.add('open');
+};
+
+window.v172Close=function(){
+  document.getElementById('v172-overlay')
+    .classList.remove('open');
+};
+
+window.v172SetSchool=function(){
+  const next=document.getElementById(
+    'v172School'
+  ).value;
+
+  if(!['elementary','middle','high'].includes(next)){
+    return;
+  }
+
+  if(!confirm(
+    '評価ステージを変更しますか？\n' +
+    '過去の評価記録は変更されません。'
+  ))return;
+
+  const previous=state.school;
+  state.school=next;
+
+  if(!persist()){
+    state.school=previous;
+    return;
+  }
+
+  renderPanel();
+};
+
+window.v172SaveEvaluation=function(){
+  const ability=document.getElementById(
+    'v172Ability'
+  ).value;
+
+  const rank=document.getElementById(
+    'v172Rank'
+  ).value;
+
+  const memo=document.getElementById(
+    'v172Memo'
+  ).value.trim();
+
+  if(
+    !ABILITIES.includes(ability) ||
+    !RANKS.includes(rank)
+  ){
+    alert('評価項目を確認してください。');
+    return;
+  }
+
+  if(!memo){
+    alert(
+      '評価の根拠となる測定結果や観察を入力してください。'
+    );
+    return;
+  }
+
+  state.evaluations.push({
+    date:localDate(),
+    ability,
+    rank,
+    memo,
+    recordedAt:new Date().toISOString()
+  });
+
+  if(!persist()){
+    state.evaluations.pop();
+    return;
+  }
+
+  renderPanel();
+  alert('能力評価を記録しました。');
+};
+
+window.v172SaveCondition=function(){
+  const effort=Number(
+    document.getElementById('v172Effort').value
+  );
+  const fun=Number(
+    document.getElementById('v172Fun').value
+  );
+  const sleep=Number(
+    document.getElementById('v172Sleep').value
+  );
+  const pain=document.getElementById(
+    'v172Pain'
+  ).value;
+  const care=document.getElementById(
+    'v172Care'
+  ).value.trim();
+
+  if(
+    !Number.isFinite(sleep) ||
+    sleep<0 ||
+    sleep>24
+  ){
+    alert('睡眠時間を確認してください。');
+    return;
+  }
+
+  const record={
+    date:localDate(),
+    effort,
+    fun,
+    sleep,
+    pain,
+    care,
+    recordedAt:new Date().toISOString()
+  };
+
+  state.conditions.push(record);
+
+  if(!persist()){
+    state.conditions.pop();
+    return;
+  }
+
+  renderPanel();
+
+  if(pain!=='none'){
+    alert(
+      '記録しました。\n' +
+      '痛みがある場合は練習を無理に続けず、' +
+      '保護者・指導者に伝えてください。'
+    );
+  }else{
+    alert('今日のコンディションを記録しました。');
+  }
+};
+
+document.getElementById('v172-launch')
+  .addEventListener('click',window.v172Open);
+
+})();
+</script>
+<!-- ===== 第17弾② 終了 ===== -->
+
 </body>
 </html>
