@@ -17143,5 +17143,646 @@ window.v1710Refresh=render1710;
 
 <!-- ===== 第17弾⑩ 終了 ===== -->
 
+<!-- ===== 第17弾⑪：週間育成レポート ===== -->
+<style>
+#v1711-open{
+  position:fixed;
+  left:12px;
+  bottom:134px;
+  z-index:9500;
+  padding:12px 16px;
+  border:2px solid #ffdc73;
+  border-radius:28px;
+  background:#62449a;
+  color:white;
+  font-weight:900;
+  box-shadow:0 4px 12px #0004;
+}
+#v1711-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9800;
+  overflow-y:auto;
+  padding:12px;
+  background:#071b30e8;
+}
+#v1711-overlay.open{display:block}
+#v1711-app{
+  max-width:760px;
+  margin:16px auto;
+  padding:16px;
+  border-radius:18px;
+  background:#f0f5fb;
+  color:#173c60;
+  font-family:system-ui,sans-serif;
+}
+#v1711-app *{box-sizing:border-box}
+#v1711-app h2,#v1711-app h3{
+  color:#174a77;
+}
+#v1711-app .hero{
+  background:linear-gradient(135deg,#123b70,#65439a);
+  color:white;
+  border-radius:15px;
+  padding:18px;
+}
+#v1711-app .hero h2{color:white}
+#v1711-app .card{
+  background:white;
+  border:1px solid #d2dfed;
+  border-radius:13px;
+  padding:15px;
+  margin:12px 0;
+}
+#v1711-app .stats{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+#v1711-app .stat{
+  background:#eaf2fc;
+  border-radius:11px;
+  padding:13px;
+}
+#v1711-app .stat strong{
+  display:block;
+  font-size:25px;
+  color:#195e9c;
+}
+#v1711-app .day{
+  padding:12px 0;
+  border-bottom:1px solid #e0eaf2;
+}
+#v1711-app .day:last-child{border-bottom:0}
+#v1711-app .row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+#v1711-app .bar{
+  height:12px;
+  margin-top:8px;
+  background:#e0e9f1;
+  border-radius:15px;
+  overflow:hidden;
+}
+#v1711-app .fill{
+  height:100%;
+  background:#2b9a77;
+}
+#v1711-app .muted{
+  color:#637b90;
+  font-size:13px;
+  line-height:1.7;
+}
+#v1711-app button{
+  padding:10px 14px;
+  border:0;
+  border-radius:9px;
+  background:#215f96;
+  color:white;
+  font-weight:800;
+  margin:4px 3px;
+}
+#v1711-app textarea{
+  width:100%;
+  min-height:100px;
+  padding:12px;
+  border:1px solid #c7d7e6;
+  border-radius:9px;
+  font:inherit;
+}
+#v1711-app .notice{
+  background:#fff5dd;
+  border-left:4px solid #d7a23b;
+  border-radius:8px;
+  padding:12px;
+  margin:10px 0;
+  font-size:13px;
+}
+</style>
+
+<button id="v1711-open" type="button">
+  📊 週間レポート
+</button>
+
+<div id="v1711-overlay">
+  <div id="v1711-app"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const NOTE_KEY='shunsuke_weekly_review_v1711';
+const DAILY_KEY='shunsuke_daily_missions_v179';
+const EVAL_KEY='shunsuke_evaluation_v172';
+
+const MISSION_IDS=[
+  'sleep','meal','activity',
+  'condition','reflection'
+];
+
+const DAY_NAMES=[
+  '日','月','火','水','木','金','土'
+];
+
+function read1711(key){
+  try{
+    const x=JSON.parse(localStorage.getItem(key));
+    return x&&typeof x==='object'&&!Array.isArray(x)
+      ?x:{};
+  }catch(e){
+    return {};
+  }
+}
+
+function arr1711(x){
+  return Array.isArray(x)?x:[];
+}
+
+function esc1711(x){
+  return String(x??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;','<':'&lt;',
+      '>':'&gt;','"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function dateKey1711(d){
+  const p=n=>String(n).padStart(2,'0');
+  return [
+    d.getFullYear(),
+    p(d.getMonth()+1),
+    p(d.getDate())
+  ].join('-');
+}
+
+function parseDate1711(key){
+  const match=/^(\d{4})-(\d{2})-(\d{2})$/
+    .exec(String(key||''));
+
+  if(!match)return null;
+
+  const d=new Date(
+    Number(match[1]),
+    Number(match[2])-1,
+    Number(match[3]),
+    12
+  );
+
+  return dateKey1711(d)===key?d:null;
+}
+
+function addDays1711(date,days){
+  const d=new Date(date);
+  d.setDate(d.getDate()+days);
+  return d;
+}
+
+function monday1711(date){
+  const d=new Date(date);
+  d.setHours(12,0,0,0);
+  d.setDate(
+    d.getDate()-(d.getDay()+6)%7
+  );
+  return d;
+}
+
+function main1711(){
+  try{
+    return typeof db!=='undefined'&&db
+      ?db:{};
+  }catch(e){
+    return {};
+  }
+}
+
+function onDate1711(x,date){
+  return x&&typeof x.date==='string'&&
+    x.date.slice(0,10)===date;
+}
+
+function has1711(list,date){
+  return arr1711(list).some(
+    x=>onDate1711(x,date)
+  );
+}
+
+function sleep1711(list,date){
+  return arr1711(list).some(x=>{
+    if(!onDate1711(x,date))return false;
+    const raw=x.hours??x.sleep;
+    if(raw===''||raw==null)return false;
+    const n=Number(raw);
+    return Number.isFinite(n)&&n>0&&n<=24;
+  });
+}
+
+function evidence1711(date){
+  const main=main1711();
+  const s=main.success2027||{};
+  const evaluation=read1711(EVAL_KEY);
+
+  const rest=
+    main.success9?.days?.[date]==='rest';
+
+  const practice=has1711(
+    main.practice,date
+  )||has1711(s.quick,date);
+
+  return {
+    sleep:sleep1711(
+      [
+        ...arr1711(s.sleep),
+        ...arr1711(main.growth)
+      ],date
+    ),
+    meal:has1711(s.meals,date),
+    activity:rest||practice,
+    condition:has1711(
+      [
+        ...arr1711(s.condition),
+        ...arr1711(evaluation.conditions)
+      ],date
+    ),
+    reflection:has1711(s.reviews,date),
+    rest,
+    practice
+  };
+}
+
+function daily1711(date){
+  const manual=read1711(DAILY_KEY)[date]||{};
+  const evidence=evidence1711(date);
+
+  const count=MISSION_IDS.filter(
+    id=>manual[id]===true||evidence[id]===true
+  ).length;
+
+  return {
+    date,
+    count,
+    percent:count*20,
+    rest:evidence.rest,
+    practice:evidence.practice
+  };
+}
+
+function week1711(start){
+  const main=main1711();
+  const s=main.success2027||{};
+
+  const days=Array.from(
+    {length:7},
+    (_,i)=>daily1711(
+      dateKey1711(addDays1711(start,i))
+    )
+  );
+
+  const startKey=days[0].date;
+  const endKey=days[6].date;
+
+  const practiceRows=[
+    ...arr1711(main.practice),
+    ...arr1711(s.quick)
+  ].filter(x=>
+    x&&x.date>=startKey&&x.date<=endKey
+  );
+
+  const xp=practiceRows.reduce((sum,x)=>{
+    const n=Number(x.xp);
+    return sum+(
+      Number.isFinite(n)&&n>0?n:0
+    );
+  },0);
+
+  const practicedDays=new Set(
+    practiceRows.map(x=>x.date)
+  ).size;
+
+  const restDays=days.filter(
+    x=>x.rest
+  ).length;
+
+  const completed=days.reduce(
+    (sum,x)=>sum+x.count,0
+  );
+
+  return {
+    days,
+    completed,
+    percent:Math.round(
+      completed/35*100
+    ),
+    practicedDays,
+    restDays,
+    xp,
+    startKey,
+    endKey
+  };
+}
+
+function message1711(w){
+  if(w.completed===0){
+    return 'まずは1日1項目から記録してみよう。';
+  }
+
+  if(w.percent>=80){
+    return '毎日の記録をよく続けられたね！';
+  }
+
+  if(w.percent>=50){
+    return 'コツコツ積み重ねられているね。';
+  }
+
+  return '記録できた日を大切にして、少しずつ続けよう。';
+}
+
+let offset1711=0;
+
+function render1711(){
+  const today=new Date();
+  const start=monday1711(today);
+  start.setDate(
+    start.getDate()+offset1711*7
+  );
+
+  const w=week1711(start);
+  const previous=week1711(
+    addDays1711(start,-7)
+  );
+
+  const notes=read1711(NOTE_KEY);
+  const savedNote=notes[w.startKey]||'';
+
+  const change=w.completed-previous.completed;
+
+  const app=document.getElementById(
+    'v1711-app'
+  );
+
+  if(!app)return;
+
+  app.innerHTML=`
+    <div class="row">
+      <h2>⚾ 週間育成レポート</h2>
+      <button id="v1711-close">
+        ✕ 閉じる
+      </button>
+    </div>
+
+    <section class="hero">
+      <small>WEEKLY BASEBALL SUCCESS</small>
+      <h2>
+        ${esc1711(w.startKey)}
+        〜 ${esc1711(w.endKey)}
+      </h2>
+
+      <div style="font-size:32px;font-weight:900">
+        ${w.completed}/35
+      </div>
+
+      <p>
+        ミッション達成率 ${w.percent}%
+      </p>
+
+      <div class="bar">
+        <div class="fill"
+          style="width:${w.percent}%">
+        </div>
+      </div>
+    </section>
+
+    <div class="row">
+      <button id="v1711-prev">
+        ◀ 前の週
+      </button>
+      <button id="v1711-current">
+        今週
+      </button>
+      <button id="v1711-next"
+        ${offset1711>=0?'disabled':''}>
+        次の週 ▶
+      </button>
+    </div>
+
+    <section class="card">
+      <h3>🏆 1週間の記録</h3>
+
+      <div class="stats">
+        <div class="stat">
+          ミッション達成
+          <strong>${w.completed}/35</strong>
+        </div>
+        <div class="stat">
+          練習記録のある日
+          <strong>${w.practicedDays}日</strong>
+        </div>
+        <div class="stat">
+          休養設定日
+          <strong>${w.restDays}日</strong>
+        </div>
+        <div class="stat">
+          練習履歴XP
+          <strong>${w.xp}</strong>
+        </div>
+      </div>
+
+      <p class="muted">
+        XPは練習履歴に保存された値の合計です。
+        累計XPの増加量とは異なる場合があります。
+      </p>
+    </section>
+
+    <section class="card">
+      <h3>📅 毎日の達成状況</h3>
+
+      ${w.days.map(day=>{
+        const parsed=parseDate1711(day.date);
+        const dayName=parsed
+          ?DAY_NAMES[parsed.getDay()]:'';
+
+        return `
+          <div class="day">
+            <div class="row">
+              <strong>
+                ${esc1711(day.date.slice(5))}
+                (${dayName})
+              </strong>
+
+              <strong>
+                ${day.count}/5
+              </strong>
+            </div>
+
+            <div class="bar">
+              <div class="fill"
+                style="width:${day.percent}%">
+              </div>
+            </div>
+
+            <div class="muted">
+              ${
+                day.rest
+                ?'🌙 休養設定あり'
+                :day.practice
+                  ?'⚾ 練習記録あり'
+                  :'記録を確認'
+              }
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </section>
+
+    <section class="card">
+      <h3>📈 先週との比較</h3>
+
+      <p>
+        先週：${previous.completed}/35
+      </p>
+
+      <p>
+        今週：${w.completed}/35
+      </p>
+
+      <p>
+        変化：
+        <strong>
+          ${change>0?'+':''}${change}項目
+        </strong>
+      </p>
+
+      <p class="muted">
+        今週が途中の場合は、7日間が終了した
+        先週と単純比較しているため、
+        数値が低くなることがあります。
+      </p>
+    </section>
+
+    <section class="card">
+      <h3>🌟 今週の監督コメント</h3>
+
+      <p>${message1711(w)}</p>
+
+      ${
+        w.restDays>0
+        ?'<p>💚 休養日も記録できているね。身体を守る判断も大切！</p>'
+        :''
+      }
+
+      <p class="muted">
+        達成率は記録習慣の指標です。
+        野球の実力や健康状態を判定するものではありません。
+      </p>
+    </section>
+
+    <section class="card">
+      <h3>✏️ 週間振り返り</h3>
+
+      <p>
+        今週できたこと、課題、
+        来週意識したいことを書こう。
+      </p>
+
+      <textarea id="v1711-note"
+        placeholder="例：守備練習を頑張った。来週は送球の正確さを意識する。">${esc1711(savedNote)}</textarea>
+
+      <button id="v1711-save">
+        💾 振り返りを保存
+      </button>
+    </section>
+
+    <section class="card">
+      <h3>🔒 記録の取り扱い</h3>
+
+      <p class="muted">
+        このレポートは既存の練習・生活記録と
+        デイリーミッションを読み取ります。
+        週間振り返りだけを別の保存領域に記録します。
+        XPや能力値は変更しません。
+      </p>
+    </section>
+  `;
+
+  app.querySelector('#v1711-close')
+    .addEventListener('click',window.v1711Close);
+
+  app.querySelector('#v1711-prev')
+    .addEventListener('click',()=>{
+      offset1711--;
+      render1711();
+    });
+
+  app.querySelector('#v1711-current')
+    .addEventListener('click',()=>{
+      offset1711=0;
+      render1711();
+    });
+
+  app.querySelector('#v1711-next')
+    .addEventListener('click',()=>{
+      if(offset1711<0){
+        offset1711++;
+        render1711();
+      }
+    });
+
+  app.querySelector('#v1711-save')
+    .addEventListener('click',()=>{
+      const note=app.querySelector(
+        '#v1711-note'
+      ).value.trim();
+
+      const all=read1711(NOTE_KEY);
+      all[w.startKey]=note;
+
+      try{
+        localStorage.setItem(
+          NOTE_KEY,
+          JSON.stringify(all)
+        );
+
+        alert('週間振り返りを保存しました。');
+      }catch(e){
+        alert('保存に失敗しました。');
+      }
+    });
+}
+
+window.v1711Open=function(){
+  offset1711=0;
+  render1711();
+
+  document.getElementById(
+    'v1711-overlay'
+  ).classList.add('open');
+};
+
+window.v1711Close=function(){
+  document.getElementById(
+    'v1711-overlay'
+  ).classList.remove('open');
+};
+
+document.getElementById(
+  'v1711-open'
+).addEventListener(
+  'click',
+  window.v1711Open
+);
+
+})();
+</script>
+
+<!-- ===== 第17弾⑪ 終了 ===== -->
+
 </body>
 </html>
