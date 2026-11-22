@@ -12565,5 +12565,318 @@ render();
 </script>
 
 <!-- ===== 第16弾 終了 ===== -->
+
+<!-- ===== 第17弾①：練習XP再計算エンジン ===== -->
+<script>
+(function(){
+'use strict';
+
+if(
+  typeof db==='undefined' ||
+  typeof save!=='function'
+){
+  console.warn('第17弾：既存データに接続できません');
+  return;
+}
+
+const V17='v17-xp-1';
+
+/*
+ 既存の記録は変更しない。
+ このコードの読み込み後に新しく追加された
+ 練習記録だけを処理する。
+*/
+const existing=new WeakSet();
+
+(db.practice||[]).forEach(e=>{
+  if(e&&typeof e==='object'){
+    existing.add(e);
+  }
+});
+
+/*
+ メニュー別の基準。
+ base: 基準量でのXP
+ standard: 基準量
+ unit: 分・回など
+
+ これはゲーム用の暫定配点であり、
+ 医学的な能力向上量を表すものではない。
+*/
+const RULES=[
+  {
+    words:['素振り'],
+    base:12,
+    standard:30
+  },
+  {
+    words:['ノック','守備練習'],
+    base:15,
+    standard:30
+  },
+  {
+    words:['キャッチボール'],
+    base:12,
+    standard:20
+  },
+  {
+    words:['ティー','バッティング'],
+    base:14,
+    standard:30
+  },
+  {
+    words:['ラダー','走塁','ダッシュ'],
+    base:12,
+    standard:20
+  },
+  {
+    words:['シャドーピッチング'],
+    base:12,
+    standard:20
+  },
+  {
+    words:['ストレッチ','身体ケア'],
+    base:8,
+    standard:15
+  },
+  {
+    words:['野球ノート','配球研究'],
+    base:8,
+    standard:20
+  }
+];
+
+function number17(value,fallback=0){
+  const n=Number(value);
+  return Number.isFinite(n)?n:fallback;
+}
+
+function clamp17(n,min,max){
+  return Math.max(min,Math.min(max,n));
+}
+
+function rule17(entry){
+  const name=String(entry.name||'');
+  const kind=String(entry.kind||'');
+
+  return RULES.find(r=>
+    r.words.some(w=>
+      name.includes(w)||kind.includes(w)
+    )
+  )||null;
+}
+
+function isRest17(entry){
+  return /睡眠|休養|休息|オフ/.test(
+    String(entry.name||'')+' '+
+    String(entry.kind||'')
+  );
+}
+
+function isCare17(entry){
+  return /身体ケア|ストレッチ|回復/.test(
+    String(entry.name||'')+' '+
+    String(entry.kind||'')
+  );
+}
+
+function calculate17(entry){
+  if(isRest17(entry)){
+    return 0;
+  }
+
+  const rule=rule17(entry);
+
+  /*
+   未登録メニューは従来の基本XPを使う。
+   既存メニューとの互換性を優先する。
+  */
+  if(!rule){
+    return clamp17(
+      number17(entry.xp,5),
+      0,
+      15
+    );
+  }
+
+  const amount=number17(entry.amount,0);
+
+  /*
+   数量が入力されていない場合は
+   基準量とみなさず、基本XPの半分。
+  */
+  if(amount<=0){
+    return Math.round(rule.base*0.5);
+  }
+
+  /*
+   練習量の平方根を使い、
+   長時間練習のXP効率を抑える。
+  */
+  const ratio=amount/rule.standard;
+
+  let xp=rule.base*Math.sqrt(ratio);
+
+  /*
+   1記録あたりのXP上限。
+   ケアは長時間化を促さない。
+  */
+  const max=isCare17(entry)?12:28;
+
+  return clamp17(
+    Math.round(xp),
+    1,
+    max
+  );
+}
+
+function dailyTotal17(date,exclude){
+  return (db.practice||[])
+    .filter(e=>
+      e!==exclude &&
+      e.date===date &&
+      !isRest17(e)
+    )
+    .reduce(
+      (sum,e)=>sum+Math.max(
+        0,
+        number17(e.xp)
+      ),
+      0
+    );
+}
+
+function adjust17(entry){
+  if(
+    !entry ||
+    typeof entry!=='object' ||
+    existing.has(entry) ||
+    entry.xpEngine===V17
+  ){
+    return;
+  }
+
+  const oldXP=number17(entry.xp);
+  const calculated=calculate17(entry);
+
+  /*
+   1日の練習XP上限は60。
+   休養や身体ケアの記録自体は
+   XPがなくても残す。
+  */
+  const already=dailyTotal17(
+    entry.date,
+    entry
+  );
+
+  const allowed=Math.max(0,60-already);
+
+  const finalXP=isRest17(entry)
+    ?0
+    :Math.min(calculated,allowed);
+
+  /*
+   既存の追加処理が先に加算したXPと
+   新しい計算結果との差だけを補正する。
+  */
+  db.xp=Math.max(
+    0,
+    number17(db.xp)+finalXP-oldXP
+  );
+
+  entry.xp=finalXP;
+  entry.xpEngine=V17;
+  entry.xpCalculated=calculated;
+  entry.xpLimited=finalXP<calculated;
+  entry.xpRule='volume-sqrt';
+}
+
+/*
+ save() の直前に新規練習記録を補正。
+
+ 過去の記録は読み込み時に
+ WeakSetへ登録しているため変更しない。
+*/
+const previousSave17=save;
+
+save=function(){
+  const pending=(db.practice||[])
+    .filter(e=>
+      e &&
+      typeof e==='object' &&
+      !existing.has(e) &&
+      e.xpEngine!==V17
+    );
+
+  const originalXP=number17(db.xp);
+
+  const snapshots=pending.map(e=>({
+    entry:e,
+    xp:e.xp,
+    xpEngine:e.xpEngine,
+    xpCalculated:e.xpCalculated,
+    xpLimited:e.xpLimited,
+    xpRule:e.xpRule
+  }));
+
+  try{
+    pending.forEach(adjust17);
+
+    const result=previousSave17.apply(
+      this,
+      arguments
+    );
+
+    if(result===false){
+      throw new Error('保存失敗');
+    }
+
+    pending.forEach(e=>existing.add(e));
+
+    return result;
+
+  }catch(error){
+    db.xp=originalXP;
+
+    snapshots.forEach(s=>{
+      s.entry.xp=s.xp;
+
+      for(const key of [
+        'xpEngine',
+        'xpCalculated',
+        'xpLimited',
+        'xpRule'
+      ]){
+        if(s[key]===undefined){
+          delete s.entry[key];
+        }else{
+          s.entry[key]=s[key];
+        }
+      }
+    });
+
+    console.error(
+      '第17弾：XP保存処理に失敗',
+      error
+    );
+
+    return false;
+  }
+};
+
+/*
+ 動作確認用。
+ コンソールから呼び出せる。
+*/
+window.v17CalculateXP=calculate17;
+
+console.log(
+  '第17弾①：練習XP計算エンジンを読み込みました'
+);
+
+})();
+</script>
+<!-- ===== 第17弾① 終了 ===== -->
+
 </body>
 </html>
