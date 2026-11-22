@@ -17784,5 +17784,224 @@ document.getElementById(
 
 <!-- ===== 第17弾⑪ 終了 ===== -->
 
+<!-- ===== XP修復 第1段階：全履歴保護 ===== -->
+<style>
+#xp-repair-open{
+  position:fixed;
+  right:12px;
+  bottom:18px;
+  z-index:20000;
+  padding:13px 16px;
+  border:2px solid #ffd76a;
+  border-radius:25px;
+  background:#a33131;
+  color:white;
+  font-weight:900;
+}
+#xp-repair-panel{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:20001;
+  background:#071b30ee;
+  overflow:auto;
+  padding:16px;
+}
+#xp-repair-content{
+  max-width:650px;
+  margin:20px auto;
+  padding:20px;
+  background:white;
+  color:#173d60;
+  border-radius:16px;
+  font-family:system-ui,sans-serif;
+}
+#xp-repair-content button{
+  padding:12px;
+  margin:6px 3px;
+  border:0;
+  border-radius:9px;
+  background:#195e91;
+  color:white;
+  font-weight:bold;
+}
+#xp-repair-content .result{
+  padding:12px;
+  background:#eaf3fc;
+  border-radius:10px;
+  line-height:1.9;
+}
+</style>
+
+<button id="xp-repair-open" type="button">
+  🛠️ XP修復
+</button>
+
+<div id="xp-repair-panel">
+  <div id="xp-repair-content">
+    <h2>🛠️ 駿介の全練習データ保護</h2>
+
+    <p>
+      練習履歴・経験値・能力値を保護します。
+      この操作で現在の記録は変更されません。
+    </p>
+
+    <div class="result" id="xp-repair-result">
+      データを確認中...
+    </div>
+
+    <button id="xp-repair-export">
+      💾 全データをバックアップ
+    </button>
+
+    <button id="xp-repair-close">
+      閉じる
+    </button>
+
+    <p>
+      バックアップしたJSONファイルを
+      ChatGPTに送ってください。
+      全履歴の修復計算に使用します。
+    </p>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const open=document.getElementById(
+  'xp-repair-open'
+);
+const panel=document.getElementById(
+  'xp-repair-panel'
+);
+const result=document.getElementById(
+  'xp-repair-result'
+);
+
+function getData(){
+  try{
+    if(typeof db!=='undefined' && db){
+      return db;
+    }
+  }catch(e){}
+  return null;
+}
+
+function report(){
+  const data=getData();
+
+  if(!data){
+    result.textContent=
+      'アプリの保存データを取得できません。';
+    return;
+  }
+
+  const practices=Array.isArray(data.practice)
+    ?data.practice:[];
+
+  const storedXP=practices.reduce(
+    (sum,p)=>{
+      const value=Number(p.xp);
+      return sum+(
+        Number.isFinite(value)?value:0
+      );
+    },0
+  );
+
+  const zero=practices.filter(
+    p=>Number(p.xp)===0
+  ).length;
+
+  const days=new Set(
+    practices.map(p=>p.date)
+  ).size;
+
+  result.textContent=[
+    '練習記録：'+practices.length+'件',
+    '練習した日：'+days+'日',
+    '現在の累計XP：'+data.xp,
+    '履歴に記録されたXP合計：'+storedXP,
+    '0 XPの練習：'+zero+'件',
+    '能力値：'+JSON.stringify(
+      data.abilities||{}
+    ),
+    '投手能力：'+JSON.stringify(
+      data.pitch||{}
+    )
+  ].join('\n');
+
+  result.style.whiteSpace='pre-wrap';
+}
+
+function exportData(){
+  const data=getData();
+
+  if(!data){
+    alert('データを取得できません。');
+    return;
+  }
+
+  const storage={};
+
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      storage[key]=localStorage.getItem(key);
+    }
+  }catch(e){
+    alert('保存領域を読み取れませんでした。');
+    return;
+  }
+
+  const backup={
+    backupType:'shunsuke-xp-repair',
+    version:1,
+    createdAt:new Date().toISOString(),
+    mainData:data,
+    localStorage:storage
+  };
+
+  const blob=new Blob(
+    [JSON.stringify(backup,null,2)],
+    {type:'application/json'}
+  );
+
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+
+  link.href=url;
+  link.download=
+    'shunsuke-xp-repair-backup.json';
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+  },30000);
+}
+
+open.addEventListener('click',()=>{
+  report();
+  panel.style.display='block';
+});
+
+document.getElementById(
+  'xp-repair-close'
+).addEventListener('click',()=>{
+  panel.style.display='none';
+});
+
+document.getElementById(
+  'xp-repair-export'
+).addEventListener('click',exportData);
+
+})();
+</script>
+<!-- ===== XP修復 第1段階 終了 ===== -->
+
 </body>
 </html>
