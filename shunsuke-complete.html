@@ -13489,5 +13489,627 @@ document.getElementById('v172-launch')
 </script>
 <!-- ===== 第17弾② 終了 ===== -->
 
+<!-- ===== 第17弾③：実測成長エンジン ===== -->
+<style>
+#v173-open{
+  position:fixed;
+  right:12px;
+  bottom:140px;
+  z-index:9000;
+  background:#176b57;
+  color:white;
+  border:2px solid #f2cc61;
+  border-radius:28px;
+  padding:12px 16px;
+  font-weight:bold;
+}
+#v173-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9100;
+  background:#0009;
+  overflow:auto;
+  padding:12px;
+}
+#v173-overlay.active{display:block}
+#v173-panel{
+  max-width:650px;
+  margin:20px auto;
+  padding:18px;
+  border-radius:18px;
+  background:#f3f8fc;
+  color:#173951;
+  font-family:system-ui,sans-serif;
+}
+#v173-panel .card{
+  background:white;
+  border:1px solid #cbdce8;
+  border-radius:12px;
+  padding:14px;
+  margin:12px 0;
+}
+#v173-panel label{
+  display:block;
+  margin:12px 0;
+  font-weight:bold;
+}
+#v173-panel input,
+#v173-panel select{
+  width:100%;
+  box-sizing:border-box;
+  display:block;
+  padding:11px;
+  margin-top:5px;
+  border:1px solid #a9bfd0;
+  border-radius:8px;
+  font-size:16px;
+}
+#v173-panel button{
+  padding:11px 14px;
+  border:0;
+  border-radius:8px;
+  background:#176b57;
+  color:white;
+  font-weight:bold;
+  margin:5px 4px 5px 0;
+}
+#v173-panel .muted{
+  color:#62788b;
+  font-size:13px;
+}
+#v173-panel .rank{
+  font-size:30px;
+  font-weight:900;
+  color:#176b57;
+}
+#v173-panel .row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+</style>
+
+<button id="v173-open" type="button">
+  📏 実力測定
+</button>
+
+<div id="v173-overlay">
+  <div id="v173-panel"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const KEY='shunsuke_measurements_v173';
+const RANKS=['G','F','E','D','C','B','A'];
+
+const TESTS={
+  fielding:{
+    label:'守備・捕球成功率',
+    unit:'%',
+    direction:'higher',
+    min:0,
+    max:100
+  },
+  throwing:{
+    label:'送球成功率',
+    unit:'%',
+    direction:'higher',
+    min:0,
+    max:100
+  },
+  hitting:{
+    label:'打撃コンタクト率',
+    unit:'%',
+    direction:'higher',
+    min:0,
+    max:100
+  },
+  sprint:{
+    label:'30m走タイム',
+    unit:'秒',
+    direction:'lower',
+    min:3,
+    max:20
+  },
+  velocity:{
+    label:'球速',
+    unit:'km/h',
+    direction:'higher',
+    min:20,
+    max:180
+  }
+};
+
+function initial(){
+  return {
+    version:1,
+    school:'elementary',
+    stageRanks:{
+      elementary:{},
+      middle:{},
+      high:{}
+    },
+    measurements:[]
+  };
+}
+
+function load(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(KEY));
+    if(!raw||typeof raw!=='object'){
+      return initial();
+    }
+    const base=initial();
+    return {
+      ...base,
+      ...raw,
+      stageRanks:{
+        ...base.stageRanks,
+        ...(raw.stageRanks||{})
+      },
+      measurements:Array.isArray(raw.measurements)
+        ?raw.measurements:[]
+    };
+  }catch(e){
+    return initial();
+  }
+}
+
+let data=load();
+
+function saveData(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(data));
+    return true;
+  }catch(e){
+    alert('保存に失敗しました。');
+    return false;
+  }
+}
+
+function esc(v){
+  return String(v??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function today(){
+  const d=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  return [
+    d.getFullYear(),
+    pad(d.getMonth()+1),
+    pad(d.getDate())
+  ].join('-');
+}
+
+function recordsOf(test){
+  return data.measurements
+    .filter(x=>x.test===test)
+    .sort((a,b)=>
+      String(a.date).localeCompare(String(b.date))||
+      String(a.createdAt).localeCompare(String(b.createdAt))
+    );
+}
+
+function average(values){
+  if(!values.length)return null;
+  return values.reduce((a,b)=>a+b,0)/values.length;
+}
+
+function analysis(test){
+  const records=recordsOf(test);
+  const config=TESTS[test];
+
+  if(!records.length)return null;
+
+  const values=records.map(x=>x.value);
+  const first=values[0];
+  const latest=values.at(-1);
+  const recent=average(values.slice(-3));
+
+  /*
+    変化率は参考情報。
+    測定誤差や成熟による変化を
+    除外できるわけではない。
+  */
+  const change=first===0
+    ?null
+    :(latest-first)/Math.abs(first)*100;
+
+  const improved=change===null
+    ?null
+    :(config.direction==='higher'
+      ?change
+      :-change);
+
+  const reliability=
+    records.length>=6?'記録数：十分':
+    records.length>=3?'記録数：増加中':
+    '記録数：少ない';
+
+  return {
+    count:records.length,
+    first,
+    latest,
+    recent,
+    improved,
+    reliability,
+    lastDate:records.at(-1).date
+  };
+}
+
+/*
+ 学校段階別のゲーム評価。
+ 測定値からA〜Gを自動確定しない。
+
+ 進学時は直前の学校段階で登録した
+ ランクを3段階下げて初期値にする。
+ 以後は新しい学校段階で独立して
+ 評価を更新できる。
+*/
+function stageRank(test,school){
+  const own=data.stageRanks[school]||{};
+
+  if(RANKS.includes(own[test])){
+    return own[test];
+  }
+
+  if(school==='elementary'){
+    return '未評価';
+  }
+
+  const previous=school==='middle'
+    ?'elementary'
+    :'middle';
+
+  const prior=stageRank(test,previous);
+
+  if(!RANKS.includes(prior)){
+    return '未評価';
+  }
+
+  return RANKS[
+    Math.max(0,RANKS.indexOf(prior)-3)
+  ];
+}
+
+function cards(){
+  return Object.entries(TESTS).map(([id,t])=>{
+    const a=analysis(id);
+    const rank=stageRank(id,data.school);
+
+    return `
+      <div class="card">
+        <div class="row">
+          <strong>${esc(t.label)}</strong>
+          <span class="rank">${esc(rank)}</span>
+        </div>
+
+        ${a?`
+          <p>
+            初回：${a.first.toFixed(2)} ${esc(t.unit)}
+          </p>
+          <p>
+            最新：${a.latest.toFixed(2)} ${esc(t.unit)}
+          </p>
+          <p>
+            直近3回平均：
+            ${a.recent.toFixed(2)} ${esc(t.unit)}
+          </p>
+          <p>
+            初回比：
+            ${a.improved===null?'—':
+              (a.improved>=0?'+':'')+
+              a.improved.toFixed(1)+'%'}
+            （改善方向を正として表示）
+          </p>
+          <p class="muted">
+            ${esc(a.reliability)}
+            ／記録${a.count}回
+            ／最終${esc(a.lastDate)}
+          </p>
+        `:`
+          <p class="muted">
+            測定記録はまだありません。
+          </p>
+        `}
+
+        <p class="muted">
+          ランクはゲーム上の暫定評価です。
+          測定値だけから全国水準を
+          判定していません。
+        </p>
+      </div>
+    `;
+  }).join('');
+}
+
+function render(){
+  const schoolLabels={
+    elementary:'小学生',
+    middle:'中学生',
+    high:'高校生'
+  };
+
+  document.getElementById('v173-panel').innerHTML=`
+    <div class="row">
+      <h2>⚾ 実力測定・成長分析</h2>
+      <button onclick="v173Close()">閉じる</button>
+    </div>
+
+    <div class="card">
+      <h3>🎓 評価ステージ</h3>
+      <p><strong>
+        ${schoolLabels[data.school]}
+      </strong></p>
+
+      <p class="muted">
+        進学時は前段階のランクから
+        3ランク下げて開始します。
+        測定履歴は引き継ぎます。
+      </p>
+
+      <button onclick="v173Advance()">
+        次の学校段階へ進む
+      </button>
+    </div>
+
+    <div class="card">
+      <h3>📏 新しい測定を記録</h3>
+
+      <label>測定項目
+        <select id="v173-test">
+          ${Object.entries(TESTS).map(([id,t])=>`
+            <option value="${id}">
+              ${esc(t.label)}（${esc(t.unit)}）
+            </option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>測定値
+        <input
+          id="v173-value"
+          type="number"
+          step="any"
+          placeholder="測定した数値"
+        >
+      </label>
+
+      <label>測定日
+        <input
+          id="v173-date"
+          type="date"
+          value="${today()}"
+        >
+      </label>
+
+      <label>測定条件・メモ
+        <input
+          id="v173-note"
+          type="text"
+          maxlength="300"
+          placeholder="例：正面のゴロ20球、同じ距離"
+        >
+      </label>
+
+      <button onclick="v173Add()">
+        💾 測定結果を保存
+      </button>
+
+      <p class="muted">
+        成功率は成功数÷試行数×100で入力。
+        できるだけ同じ条件で測定してください。
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>🏅 ゲーム内評価ランク</h3>
+
+      <label>評価項目
+        <select id="v173-rank-test">
+          ${Object.entries(TESTS).map(([id,t])=>`
+            <option value="${id}">
+              ${esc(t.label)}
+            </option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>今回の評価
+        <select id="v173-rank">
+          ${RANKS.map(r=>`
+            <option value="${r}">${r}</option>
+          `).join('')}
+        </select>
+      </label>
+
+      <button onclick="v173SetRank()">
+        評価を更新
+      </button>
+
+      <p class="muted">
+        測定結果を確認した保護者・指導者が
+        暫定評価を入力する機能です。
+        自動昇格ではありません。
+      </p>
+    </div>
+
+    <h3>📈 成長分析</h3>
+    ${cards()}
+
+    <div class="card">
+      <h3>🔒 データの取り扱い</h3>
+      <p class="muted">
+        測定結果はこの端末に保存されます。
+        既存のXP・練習履歴・能力値は
+        変更しません。
+        別端末とは自動同期されません。
+      </p>
+    </div>
+  `;
+}
+
+window.v173Open=function(){
+  data=load();
+  render();
+  document.getElementById('v173-overlay')
+    .classList.add('active');
+};
+
+window.v173Close=function(){
+  document.getElementById('v173-overlay')
+    .classList.remove('active');
+};
+
+window.v173Add=function(){
+  const test=document.getElementById(
+    'v173-test'
+  ).value;
+
+  const input=document.getElementById(
+    'v173-value'
+  );
+
+  const value=Number(input.value);
+
+  const date=document.getElementById(
+    'v173-date'
+  ).value;
+
+  const note=document.getElementById(
+    'v173-note'
+  ).value.trim();
+
+  const config=TESTS[test];
+
+  if(
+    !config ||
+    !input.value.trim() ||
+    !Number.isFinite(value) ||
+    value<config.min ||
+    value>config.max
+  ){
+    alert('測定項目と数値を確認してください。');
+    return;
+  }
+
+  if(
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    date>today()
+  ){
+    alert('測定日を確認してください。');
+    return;
+  }
+
+  if(!note){
+    alert('測定条件を記録してください。');
+    return;
+  }
+
+  const record={
+    test,
+    value,
+    date,
+    note,
+    createdAt:new Date().toISOString()
+  };
+
+  data.measurements.push(record);
+
+  if(!saveData()){
+    data.measurements.pop();
+    return;
+  }
+
+  render();
+  alert('測定結果を保存しました！');
+};
+
+window.v173SetRank=function(){
+  const test=document.getElementById(
+    'v173-rank-test'
+  ).value;
+
+  const rank=document.getElementById(
+    'v173-rank'
+  ).value;
+
+  if(!TESTS[test]||!RANKS.includes(rank)){
+    return;
+  }
+
+  if(!analysis(test)){
+    alert('先に測定結果を登録してください。');
+    return;
+  }
+
+  if(!confirm(
+    '測定結果や実戦内容を確認して、' +
+    '評価ランクを更新しますか？'
+  ))return;
+
+  const stage=data.stageRanks[data.school]||{};
+  const old=stage[test];
+
+  stage[test]=rank;
+  data.stageRanks[data.school]=stage;
+
+  if(!saveData()){
+    if(old===undefined)delete stage[test];
+    else stage[test]=old;
+    return;
+  }
+
+  render();
+};
+
+window.v173Advance=function(){
+  const next={
+    elementary:'middle',
+    middle:'high'
+  }[data.school];
+
+  if(!next){
+    alert('現在は高校生ステージです。');
+    return;
+  }
+
+  if(!confirm(
+    '次の学校段階に進みますか？\n' +
+    'ランクの基準が3段階上がります。\n' +
+    '過去の測定記録は残ります。'
+  ))return;
+
+  const old=data.school;
+  data.school=next;
+
+  if(!saveData()){
+    data.school=old;
+    return;
+  }
+
+  render();
+};
+
+document.getElementById('v173-open')
+  .addEventListener('click',window.v173Open);
+
+})();
+</script>
+<!-- ===== 第17弾③ 終了 ===== -->
+
 </body>
 </html>
