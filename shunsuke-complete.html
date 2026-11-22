@@ -14111,5 +14111,3037 @@ document.getElementById('v173-open')
 </script>
 <!-- ===== 第17弾③ 終了 ===== -->
 
+<!-- ===== 第17弾④：育成データ統合ダッシュボード ===== -->
+<style>
+#v174-open{
+  position:fixed;right:12px;bottom:198px;z-index:9000;
+  padding:12px 15px;border:2px solid #ffd65a;
+  border-radius:25px;background:#173d79;color:white;
+  font-weight:800;box-shadow:0 4px 12px #0005;
+}
+#v174-overlay{
+  display:none;position:fixed;inset:0;z-index:9200;
+  overflow-y:auto;background:#000b;padding:12px;
+}
+#v174-overlay.open{display:block}
+#v174-app{
+  max-width:740px;margin:16px auto;padding:18px;
+  border-radius:18px;background:#edf4fb;color:#193653;
+  font-family:system-ui,sans-serif;
+}
+#v174-app *{box-sizing:border-box}
+#v174-app h2,#v174-app h3{color:#174777}
+#v174-app .card{
+  background:white;border:1px solid #cfdeed;
+  padding:14px;border-radius:12px;margin:12px 0;
+}
+#v174-app .row{
+  display:flex;justify-content:space-between;
+  align-items:center;gap:10px;flex-wrap:wrap;
+}
+#v174-app .stats{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+#v174-app .stat{
+  background:#eaf2fc;padding:13px;border-radius:10px;
+}
+#v174-app .value{
+  display:block;font-size:25px;font-weight:900;color:#125b99;
+}
+#v174-app .rankgrid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+#v174-app .rankitem{
+  padding:10px;border:1px solid #d6e3ef;
+  border-radius:10px;background:#f7fbff;
+}
+#v174-app .rank{
+  font-size:25px;font-weight:900;color:#176b57;
+}
+#v174-app .muted{
+  font-size:13px;color:#62778b;line-height:1.6;
+}
+#v174-app .warning{
+  padding:12px;border-left:4px solid #c88b22;
+  background:#fff4d8;border-radius:8px;
+  margin:10px 0;
+}
+#v174-app button{
+  border:0;border-radius:9px;padding:10px 13px;
+  background:#17649e;color:white;font-weight:750;
+  margin:4px 3px 4px 0;
+}
+#v174-app button.secondary{background:#60758b}
+#v174-app .bar{
+  height:11px;background:#dce7f1;border-radius:20px;
+  overflow:hidden;margin-top:7px;
+}
+#v174-app .fill{height:100%;background:#269a75}
+</style>
+
+<button id="v174-open" type="button">
+  ⚾ 総合育成
+</button>
+
+<div id="v174-overlay">
+  <div id="v174-app"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const EVAL_KEY='shunsuke_evaluation_v172';
+const MEASURE_KEY='shunsuke_measurements_v173';
+
+const ABILITIES=[
+  'ミート','パワー','走力','肩力','守備力',
+  '捕球','球威','制球力','スタミナ','投球術'
+];
+
+const TESTS={
+  fielding:['守備・捕球成功率','%'],
+  throwing:['送球成功率','%'],
+  hitting:['打撃コンタクト率','%'],
+  sprint:['30m走','秒'],
+  velocity:['球速','km/h']
+};
+
+const STAGES={
+  elementary:'小学生',
+  middle:'中学生',
+  high:'高校生'
+};
+
+const RANKS=['G','F','E','D','C','B','A'];
+
+function esc174(value){
+  return String(value??'').replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;',
+    '"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function read174(key){
+  try{
+    const value=JSON.parse(localStorage.getItem(key));
+    return value&&typeof value==='object'?value:{};
+  }catch(e){
+    return {};
+  }
+}
+
+function n174(v,fallback=0){
+  const n=Number(v);
+  return Number.isFinite(n)?n:fallback;
+}
+
+function arr174(v){
+  return Array.isArray(v)?v:[];
+}
+
+function date174(){
+  const d=new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth()+1).padStart(2,'0'),
+    String(d.getDate()).padStart(2,'0')
+  ].join('-');
+}
+
+function last174(items){
+  return [...items].sort((a,b)=>
+    String(a.recordedAt||a.createdAt||a.date||'')
+    .localeCompare(
+      String(b.recordedAt||b.createdAt||b.date||'')
+    )
+  ).at(-1)||null;
+}
+
+function rank174(entry,school){
+  if(!entry||!RANKS.includes(entry.rank)){
+    return '—';
+  }
+  const penalty={
+    elementary:0,middle:3,high:6
+  }[school]||0;
+
+  return RANKS[
+    Math.max(0,RANKS.indexOf(entry.rank)-penalty)
+  ];
+}
+
+function measuredRank174(data,test,stage){
+  const stages=data.stageRanks||{};
+  const own=stages[stage]||{};
+
+  if(RANKS.includes(own[test]))return own[test];
+
+  const prev={
+    middle:'elementary',
+    high:'middle'
+  }[stage];
+
+  if(!prev)return '—';
+
+  const r=measuredRank174(data,test,prev);
+  if(!RANKS.includes(r))return '—';
+
+  return RANKS[
+    Math.max(0,RANKS.indexOf(r)-3)
+  ];
+}
+
+function load174(){
+  const main=typeof db!=='undefined'?db:{};
+  return {
+    main,
+    eval:read174(EVAL_KEY),
+    measure:read174(MEASURE_KEY)
+  };
+}
+
+function practiceSummary174(main){
+  const all=arr174(main.practice);
+  const today=date174();
+  const todays=all.filter(x=>x.date===today);
+
+  const earned=todays.reduce(
+    (sum,x)=>sum+Math.max(0,n174(x.xp)),0
+  );
+
+  const total=all.reduce(
+    (sum,x)=>sum+Math.max(0,n174(x.xp)),0
+  );
+
+  const recent=[...all].reverse().slice(0,5);
+
+  return `
+    <div class="stats">
+      <div class="stat">
+        <span>累計XP</span>
+        <span class="value">${n174(main.xp)}</span>
+      </div>
+      <div class="stat">
+        <span>今日の練習XP</span>
+        <span class="value">${earned}</span>
+      </div>
+      <div class="stat">
+        <span>練習記録数</span>
+        <span class="value">${all.length}</span>
+      </div>
+      <div class="stat">
+        <span>今日の記録</span>
+        <span class="value">${todays.length}</span>
+      </div>
+    </div>
+
+    <p class="muted">
+      累計XPは既存アプリの保存値です。
+      練習履歴のXP合計 ${total} とは、
+      ミッション報酬などにより異なる場合があります。
+    </p>
+
+    <h3>最近の練習</h3>
+    ${
+      recent.length
+      ?recent.map(x=>`
+        <p>
+          <b>${esc174(x.date)}</b>
+          ${esc174(x.name)}
+          ＋${Math.max(0,n174(x.xp))} XP
+        </p>
+      `).join('')
+      :'<p>まだ練習記録がありません。</p>'
+    }
+  `;
+}
+
+function abilities174(e){
+  const stage=e.school||'elementary';
+  const records=arr174(e.evaluations);
+
+  return `
+    <p class="muted">
+      評価ステージ：
+      ${esc174(STAGES[stage]||'未設定')}
+    </p>
+
+    <div class="rankgrid">
+      ${ABILITIES.map(name=>{
+        const latest=last174(
+          records.filter(x=>x.ability===name)
+        );
+        const rank=rank174(latest,stage);
+
+        return `
+          <div class="rankitem">
+            <strong>${esc174(name)}</strong>
+            <div class="rank">${esc174(rank)}</div>
+            <div class="muted">
+              ${latest?esc174(latest.date):'未評価'}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <p class="muted">
+      評価は第17弾②の記録に基づきます。
+      練習XPだけでランクは上昇しません。
+    </p>
+  `;
+}
+
+function measurements174(m){
+  const stage=m.school||'elementary';
+  const records=arr174(m.measurements);
+
+  return `
+    <p class="muted">
+      測定ステージ：
+      ${esc174(STAGES[stage]||'未設定')}
+    </p>
+
+    ${Object.entries(TESTS).map(([id,info])=>{
+      const all=records.filter(x=>x.test===id);
+      const latest=last174(all);
+      const rank=measuredRank174(m,id,stage);
+
+      return `
+        <div class="rankitem" style="margin:8px 0">
+          <div class="row">
+            <strong>${esc174(info[0])}</strong>
+            <span class="rank">${esc174(rank)}</span>
+          </div>
+
+          ${
+            latest
+            ?`
+              <span class="value">
+                ${n174(latest.value)} ${esc174(info[1])}
+              </span>
+              <p class="muted">
+                ${esc174(latest.date)}
+                ／測定 ${all.length}回
+              </p>
+            `
+            :'<p class="muted">測定記録なし</p>'
+          }
+        </div>
+      `;
+    }).join('')}
+
+    <p class="muted">
+      ランクは第17弾③で登録した暫定評価です。
+      実測値から全国水準を自動判定していません。
+    </p>
+  `;
+}
+
+function condition174(e){
+  const records=arr174(e.conditions);
+  const latest=last174(records);
+
+  if(!latest){
+    return '<p>コンディション記録はまだありません。</p>';
+  }
+
+  const sleep=n174(latest.sleep);
+  const effort=n174(latest.effort);
+  const pain=latest.pain||'none';
+
+  const alerts=[];
+
+  if(pain!=='none'){
+    alerts.push(
+      '痛みが報告されています。運動を無理に続けず、保護者・指導者に相談してください。'
+    );
+  }
+
+  if(sleep>0&&sleep<9){
+    alerts.push(
+      '睡眠が9時間未満です。小学生の睡眠目安は一般に9〜12時間です。'
+    );
+  }
+
+  if(effort>=5){
+    alerts.push(
+      '練習のきつさが最大評価です。疲労や回復状況を確認しましょう。'
+    );
+  }
+
+  return `
+    <p><b>記録日：</b>${esc174(latest.date)}</p>
+
+    <div class="stats">
+      <div class="stat">
+        睡眠
+        <span class="value">${sleep}時間</span>
+      </div>
+      <div class="stat">
+        きつさ
+        <span class="value">${effort}/5</span>
+      </div>
+      <div class="stat">
+        楽しさ
+        <span class="value">${n174(latest.fun)}/5</span>
+      </div>
+      <div class="stat">
+        痛み
+        <span class="value" style="font-size:18px">
+          ${
+            pain==='none'?'なし':
+            pain==='mild'?'少し痛い':'強い痛み'
+          }
+        </span>
+      </div>
+    </div>
+
+    ${alerts.map(x=>`
+      <div class="warning">${esc174(x)}</div>
+    `).join('')}
+
+    ${
+      !alerts.length
+      ?'<p>今回の入力値に基づく注意表示はありません。</p>'
+      :''
+    }
+
+    <p class="muted">
+      この表示は診断や練習許可の判定ではありません。
+      過去の腰のけがなどについては医療者の指示を優先してください。
+    </p>
+  `;
+}
+
+function integrity174(data){
+  const warnings=[];
+
+  const a=data.eval.school;
+  const b=data.measure.school;
+
+  if(a&&b&&a!==b){
+    warnings.push(
+      '能力評価と実力測定の学校ステージが一致していません。進学操作を行った画面を確認してください。'
+    );
+  }
+
+  const practice=arr174(data.main.practice);
+  const pending=practice.filter(x=>
+    x&&x.xpEngine==='v17-xp-1'&&x.xpLimited
+  );
+
+  if(pending.length){
+    warnings.push(
+      `1日のXP上限が適用された練習記録が${pending.length}件あります。`
+    );
+  }
+
+  if(!warnings.length){
+    return '<p>確認できる範囲で、ステージの不一致はありません。</p>';
+  }
+
+  return warnings.map(x=>`
+    <div class="warning">${esc174(x)}</div>
+  `).join('');
+}
+
+function render174(){
+  const d=load174();
+  const app=document.getElementById('v174-app');
+  if(!app)return;
+
+  app.innerHTML=`
+    <div class="row">
+      <h2>⚾ 駿介 総合育成</h2>
+      <button class="secondary" onclick="v174Close()">
+        ✕ 閉じる
+      </button>
+    </div>
+
+    <p>
+      努力を積み重ね、実力を測り、
+      休養も大切にしながら成長しよう！
+    </p>
+
+    <section class="card">
+      <h3>🏆 練習・経験値</h3>
+      ${practiceSummary174(d.main)}
+    </section>
+
+    <section class="card">
+      <h3>⭐ 10項目の能力評価</h3>
+      ${abilities174(d.eval)}
+      <button onclick="v174ToEvaluation()">
+        能力評価を開く
+      </button>
+    </section>
+
+    <section class="card">
+      <h3>📏 実力測定</h3>
+      ${measurements174(d.measure)}
+      <button onclick="v174ToMeasurements()">
+        実力測定を開く
+      </button>
+    </section>
+
+    <section class="card">
+      <h3>❤️ コンディション・休養</h3>
+      ${condition174(d.eval)}
+    </section>
+
+    <section class="card">
+      <h3>🔎 データ整合性チェック</h3>
+      ${integrity174(d)}
+    </section>
+
+    <section class="card">
+      <h3>🔒 保存について</h3>
+      <p class="muted">
+        この画面は既存データを読み取るだけです。
+        XP、ランク、測定履歴を変更しません。
+        各記録は現在の端末内に保存されています。
+        iPhoneとiPadの自動同期には、
+        別途クラウド保存機能が必要です。
+      </p>
+      <button onclick="v174Refresh()">
+        🔄 最新データを再読み込み
+      </button>
+    </section>
+  `;
+}
+
+window.v174Open=function(){
+  render174();
+  document.getElementById('v174-overlay')
+    .classList.add('open');
+};
+
+window.v174Close=function(){
+  document.getElementById('v174-overlay')
+    .classList.remove('open');
+};
+
+window.v174Refresh=function(){
+  render174();
+};
+
+window.v174ToEvaluation=function(){
+  window.v174Close();
+  if(typeof window.v172Open==='function'){
+    window.v172Open();
+  }else{
+    alert('第17弾②が読み込まれていません。');
+  }
+};
+
+window.v174ToMeasurements=function(){
+  window.v174Close();
+  if(typeof window.v173Open==='function'){
+    window.v173Open();
+  }else{
+    alert('第17弾③が読み込まれていません。');
+  }
+};
+
+document.getElementById('v174-open')
+  .addEventListener('click',window.v174Open);
+
+})();
+</script>
+<!-- ===== 第17弾④ 終了 ===== -->
+
+<!-- ===== 第17弾⑤：XP確認・進学ステージ統合 ===== -->
+
+<style>
+#v175-open{
+  position:fixed;
+  right:12px;
+  bottom:256px;
+  z-index:9000;
+  border:2px solid #f3cc5b;
+  border-radius:26px;
+  padding:12px 15px;
+  background:#673b9b;
+  color:white;
+  font-weight:800;
+  box-shadow:0 4px 12px #0004;
+}
+#v175-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9300;
+  overflow-y:auto;
+  padding:12px;
+  background:#000b;
+}
+#v175-overlay.open{display:block}
+#v175-panel{
+  max-width:650px;
+  margin:20px auto;
+  padding:18px;
+  border-radius:18px;
+  background:#f2f6fc;
+  color:#17395c;
+  font-family:system-ui,sans-serif;
+}
+#v175-panel *{box-sizing:border-box}
+#v175-panel .card{
+  background:white;
+  padding:15px;
+  margin:12px 0;
+  border:1px solid #d0ddec;
+  border-radius:12px;
+}
+#v175-panel .row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+#v175-panel button{
+  padding:11px 14px;
+  margin:5px 4px 5px 0;
+  border:0;
+  border-radius:9px;
+  background:#245e9b;
+  color:white;
+  font-weight:bold;
+}
+#v175-panel button:disabled{
+  opacity:.45;
+}
+#v175-panel select{
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  margin:8px 0;
+}
+#v175-panel .muted{
+  color:#64778b;
+  font-size:13px;
+  line-height:1.6;
+}
+#v175-panel .big{
+  font-size:28px;
+  font-weight:900;
+  color:#185c9b;
+}
+#v175-panel .warning{
+  padding:12px;
+  border-left:4px solid #cb942c;
+  background:#fff2d3;
+  border-radius:8px;
+}
+</style>
+
+<button id="v175-open" type="button">
+  🎓 育成管理
+</button>
+
+<div id="v175-overlay">
+  <div id="v175-panel"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const KEY_EVAL='shunsuke_evaluation_v172';
+const KEY_MEASURE='shunsuke_measurements_v173';
+
+const STAGES=[
+  'elementary',
+  'middle',
+  'high'
+];
+
+const NAMES={
+  elementary:'小学生',
+  middle:'中学生',
+  high:'高校生'
+};
+
+function read175(key){
+  try{
+    const x=JSON.parse(localStorage.getItem(key));
+    return x&&typeof x==='object'?x:null;
+  }catch(e){
+    return null;
+  }
+}
+
+function valid175(stage){
+  return STAGES.includes(stage);
+}
+
+function escape175(value){
+  return String(value??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function current175(){
+  const e=read175(KEY_EVAL);
+  const m=read175(KEY_MEASURE);
+
+  return {
+    eval:e,
+    measure:m,
+    evalStage:valid175(e?.school)
+      ?e.school:null,
+    measureStage:valid175(m?.school)
+      ?m.school:null
+  };
+}
+
+function practice175(){
+  const main=typeof db!=='undefined'?db:{};
+  const records=Array.isArray(main.practice)
+    ?main.practice:[];
+
+  const latest=records.at(-1)||null;
+
+  return {
+    totalXP:Number(main.xp)||0,
+    count:records.length,
+    latest
+  };
+}
+
+/*
+ 2つの保存領域をまとめて更新する。
+
+ どちらかが保存できなかった場合、
+ 以前の文字列を使って復元を試みる。
+
+ 複数キーの保存は完全な
+ トランザクションではないため、
+ 復元失敗時は警告する。
+*/
+function saveStage175(next){
+  if(!valid175(next))return false;
+
+  const data=current175();
+
+  if(!data.eval||!data.measure){
+    alert(
+      '第17弾②・③の保存領域を確認できません。'
+    );
+    return false;
+  }
+
+  const oldEval=localStorage.getItem(KEY_EVAL);
+  const oldMeasure=localStorage.getItem(KEY_MEASURE);
+
+  const e={
+    ...data.eval,
+    school:next
+  };
+
+  const m={
+    ...data.measure,
+    school:next
+  };
+
+  try{
+    localStorage.setItem(
+      KEY_EVAL,
+      JSON.stringify(e)
+    );
+
+    localStorage.setItem(
+      KEY_MEASURE,
+      JSON.stringify(m)
+    );
+
+    return true;
+
+  }catch(error){
+    let restored=true;
+
+    try{
+      if(oldEval===null){
+        localStorage.removeItem(KEY_EVAL);
+      }else{
+        localStorage.setItem(KEY_EVAL,oldEval);
+      }
+
+      if(oldMeasure===null){
+        localStorage.removeItem(KEY_MEASURE);
+      }else{
+        localStorage.setItem(
+          KEY_MEASURE,
+          oldMeasure
+        );
+      }
+
+    }catch(restoreError){
+      restored=false;
+      console.error(
+        '復元失敗',
+        restoreError
+      );
+    }
+
+    alert(
+      restored
+        ?'保存に失敗しました。以前の状態に戻しました。'
+        :'保存と復元に失敗しました。バックアップを確認してください。'
+    );
+
+    return false;
+  }
+}
+
+function render175(){
+  const data=current175();
+  const practice=practice175();
+
+  const same=
+    data.evalStage &&
+    data.evalStage===data.measureStage;
+
+  const latest=practice.latest;
+
+  const panel=document.getElementById(
+    'v175-panel'
+  );
+
+  panel.innerHTML=`
+    <div class="row">
+      <h2>⚾ 駿介 育成管理</h2>
+      <button onclick="v175Close()">
+        ✕ 閉じる
+      </button>
+    </div>
+
+    <div class="card">
+      <h3>🏆 経験値の確認</h3>
+
+      <p>現在の累計XP</p>
+      <div class="big">
+        ${practice.totalXP} XP
+      </div>
+
+      <p>
+        練習記録：
+        ${practice.count}件
+      </p>
+
+      <h4>最新の練習記録</h4>
+
+      ${
+        latest
+        ?`
+          <p>
+            ${escape175(latest.date||'')}
+            ／${escape175(latest.name||'練習')}
+          </p>
+
+          <div class="big">
+            ＋${Number(latest.xp)||0} XP
+          </div>
+
+          <p class="muted">
+            ${
+              latest.xpEngine==='v17-xp-1'
+              ?'第17弾①のXP計算を適用済み'
+              :'従来のXP記録'
+            }
+          </p>
+
+          ${
+            latest.xpLimited
+            ?'<p class="warning">1日のXP上限が適用されています。</p>'
+            :''
+          }
+        `
+        :'<p>まだ練習記録がありません。</p>'
+      }
+
+      <p class="muted">
+        ここには保存済みのXPを表示します。
+        練習登録時の従来の通知は変更しません。
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>🎓 学校ステージの統一</h3>
+
+      <p>
+        能力評価：
+        <b>${escape175(
+          NAMES[data.evalStage]||'未設定'
+        )}</b>
+      </p>
+
+      <p>
+        実力測定：
+        <b>${escape175(
+          NAMES[data.measureStage]||'未設定'
+        )}</b>
+      </p>
+
+      ${
+        same
+        ?'<p>✅ 両方のステージが一致しています。</p>'
+        :'<p class="warning">⚠️ ステージが一致していません。</p>'
+      }
+
+      <label for="v175-stage">
+        統一する学校ステージ
+      </label>
+
+      <select id="v175-stage">
+        ${STAGES.map(s=>`
+          <option
+            value="${s}"
+            ${
+              s===(data.evalStage||'elementary')
+              ?'selected':''
+            }
+          >
+            ${NAMES[s]}
+          </option>
+        `).join('')}
+      </select>
+
+      <button
+        onclick="v175SaveStage()"
+        ${!data.eval||!data.measure?'disabled':''}
+      >
+        💾 ステージを統一
+      </button>
+
+      <p class="muted">
+        評価・測定の保存履歴は削除しません。
+        進学時は第17弾③のゲーム内評価で、
+        前段階のランクから3段階下げた
+        初期ランクが表示されます。
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>📊 育成ダッシュボード</h3>
+
+      <button onclick="v175Dashboard()">
+        ⚾ 総合育成を開く
+      </button>
+
+      <button onclick="v175Refresh()">
+        🔄 データを再確認
+      </button>
+    </div>
+
+    <div class="card">
+      <h3>🔒 データ保護</h3>
+      <p class="muted">
+        ステージ統一では、学校ステージの
+        設定だけを更新します。
+        練習XP・能力評価・測定履歴は
+        変更しません。
+        データはこの端末内に保存されます。
+      </p>
+    </div>
+  `;
+}
+
+window.v175Open=function(){
+  render175();
+
+  document.getElementById(
+    'v175-overlay'
+  ).classList.add('open');
+};
+
+window.v175Close=function(){
+  document.getElementById(
+    'v175-overlay'
+  ).classList.remove('open');
+};
+
+window.v175Refresh=function(){
+  render175();
+};
+
+window.v175SaveStage=function(){
+  const next=document.getElementById(
+    'v175-stage'
+  ).value;
+
+  if(!valid175(next))return;
+
+  const data=current175();
+
+  const previous=[
+    data.evalStage,
+    data.measureStage
+  ];
+
+  const isBackward=previous.some(
+    s=>valid175(s)&&
+    STAGES.indexOf(next)<STAGES.indexOf(s)
+  );
+
+  if(isBackward){
+    alert(
+      '以前の学校段階には戻せません。' +
+      '設定を確認してください。'
+    );
+    return;
+  }
+
+  if(!confirm(
+    `学校ステージを「${NAMES[next]}」に統一しますか？\n`+
+    '既存の記録は保持されます。'
+  ))return;
+
+  if(saveStage175(next)){
+    render175();
+    alert('学校ステージを統一しました。');
+  }
+};
+
+window.v175Dashboard=function(){
+  window.v175Close();
+
+  if(typeof window.v174Open==='function'){
+    window.v174Open();
+  }else{
+    alert(
+      '第17弾④の画面が見つかりません。'
+    );
+  }
+};
+
+document.getElementById('v175-open')
+  .addEventListener(
+    'click',
+    window.v175Open
+  );
+
+})();
+</script>
+
+<!-- ===== 第17弾⑤ 終了 ===== -->
+
+<!-- ===== 第17弾⑥：XP整合性管理 ===== -->
+
+<style>
+#v176-open{
+  position:fixed;
+  right:12px;
+  bottom:314px;
+  z-index:9000;
+  padding:11px 15px;
+  border-radius:25px;
+  border:2px solid #f1ca57;
+  background:#185d83;
+  color:white;
+  font-weight:800;
+}
+#v176-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9400;
+  overflow-y:auto;
+  background:#000a;
+  padding:12px;
+}
+#v176-overlay.open{display:block}
+#v176-panel{
+  max-width:650px;
+  margin:20px auto;
+  padding:18px;
+  background:#f2f7fc;
+  border-radius:16px;
+  color:#183d60;
+  font-family:system-ui,sans-serif;
+}
+#v176-panel .card{
+  background:white;
+  padding:14px;
+  margin:12px 0;
+  border:1px solid #d1dfeb;
+  border-radius:12px;
+}
+#v176-panel button{
+  padding:10px 14px;
+  border:0;
+  border-radius:8px;
+  background:#17618e;
+  color:white;
+  font-weight:bold;
+  margin:4px;
+}
+#v176-panel .muted{
+  font-size:13px;
+  color:#60778a;
+}
+#v176-panel .big{
+  font-size:28px;
+  font-weight:900;
+  color:#17618e;
+}
+</style>
+
+<button id="v176-open" type="button">
+  ⚡ XP管理
+</button>
+
+<div id="v176-overlay">
+  <div id="v176-panel"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+if(
+  typeof db==='undefined' ||
+  typeof save!=='function'
+){
+  console.warn(
+    '第17弾⑥：既存アプリに接続できません'
+  );
+  return;
+}
+
+const VERSION='v176';
+const DAILY_LIMIT=60;
+
+function num176(v){
+  const n=Number(v);
+  return Number.isFinite(n)?n:0;
+}
+
+function today176(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+
+  return [
+    d.getFullYear(),
+    p(d.getMonth()+1),
+    p(d.getDate())
+  ].join('-');
+}
+
+function esc176(v){
+  return String(v??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function practices176(){
+  return Array.isArray(db.practice)
+    ?db.practice:[];
+}
+
+/*
+ 既存の記録は変更せず、
+ 新規登録分だけIDを付ける。
+*/
+const known176=new WeakSet();
+
+practices176().forEach(e=>{
+  if(e&&typeof e==='object'){
+    known176.add(e);
+  }
+});
+
+let sequence176=0;
+
+function id176(){
+  sequence176++;
+
+  if(
+    typeof crypto!=='undefined' &&
+    typeof crypto.randomUUID==='function'
+  ){
+    return crypto.randomUUID();
+  }
+
+  return [
+    'p176',
+    Date.now(),
+    sequence176,
+    Math.random().toString(36).slice(2)
+  ].join('-');
+}
+
+/*
+ 第17弾①で確定済みのXPを尊重する。
+
+ ここでは再計算・再加算を行わない。
+*/
+function mark176(entry){
+  if(
+    !entry ||
+    typeof entry!=='object' ||
+    known176.has(entry)
+  ){
+    return;
+  }
+
+  if(!entry.recordId){
+    entry.recordId=id176();
+  }
+
+  entry.xpFinalized=VERSION;
+}
+
+/*
+ 保存処理を包み、成功時だけ
+ 新規記録を処理済みにする。
+*/
+const previousSave176=save;
+
+save=function(){
+  const pending=practices176()
+    .filter(e=>
+      e &&
+      typeof e==='object' &&
+      !known176.has(e)
+    );
+
+  const snapshots=pending.map(e=>({
+    entry:e,
+    recordId:e.recordId,
+    xpFinalized:e.xpFinalized
+  }));
+
+  pending.forEach(mark176);
+
+  let result;
+
+  try{
+    result=previousSave176.apply(
+      this,
+      arguments
+    );
+
+    if(result===false){
+      throw new Error('保存失敗');
+    }
+
+    pending.forEach(e=>known176.add(e));
+
+    return result;
+
+  }catch(error){
+    snapshots.forEach(s=>{
+      if(s.recordId===undefined){
+        delete s.entry.recordId;
+      }else{
+        s.entry.recordId=s.recordId;
+      }
+
+      if(s.xpFinalized===undefined){
+        delete s.entry.xpFinalized;
+      }else{
+        s.entry.xpFinalized=s.xpFinalized;
+      }
+    });
+
+    console.error(
+      '第17弾⑥：保存に失敗しました',
+      error
+    );
+
+    return false;
+  }
+};
+
+function daily176(date){
+  const records=practices176()
+    .filter(e=>e.date===date);
+
+  const total=records.reduce(
+    (sum,e)=>sum+Math.max(
+      0,num176(e.xp)
+    ),
+    0
+  );
+
+  return {
+    records,
+    total,
+    remaining:Math.max(
+      0,
+      DAILY_LIMIT-total
+    )
+  };
+}
+
+function report176(){
+  const dates=[
+    ...new Set(
+      practices176()
+        .map(e=>e.date)
+        .filter(Boolean)
+    )
+  ].sort().reverse().slice(0,14);
+
+  return dates.map(date=>{
+    const day=daily176(date);
+
+    return `
+      <div class="card">
+        <strong>${esc176(date)}</strong>
+
+        <p>
+          練習記録：${day.records.length}件
+        </p>
+
+        <p>
+          練習XP合計：
+          <b>${day.total} XP</b>
+        </p>
+
+        ${
+          day.total>DAILY_LIMIT
+          ?`
+            <p style="color:#b35b18">
+              ⚠️ この日の記録XPは
+              現在の上限を超えています。
+              過去データは変更しません。
+            </p>
+          `
+          :''
+        }
+      </div>
+    `;
+  }).join('')||
+    '<p>まだ練習記録がありません。</p>';
+}
+
+function render176(){
+  const date=today176();
+  const day=daily176(date);
+
+  const total=num176(db.xp);
+
+  document.getElementById(
+    'v176-panel'
+  ).innerHTML=`
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px
+    ">
+      <h2>⚡ 経験値管理</h2>
+
+      <button onclick="v176Close()">
+        閉じる
+      </button>
+    </div>
+
+    <div class="card">
+      <h3>🏆 累計経験値</h3>
+      <div class="big">${total} XP</div>
+    </div>
+
+    <div class="card">
+      <h3>📅 今日の練習XP</h3>
+
+      <div class="big">
+        ${day.total} XP
+      </div>
+
+      <p>練習記録：${day.records.length}件</p>
+
+      <p>
+        現在の1日上限：
+        ${DAILY_LIMIT} XP
+      </p>
+
+      <p>
+        残り：
+        ${day.remaining} XP
+      </p>
+
+      <p class="muted">
+        上限は第17弾①の新規練習XP計算に
+        適用されます。この画面では
+        保存済みの値を集計しています。
+      </p>
+    </div>
+
+    <h3>📈 最近のXP履歴</h3>
+
+    ${report176()}
+
+    <div class="card">
+      <h3>🔒 データ保護</h3>
+
+      <p class="muted">
+        この機能は新規練習記録にIDを付け、
+        保存済みXPを表示します。
+        既存のXPを再計算・再加算せず、
+        過去の練習履歴も変更しません。
+      </p>
+    </div>
+  `;
+}
+
+window.v176Open=function(){
+  render176();
+
+  document.getElementById(
+    'v176-overlay'
+  ).classList.add('open');
+};
+
+window.v176Close=function(){
+  document.getElementById(
+    'v176-overlay'
+  ).classList.remove('open');
+};
+
+document.getElementById(
+  'v176-open'
+).addEventListener(
+  'click',
+  window.v176Open
+);
+
+})();
+</script>
+
+<!-- ===== 第17弾⑥ 終了 ===== -->
+
+<!-- ===== 第17弾⑦：統合育成ダッシュボード ===== -->
+
+<style>
+#v177-open{
+  position:fixed;
+  left:12px;
+  bottom:20px;
+  z-index:9500;
+  padding:13px 17px;
+  border:2px solid #f3cb5b;
+  border-radius:30px;
+  background:#123e70;
+  color:white;
+  font-weight:900;
+  box-shadow:0 4px 14px #0004;
+}
+
+#v177-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9600;
+  overflow-y:auto;
+  background:#071b30e8;
+  padding:12px;
+}
+
+#v177-overlay.open{
+  display:block;
+}
+
+#v177-app{
+  max-width:760px;
+  margin:16px auto;
+  padding:16px;
+  background:#f1f6fc;
+  color:#173c60;
+  border-radius:20px;
+  font-family:system-ui,sans-serif;
+}
+
+#v177-app *{
+  box-sizing:border-box;
+}
+
+.v177-hero{
+  background:linear-gradient(
+    135deg,#102e57,#17669b
+  );
+  color:white;
+  border-radius:16px;
+  padding:20px;
+  margin-bottom:14px;
+}
+
+.v177-hero h2{
+  margin:5px 0 16px;
+  color:white;
+}
+
+.v177-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+
+.v177-stat{
+  background:#ffffff20;
+  border-radius:10px;
+  padding:10px 5px;
+  text-align:center;
+}
+
+.v177-stat small{
+  display:block;
+  font-size:11px;
+  opacity:.85;
+}
+
+.v177-stat strong{
+  display:block;
+  font-size:20px;
+  margin-top:5px;
+}
+
+.v177-card{
+  background:white;
+  border:1px solid #d2e0ee;
+  border-radius:14px;
+  padding:15px;
+  margin:12px 0;
+}
+
+.v177-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+
+.v177-action{
+  width:100%;
+  min-height:78px;
+  border:1px solid #bed5e8;
+  border-radius:12px;
+  background:#eaf3fb;
+  color:#173e66;
+  font-size:15px;
+  font-weight:800;
+  cursor:pointer;
+  padding:12px;
+}
+
+.v177-action span{
+  display:block;
+  font-size:24px;
+  margin-bottom:5px;
+}
+
+.v177-action:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.v177-close{
+  background:#184d7b;
+  color:white;
+  border:0;
+  border-radius:9px;
+  padding:11px 16px;
+  font-weight:bold;
+}
+
+.v177-muted{
+  font-size:13px;
+  color:#657d91;
+}
+
+.v177-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+@media(max-width:400px){
+  .v177-stat strong{
+    font-size:16px;
+  }
+  .v177-action{
+    font-size:13px;
+  }
+}
+</style>
+
+<button id="v177-open" type="button">
+  ⚾ 育成基地
+</button>
+
+<div id="v177-overlay">
+  <div id="v177-app"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+if(
+  typeof db==='undefined' ||
+  typeof go!=='function'
+){
+  console.warn(
+    '第17弾⑦：既存アプリに接続できません'
+  );
+  return;
+}
+
+function n(v){
+  const x=Number(v);
+  return Number.isFinite(x)?x:0;
+}
+
+function esc(v){
+  return String(v??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function localToday(){
+  const d=new Date();
+  const p=x=>String(x).padStart(2,'0');
+
+  return [
+    d.getFullYear(),
+    p(d.getMonth()+1),
+    p(d.getDate())
+  ].join('-');
+}
+
+function currentLevel(){
+  try{
+    return typeof level==='function'
+      ?level():'—';
+  }catch(e){
+    return '—';
+  }
+}
+
+function currentName(){
+  return db.name||
+    db.playerName||
+    '駿介';
+}
+
+function todayPractice(){
+  const records=Array.isArray(db.practice)
+    ?db.practice:[];
+
+  const today=localToday();
+
+  const selected=records.filter(
+    x=>x&&x.date===today
+  );
+
+  return {
+    count:selected.length,
+    xp:selected.reduce(
+      (sum,x)=>sum+Math.max(0,n(x.xp)),
+      0
+    )
+  };
+}
+
+function actionButton(
+  label,
+  icon,
+  action,
+  enabled=true
+){
+  return `
+    <button
+      type="button"
+      class="v177-action"
+      ${enabled?'':'disabled'}
+      onclick="v177Action('${action}')"
+    >
+      <span>${icon}</span>
+      ${esc(label)}
+    </button>
+  `;
+}
+
+function screen(){
+  const practice=todayPractice();
+
+  const hasMandala=
+    typeof tabs!=='undefined' &&
+    Array.isArray(tabs) &&
+    tabs.some(x=>x[0]==='mandala15');
+
+  const hasTraining=
+    typeof tabs!=='undefined' &&
+    Array.isArray(tabs) &&
+    tabs.some(x=>x[0]==='training');
+
+  const hasPlan=
+    typeof tabs!=='undefined' &&
+    Array.isArray(tabs) &&
+    tabs.some(x=>x[0]==='plan');
+
+  const hasGrowth=
+    typeof tabs!=='undefined' &&
+    Array.isArray(tabs) &&
+    tabs.some(x=>x[0]==='growth');
+
+  const hasEvaluation=
+    typeof window.v172Open==='function';
+
+  const hasMeasurement=
+    typeof window.v173Open==='function';
+
+  const hasXP=
+    typeof window.v176Open==='function';
+
+  return `
+    <div class="v177-row">
+      <h2>⚾ SUCCESS 育成基地</h2>
+
+      <button
+        class="v177-close"
+        onclick="v177Close()"
+      >
+        ✕ 閉じる
+      </button>
+    </div>
+
+    <section class="v177-hero">
+      <small>BASEBALL SUCCESS</small>
+
+      <h2>${esc(currentName())}</h2>
+
+      <div class="v177-stats">
+        <div class="v177-stat">
+          <small>LEVEL</small>
+          <strong>Lv.${esc(currentLevel())}</strong>
+        </div>
+
+        <div class="v177-stat">
+          <small>TOTAL XP</small>
+          <strong>${n(db.xp)}</strong>
+        </div>
+
+        <div class="v177-stat">
+          <small>ENERGY</small>
+          <strong>${n(db.energy)}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="v177-card">
+      <h3>📅 今日の積み重ね</h3>
+
+      <p>
+        今日の練習：
+        <strong>${practice.count}件</strong>
+      </p>
+
+      <p>
+        今日の練習XP：
+        <strong>${practice.xp} XP</strong>
+      </p>
+
+      <p class="v177-muted">
+        ${esc(localToday())} の保存済み
+        練習記録から集計しています。
+      </p>
+    </section>
+
+    <section class="v177-card">
+      <h3>🎮 育成メニュー</h3>
+
+      <div class="v177-grid">
+        ${actionButton(
+          '練習を記録',
+          '⚾',
+          'training',
+          hasTraining
+        )}
+
+        ${actionButton(
+          '81マス目標',
+          '🌟',
+          'mandala15',
+          hasMandala
+        )}
+
+        ${actionButton(
+          '実力を測定',
+          '📏',
+          'measurement',
+          hasMeasurement
+        )}
+
+        ${actionButton(
+          '成長評価・体調',
+          '❤️',
+          'evaluation',
+          hasEvaluation
+        )}
+
+        ${actionButton(
+          'XP管理',
+          '⚡',
+          'xp',
+          hasXP
+        )}
+
+        ${actionButton(
+          '週間予定',
+          '📅',
+          'plan',
+          hasPlan
+        )}
+
+        ${actionButton(
+          '身体の成長',
+          '📈',
+          'growth',
+          hasGrowth
+        )}
+
+        ${actionButton(
+          'ホームへ戻る',
+          '🏠',
+          'home'
+        )}
+      </div>
+    </section>
+
+    <section class="v177-card">
+      <h3>💚 休養も成長の一部</h3>
+
+      <p>
+        練習だけでなく、睡眠・食事・休養・
+        身体の状態も確認しながら
+        継続していこう。
+      </p>
+
+      <p class="v177-muted">
+        痛みがある日は無理に練習せず、
+        保護者や指導者に相談しましょう。
+      </p>
+    </section>
+  `;
+}
+
+window.v177Open=function(){
+  document.getElementById(
+    'v177-app'
+  ).innerHTML=screen();
+
+  document.getElementById(
+    'v177-overlay'
+  ).classList.add('open');
+};
+
+window.v177Close=function(){
+  document.getElementById(
+    'v177-overlay'
+  ).classList.remove('open');
+};
+
+window.v177Action=function(action){
+  window.v177Close();
+
+  if(action==='measurement'){
+    if(typeof window.v173Open==='function'){
+      window.v173Open();
+    }
+    return;
+  }
+
+  if(action==='evaluation'){
+    if(typeof window.v172Open==='function'){
+      window.v172Open();
+    }
+    return;
+  }
+
+  if(action==='xp'){
+    if(typeof window.v176Open==='function'){
+      window.v176Open();
+    }
+    return;
+  }
+
+  const allowed=[
+    'training',
+    'mandala15',
+    'plan',
+    'growth',
+    'home'
+  ];
+
+  if(allowed.includes(action)){
+    go(action);
+  }
+};
+
+document.getElementById(
+  'v177-open'
+).addEventListener(
+  'click',
+  window.v177Open
+);
+
+})();
+</script>
+
+<!-- ===== 第17弾⑦ 終了 ===== -->
+
+<!-- ===== 第17弾⑧：育成基地メニュー整理 ===== -->
+
+<style>
+/* 旧フローティングボタンを整理。
+   機能そのものは残します。 */
+#v174-open,
+#v175-open,
+#v176-open{
+  display:none !important;
+}
+
+/* 第17弾⑦のボタンをメイン入口にする */
+#v177-open{
+  left:12px;
+  right:auto;
+  bottom:18px;
+  z-index:9500;
+  background:linear-gradient(135deg,#164a83,#127e96);
+  border:2px solid #ffd15c;
+  padding:14px 19px;
+  font-size:15px;
+}
+
+/* 育成基地のメニュー分類 */
+.v178-group{
+  background:white;
+  border:1px solid #d4e0ed;
+  border-radius:15px;
+  padding:15px;
+  margin:12px 0;
+}
+
+.v178-group h3{
+  margin:0 0 12px;
+  color:#173e68;
+}
+
+.v178-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+
+.v178-btn{
+  min-height:76px;
+  padding:12px 8px;
+  border:1px solid #c7daea;
+  border-radius:12px;
+  background:#edf5fd;
+  color:#17436c;
+  font-weight:800;
+  font-size:14px;
+  cursor:pointer;
+}
+
+.v178-btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.v178-btn .emoji{
+  display:block;
+  font-size:25px;
+  margin-bottom:6px;
+}
+
+.v178-note{
+  padding:12px;
+  background:#e9f4ef;
+  border-radius:10px;
+  font-size:13px;
+  line-height:1.6;
+  color:#27634c;
+}
+
+@media(max-width:380px){
+  .v178-btn{
+    font-size:12px;
+  }
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const oldOpen=window.v177Open;
+
+if(typeof oldOpen!=='function'){
+  console.warn(
+    '第17弾⑧：第17弾⑦が見つかりません'
+  );
+  return;
+}
+
+function escape178(value){
+  return String(value??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function btn178(label,emoji,action,enabled=true){
+  return `
+    <button
+      type="button"
+      class="v178-btn"
+      data-v178-action="${escape178(action)}"
+      ${enabled?'':'disabled'}
+    >
+      <span class="emoji">${emoji}</span>
+      ${escape178(label)}
+    </button>
+  `;
+}
+
+function hasFunction178(name){
+  return typeof window[name]==='function';
+}
+
+/*
+ 第17弾⑦の既存画面を生成した後、
+ メニュー部分だけを整理します。
+*/
+window.v177Open=function(){
+  oldOpen();
+
+  const app=document.getElementById('v177-app');
+  if(!app)return;
+
+  const menu=app.querySelector(
+    '.v177-card .v177-grid'
+  );
+
+  if(!menu)return;
+
+  const section=menu.closest('.v177-card');
+  if(!section)return;
+
+  section.outerHTML=`
+    <section class="v178-group">
+      <h3>📅 今日の記録</h3>
+
+      <div class="v178-grid">
+        ${btn178(
+          '練習を記録',
+          '⚾',
+          'training'
+        )}
+
+        ${btn178(
+          'コンディション',
+          '❤️',
+          'evaluation',
+          hasFunction178('v172Open')
+        )}
+
+        ${btn178(
+          'XPを確認',
+          '⚡',
+          'xp',
+          hasFunction178('v176Open')
+        )}
+
+        ${btn178(
+          '81マス目標',
+          '🌟',
+          'mandala15'
+        )}
+      </div>
+    </section>
+
+    <section class="v178-group">
+      <h3>📈 実力の成長</h3>
+
+      <div class="v178-grid">
+        ${btn178(
+          '実力測定',
+          '📏',
+          'measurement',
+          hasFunction178('v173Open')
+        )}
+
+        ${btn178(
+          '能力ランク',
+          '⭐',
+          'evaluation',
+          hasFunction178('v172Open')
+        )}
+
+        ${btn178(
+          '総合成長分析',
+          '📊',
+          'dashboard',
+          hasFunction178('v174Open')
+        )}
+
+        ${btn178(
+          '身長・体重',
+          '📐',
+          'growth'
+        )}
+      </div>
+    </section>
+
+    <section class="v178-group">
+      <h3>🎯 目標と予定</h3>
+
+      <div class="v178-grid">
+        ${btn178(
+          '週間予定',
+          '🗓️',
+          'plan'
+        )}
+
+        ${btn178(
+          '学校ステージ',
+          '🎓',
+          'stage',
+          hasFunction178('v175Open')
+        )}
+
+        ${btn178(
+          '育成ホーム',
+          '🏠',
+          'home'
+        )}
+      </div>
+    </section>
+
+    <div class="v178-note">
+      💚 練習も休養も成長の一部。
+      疲れや痛みがある日は無理をせず、
+      睡眠と回復を優先しよう。
+    </div>
+  `;
+
+  /*
+   動的メニューにイベントを設定。
+   onclick文字列に任意の値を埋め込まず、
+   許可済みアクションのみ呼び出します。
+  */
+  app.querySelectorAll(
+    '[data-v178-action]'
+  ).forEach(button=>{
+    button.addEventListener('click',()=>{
+      const action=button.dataset.v178Action;
+      window.v178Action(action);
+    });
+  });
+};
+
+window.v178Action=function(action){
+  const actions={
+    training:()=>window.v177Action('training'),
+    evaluation:()=>window.v177Action('evaluation'),
+    measurement:()=>window.v177Action('measurement'),
+    xp:()=>window.v177Action('xp'),
+    mandala15:()=>window.v177Action('mandala15'),
+    growth:()=>window.v177Action('growth'),
+    plan:()=>window.v177Action('plan'),
+    home:()=>window.v177Action('home'),
+
+    dashboard:()=>{
+      window.v177Close();
+      if(hasFunction178('v174Open')){
+        window.v174Open();
+      }
+    },
+
+    stage:()=>{
+      window.v177Close();
+      if(hasFunction178('v175Open')){
+        window.v175Open();
+      }
+    }
+  };
+
+  if(Object.prototype.hasOwnProperty.call(
+    actions,action
+  )){
+    actions[action]();
+  }
+};
+
+})();
+</script>
+
+<!-- ===== 第17弾⑧ 終了 ===== -->
+
+<!-- ===== 第17弾⑨：デイリー育成ミッション ===== -->
+<style>
+#v179-open{
+  position:fixed;
+  left:12px;
+  bottom:77px;
+  z-index:9500;
+  border:2px solid #ffd66d;
+  border-radius:28px;
+  padding:12px 16px;
+  background:#23764e;
+  color:white;
+  font-weight:900;
+  box-shadow:0 4px 12px #0004;
+}
+#v179-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9700;
+  overflow-y:auto;
+  background:#071b30e8;
+  padding:12px;
+}
+#v179-overlay.open{display:block}
+#v179-app{
+  max-width:720px;
+  margin:15px auto;
+  padding:16px;
+  border-radius:18px;
+  background:#f0f6fc;
+  color:#173b5e;
+  font-family:system-ui,sans-serif;
+}
+#v179-app *{box-sizing:border-box}
+#v179-app .hero{
+  background:linear-gradient(135deg,#12395f,#227c70);
+  color:white;
+  border-radius:15px;
+  padding:18px;
+}
+#v179-app .hero h2{color:white;margin:6px 0}
+#v179-app .card{
+  background:white;
+  padding:15px;
+  border:1px solid #d3e0ec;
+  border-radius:12px;
+  margin:12px 0;
+}
+#v179-app .mission{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:13px 0;
+  border-bottom:1px solid #e3edf4;
+}
+#v179-app .mission:last-child{border-bottom:0}
+#v179-app input[type=checkbox]{
+  width:23px;
+  height:23px;
+  flex-shrink:0;
+  accent-color:#198260;
+}
+#v179-app .muted{
+  color:#687f91;
+  font-size:13px;
+  line-height:1.6;
+}
+#v179-app .stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:12px;
+}
+#v179-app .stat{
+  background:#ffffff20;
+  padding:12px 5px;
+  border-radius:10px;
+  text-align:center;
+}
+#v179-app .stat strong{
+  display:block;
+  font-size:23px;
+}
+#v179-app .bar{
+  height:13px;
+  background:#d9e5ee;
+  border-radius:15px;
+  overflow:hidden;
+}
+#v179-app .fill{
+  height:100%;
+  background:#269a75;
+  transition:width .2s;
+}
+#v179-app button{
+  border:0;
+  border-radius:9px;
+  background:#196498;
+  color:white;
+  padding:11px 14px;
+  font-weight:800;
+  margin:4px 4px 4px 0;
+}
+#v179-app textarea{
+  width:100%;
+  min-height:85px;
+  padding:12px;
+  font:inherit;
+  border:1px solid #c8d9e8;
+  border-radius:9px;
+}
+</style>
+
+<button id="v179-open" type="button">
+  🎯 今日のミッション
+</button>
+
+<div id="v179-overlay">
+  <div id="v179-app"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const KEY='shunsuke_daily_missions_v179';
+
+const MISSIONS=[
+  {
+    id:'sleep',
+    title:'😴 睡眠を記録',
+    desc:'睡眠時間を確認し、回復を大切にする'
+  },
+  {
+    id:'meal',
+    title:'🍚 食事を記録',
+    desc:'朝・昼・夜の食事を振り返る'
+  },
+  {
+    id:'activity',
+    title:'⚾ 練習または休養を記録',
+    desc:'練習日も休養日も達成できる'
+  },
+  {
+    id:'condition',
+    title:'❤️ 身体の状態を確認',
+    desc:'疲労や痛みの有無を確認する'
+  },
+  {
+    id:'reflection',
+    title:'🌟 今日の振り返り',
+    desc:'よかったことや学んだことを残す'
+  }
+];
+
+function today179(){
+  const d=new Date();
+  const p=x=>String(x).padStart(2,'0');
+  return [
+    d.getFullYear(),
+    p(d.getMonth()+1),
+    p(d.getDate())
+  ].join('-');
+}
+
+function esc179(v){
+  return String(v??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;',
+      '"':'&quot;',"'":'&#39;'
+    }[c])
+  );
+}
+
+function load179(){
+  try{
+    const x=JSON.parse(localStorage.getItem(KEY));
+    return x&&typeof x==='object'&&!Array.isArray(x)
+      ?x:{};
+  }catch(e){
+    return {};
+  }
+}
+
+let store179=load179();
+
+function save179(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(store179));
+    return true;
+  }catch(e){
+    console.error('ミッション保存失敗',e);
+    alert('保存できませんでした。端末の保存容量などを確認してください。');
+    return false;
+  }
+}
+
+function entry179(date){
+  const x=store179[date];
+  return x&&typeof x==='object'?x:{};
+}
+
+function complete179(entry){
+  return MISSIONS.filter(m=>entry[m.id]===true).length;
+}
+
+function streak179(){
+  let days=0;
+  const d=new Date();
+  d.setHours(12,0,0,0);
+
+  const today=today179();
+  if(complete179(entry179(today))!==5){
+    d.setDate(d.getDate()-1);
+  }
+
+  for(let i=0;i<365;i++){
+    const p=x=>String(x).padStart(2,'0');
+    const key=[
+      d.getFullYear(),
+      p(d.getMonth()+1),
+      p(d.getDate())
+    ].join('-');
+
+    if(complete179(entry179(key))!==5)break;
+
+    days++;
+    d.setDate(d.getDate()-1);
+  }
+
+  return days;
+}
+
+function render179(){
+  const date=today179();
+  const entry=entry179(date);
+  const count=complete179(entry);
+  const percent=Math.round(count/5*100);
+
+  const app=document.getElementById('v179-app');
+  if(!app)return;
+
+  app.innerHTML=`
+    <div class="hero">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+        <div>
+          <small>SHUNSUKE DAILY SUCCESS</small>
+          <h2>🎯 今日の育成ミッション</h2>
+        </div>
+        <button type="button" id="v179-close">
+          ✕
+        </button>
+      </div>
+
+      <p>${esc179(date)}</p>
+
+      <div class="stats">
+        <div class="stat">
+          <small>達成数</small>
+          <strong>${count}/5</strong>
+        </div>
+        <div class="stat">
+          <small>達成率</small>
+          <strong>${percent}%</strong>
+        </div>
+        <div class="stat">
+          <small>連続達成</small>
+          <strong>${streak179()}日</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>今日の進捗</h3>
+      <div class="bar">
+        <div class="fill" style="width:${percent}%"></div>
+      </div>
+      <p class="muted">
+        ${count===5
+          ?'🏆 今日のミッションコンプリート！'
+          :'できることから一つずつ達成しよう！'}
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>📋 5つのミッション</h3>
+      ${MISSIONS.map(m=>`
+        <label class="mission">
+          <input
+            type="checkbox"
+            data-mission="${m.id}"
+            ${entry[m.id]===true?'checked':''}
+          >
+          <span>
+            <strong>${m.title}</strong>
+            <span class="muted" style="display:block">
+              ${m.desc}
+            </span>
+          </span>
+        </label>
+      `).join('')}
+    </div>
+
+    <div class="card">
+      <h3>✏️ 今日のひとこと</h3>
+      <textarea id="v179-note"
+        placeholder="今日できたこと、楽しかったこと、明日意識したいこと">${esc179(entry.note||'')}</textarea>
+      <button type="button" id="v179-save-note">
+        💾 振り返りを保存
+      </button>
+      <p class="muted">
+        振り返りを保存してもチェックは自動では入りません。
+        内容を確認してチェックしてください。
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>🔗 既存の記録画面</h3>
+      <button type="button" id="v179-open-base">
+        ⚾ 育成基地を開く
+      </button>
+      <button type="button" id="v179-open-condition">
+        ❤️ コンディション評価
+      </button>
+      <p class="muted">
+        チェック項目は自己申告で管理します。
+        既存の睡眠・食事・練習記録との自動照合は
+        まだ行っていません。
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>💚 休養日も100%達成できる</h3>
+      <p>
+        休むことも大切なトレーニング。
+        痛みや強い疲労があるときは
+        無理をせず身体の回復を優先しよう。
+      </p>
+      <p class="muted">
+        この機能はXPを加算しません。
+        既存の練習記録や能力評価は変更しません。
+      </p>
+    </div>
+  `;
+
+  app.querySelector('#v179-close')
+    .addEventListener('click',window.v179Close);
+
+  app.querySelectorAll('[data-mission]')
+    .forEach(input=>{
+      input.addEventListener('change',()=>{
+        const id=input.dataset.mission;
+        const next={
+          ...entry179(today179()),
+          [id]:input.checked
+        };
+
+        const previous=store179[today179()];
+        store179[today179()]=next;
+
+        if(!save179()){
+          if(previous===undefined){
+            delete store179[today179()];
+          }else{
+            store179[today179()]=previous;
+          }
+        }
+
+        render179();
+      });
+    });
+
+  app.querySelector('#v179-save-note')
+    .addEventListener('click',()=>{
+      const note=app.querySelector('#v179-note').value;
+      const date=today179();
+      const previous=store179[date];
+
+      store179[date]={
+        ...entry179(date),
+        note
+      };
+
+      if(save179()){
+        alert('今日の振り返りを保存しました。');
+      }else{
+        if(previous===undefined){
+          delete store179[date];
+        }else{
+          store179[date]=previous;
+        }
+      }
+    });
+
+  app.querySelector('#v179-open-base')
+    .addEventListener('click',()=>{
+      window.v179Close();
+      if(typeof window.v177Open==='function'){
+        window.v177Open();
+      }
+    });
+
+  app.querySelector('#v179-open-condition')
+    .addEventListener('click',()=>{
+      window.v179Close();
+      if(typeof window.v172Open==='function'){
+        window.v172Open();
+      }
+    });
+}
+
+window.v179Open=function(){
+  store179=load179();
+  render179();
+  document.getElementById('v179-overlay')
+    .classList.add('open');
+};
+
+window.v179Close=function(){
+  document.getElementById('v179-overlay')
+    .classList.remove('open');
+};
+
+document.getElementById('v179-open')
+  .addEventListener('click',window.v179Open);
+
+})();
+</script>
+
+<!-- ===== 第17弾⑨ 終了 ===== -->
+
+<!-- ===== 第17弾⑩：ミッション記録自動連携 ===== -->
+<style>
+#v1710-summary{
+  background:#e8f5ef;
+  border:2px solid #77b99b;
+  border-radius:14px;
+  padding:15px;
+  margin:12px 0;
+  color:#174f3a;
+}
+#v1710-summary h3{
+  margin:0 0 10px;
+  color:#174f3a;
+}
+#v1710-summary .meter{
+  height:14px;
+  background:#c8ded3;
+  border-radius:20px;
+  overflow:hidden;
+  margin:10px 0;
+}
+#v1710-summary .meter-fill{
+  height:100%;
+  background:#25895d;
+}
+#v1710-summary .item{
+  padding:9px 0;
+  border-bottom:1px solid #b8d9c8;
+}
+#v1710-summary .item:last-child{
+  border-bottom:0;
+}
+#v1710-summary .detail{
+  display:block;
+  font-size:12px;
+  margin-top:3px;
+  color:#537968;
+}
+#v1710-summary .small{
+  font-size:12px;
+  line-height:1.6;
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const DAILY_KEY='shunsuke_daily_missions_v179';
+const EVAL_KEY='shunsuke_evaluation_v172';
+
+const MISSION_LIST=[
+  ['sleep','😴 睡眠'],
+  ['meal','🍚 食事'],
+  ['activity','⚾ 練習・休養'],
+  ['condition','❤️ 体調確認'],
+  ['reflection','🌟 振り返り']
+];
+
+function today1710(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return [
+    d.getFullYear(),
+    p(d.getMonth()+1),
+    p(d.getDate())
+  ].join('-');
+}
+
+function read1710(key){
+  try{
+    const data=JSON.parse(localStorage.getItem(key));
+    return data &&
+      typeof data==='object' &&
+      !Array.isArray(data)
+      ?data:{};
+  }catch(e){
+    return {};
+  }
+}
+
+function array1710(x){
+  return Array.isArray(x)?x:[];
+}
+
+function sameDay1710(item,date){
+  return item &&
+    typeof item.date==='string' &&
+    item.date.slice(0,10)===date;
+}
+
+function hasToday1710(items,date){
+  return array1710(items).some(
+    item=>sameDay1710(item,date)
+  );
+}
+
+function validSleep1710(item,date){
+  if(!sameDay1710(item,date))return false;
+
+  const value=item.hours ?? item.sleep;
+  if(value===null ||
+     value===undefined ||
+     value==='')return false;
+
+  const hours=Number(value);
+  return Number.isFinite(hours) &&
+    hours>0 &&
+    hours<=24;
+}
+
+function main1710(){
+  try{
+    return typeof db!=='undefined' && db
+      ?db:{};
+  }catch(e){
+    return {};
+  }
+}
+
+function evidence1710(date){
+  const main=main1710();
+  const success=main.success2027||{};
+  const evalData=read1710(EVAL_KEY);
+
+  const sleepRecords=[
+    ...array1710(success.sleep),
+    ...array1710(main.growth)
+  ];
+
+  const sleep=sleepRecords.some(
+    item=>validSleep1710(item,date)
+  );
+
+  const meal=hasToday1710(
+    success.meals,date
+  );
+
+  const practices=[
+    ...array1710(main.practice),
+    ...array1710(success.quick)
+  ];
+
+  const practiced=hasToday1710(
+    practices,date
+  );
+
+  const rest=
+    main.success9 &&
+    main.success9.days &&
+    main.success9.days[date]==='rest';
+
+  const conditions=[
+    ...array1710(success.condition),
+    ...array1710(evalData.conditions)
+  ];
+
+  const condition=hasToday1710(
+    conditions,date
+  );
+
+  const reviews=[
+    ...array1710(success.reviews)
+  ];
+
+  const reflection=hasToday1710(
+    reviews,date
+  );
+
+  return {
+    sleep:{
+      done:sleep,
+      source:sleep
+        ?'睡眠記録を確認'
+        :'対応する睡眠記録なし'
+    },
+    meal:{
+      done:meal,
+      source:meal
+        ?'食事記録を確認'
+        :'食事記録なし'
+    },
+    activity:{
+      done:!!(practiced||rest),
+      source:rest
+        ?'休養日の設定を確認'
+        :practiced
+          ?'練習記録を確認'
+          :'練習・休養記録なし'
+    },
+    condition:{
+      done:condition,
+      source:condition
+        ?'体調記録を確認'
+        :'対応する体調記録なし'
+    },
+    reflection:{
+      done:reflection,
+      source:reflection
+        ?'振り返り記録を確認'
+        :'対応する振り返り記録なし'
+    }
+  };
+}
+
+function escape1710(value){
+  return String(value??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+function combined1710(date){
+  const manual=read1710(DAILY_KEY)[date]||{};
+  const auto=evidence1710(date);
+
+  const results=MISSION_LIST.map(([id,label])=>{
+    const manuallyDone=manual[id]===true;
+    const automaticallyDone=auto[id].done;
+
+    return {
+      id,
+      label,
+      done:manuallyDone||automaticallyDone,
+      source:automaticallyDone
+        ?auto[id].source
+        :manuallyDone
+          ?'手動チェックで達成'
+          :auto[id].source
+    };
+  });
+
+  return {
+    results,
+    count:results.filter(x=>x.done).length
+  };
+}
+
+function render1710(){
+  const app=document.getElementById('v179-app');
+  if(!app)return;
+
+  const date=today1710();
+  const data=combined1710(date);
+  const percent=Math.round(
+    data.count/5*100
+  );
+
+  const html=`
+    <h3>🔗 自動連携ミッション</h3>
+
+    <strong style="font-size:23px">
+      ${data.count}/5 達成
+      （${percent}%）
+    </strong>
+
+    <div class="meter">
+      <div class="meter-fill"
+        style="width:${percent}%">
+      </div>
+    </div>
+
+    ${data.results.map(x=>`
+      <div class="item">
+        <strong>
+          ${x.done?'✅':'⬜'}
+          ${escape1710(x.label)}
+        </strong>
+        <span class="detail">
+          ${escape1710(x.source)}
+        </span>
+      </div>
+    `).join('')}
+
+    <p class="small">
+      自動判定は記録の有無を確認します。
+      元の5つのチェック欄は手動操作用として
+      そのまま残しています。
+      自動判定で既存の保存データやXPを
+      書き換えることはありません。
+    </p>
+
+    <button type="button"
+      id="v1710-refresh">
+      🔄 記録を再確認
+    </button>
+  `;
+
+  let panel=document.getElementById(
+    'v1710-summary'
+  );
+
+  if(!panel){
+    panel=document.createElement('section');
+    panel.id='v1710-summary';
+
+    const hero=app.querySelector('.hero');
+
+    if(hero){
+      hero.insertAdjacentElement(
+        'afterend',panel
+      );
+    }else{
+      app.prepend(panel);
+    }
+  }
+
+  panel.innerHTML=html;
+
+  panel.querySelector('#v1710-refresh')
+    .addEventListener('click',render1710);
+}
+
+/*
+ 第17弾⑨の画面を開いた後、
+ 自動連携結果を追加表示する。
+*/
+const oldOpen1710=window.v179Open;
+
+if(typeof oldOpen1710!=='function'){
+  console.warn(
+    '第17弾⑩：第17弾⑨が必要です'
+  );
+  return;
+}
+
+window.v179Open=function(){
+  oldOpen1710();
+  render1710();
+};
+
+/*
+ 第17弾⑨がチェック変更で画面を
+ 再描画した場合にも連携欄を更新。
+*/
+const app1710=document.getElementById(
+  'v179-app'
+);
+
+if(app1710){
+  let updating=false;
+
+  const observer=new MutationObserver(()=>{
+    if(updating)return;
+
+    if(
+      !document.getElementById(
+        'v179-overlay'
+      )?.classList.contains('open')
+    )return;
+
+    if(
+      !document.getElementById(
+        'v1710-summary'
+      )
+    ){
+      updating=true;
+      try{
+        render1710();
+      }finally{
+        updating=false;
+      }
+    }
+  });
+
+  observer.observe(app1710,{
+    childList:true
+  });
+
+  /*
+   手動チェックの変更後に
+   統合達成率を更新する。
+  */
+  app1710.addEventListener('change',e=>{
+    if(!e.target.matches(
+      '[data-mission]'
+    ))return;
+
+    setTimeout(render1710,0);
+  });
+}
+
+window.v1710Refresh=render1710;
+
+})();
+</script>
+
+<!-- ===== 第17弾⑩ 終了 ===== -->
+
 </body>
 </html>
