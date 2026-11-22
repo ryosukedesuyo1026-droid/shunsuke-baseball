@@ -19362,5 +19362,232 @@ document.head.appendChild(style);
 </script>
 <!-- ===== XP一本化・最終修正 終了 ===== -->
 
+<!-- ===== 駿介 練習登録・緊急復旧 v20 ===== -->
+<script>
+(function(){
+'use strict';
+
+const BASE={
+ '素振り':50,
+ '羽打ち':30,
+ '置きティー':50,
+ 'フリーバッティング':50,
+ 'シャドーピッチング':50,
+ 'キャッチボール':30,
+ '制球練習':30,
+ '配球研究':20,
+ '投手フィールディング':30,
+ '牽制の判断研究':20,
+ 'ノック':30,
+ '捕球練習':30,
+ '送球研究':20,
+ 'ラダートレーニング':20,
+ 'ベースランニング':20,
+ '走塁判断の研究':20,
+ 'ストレッチ':10,
+ '体幹・姿勢ケア':10,
+ '野球ノート':10,
+ '試合動画の研究':20,
+ '睡眠・休養':8
+};
+
+function field(id){
+ return document.getElementById(id);
+}
+
+function number(v){
+ const x=Number(v);
+ return Number.isFinite(x)?x:0;
+}
+
+function rescuePractice(){
+ const menu=field('menu');
+ const item=MENU.find(
+  m=>m[0]===menu?.value
+ );
+
+ if(!item){
+  alert('練習メニューを選択してください。');
+  return;
+ }
+
+ const pain=field('pain')?.value==='yes';
+
+ if(
+  pain &&
+  item[1]!=='自主学習' &&
+  item[0]!=='睡眠・休養'
+ ){
+  alert(
+   '痛みがある場合は運動を中止し、'+
+   '保護者や医療者に相談してください。'
+  );
+  return;
+ }
+
+ const raw=field('amount')?.value??'';
+
+ const timeField=
+  field('trainingMinutes')||
+  field('careMinutes');
+
+ const timeRaw=timeField?.value??'';
+
+ if(
+  (raw!==''&&
+   (!Number.isFinite(Number(raw))||
+    Number(raw)<0))||
+  (timeRaw!==''&&
+   (!Number.isFinite(Number(timeRaw))||
+    Number(timeRaw)<0||
+    Number(timeRaw)>1440))
+ ){
+  alert('実施量・時間を確認してください。');
+  return;
+ }
+
+ const amount=raw===''?null:Number(raw);
+
+ const minutes=timeRaw!==''
+  ?Number(timeRaw)
+  :(item[4]==='分'?number(amount):0);
+
+ const quantity=item[4]==='分'
+  ?minutes:number(amount);
+
+ if(quantity<=0){
+  alert(
+   '練習時間・回数・球数を'+
+   '入力してください。'
+  );
+  return;
+ }
+
+ const standard=BASE[item[0]]||
+  (item[4]==='分'?20:30);
+
+ const xp=Math.max(
+  1,
+  Math.round(
+   number(item[3])*
+   Math.sqrt(quantity/standard)
+  )
+ );
+
+ const old=JSON.stringify(db);
+
+ const record={
+  date:today(),
+  name:item[0],
+  kind:item[1],
+  amount,
+  unit:item[4],
+  minutes,
+  note:field('memo')?.value?.trim()||'',
+  xp,
+  sx19Calculated:true,
+  sx20Rescued:true
+ };
+
+ try{
+  db.practice.push(record);
+  db.xp=number(db.xp)+xp;
+  db.pain=pain;
+
+  if(item[2]==='ケア'){
+   db.energy=Math.min(
+    100,number(db.energy)+10
+   );
+  }else{
+   db.energy=Math.max(
+    0,number(db.energy)-5
+   );
+
+   const target=PB.includes(item[2])
+    ?db.pitch:db.abilities;
+
+   if(
+    target &&
+    Object.prototype.hasOwnProperty.call(
+     target,item[2]
+    )
+   ){
+    target[item[2]]=Math.min(
+     100,number(target[item[2]])+1
+    );
+   }
+  }
+
+  // 古いXP計算ラッパーを通さず保存
+  localStorage.setItem(
+   K,JSON.stringify(db)
+  );
+
+  alert(
+   '⚾ 練習を保存しました！\n'+
+   item[0]+'：+'+xp+' XP\n'+
+   '累計：'+db.xp+' XP\n'+
+   '練習履歴：'+db.practice.length+'件'
+  );
+
+  render();
+
+  const todayRows=db.practice.filter(
+   p=>p.date===today() &&
+   p.name!=='睡眠・休養'
+  );
+
+  const totalMinutes=todayRows.reduce(
+   (sum,p)=>sum+number(p.minutes),0
+  );
+
+  if(totalMinutes>=120){
+   alert(
+    '⚠️ 今日の記録時間が多めです。'+
+    '\n疲労や痛みを確認し、'+
+    '休息も大切にしてください。'+
+    '\n※120分は医学的な安全基準ではありません。'
+   );
+  }
+
+ }catch(error){
+  db=JSON.parse(old);
+
+  alert(
+   '保存できませんでした。\n'+
+   'エラー：'+error.message+
+   '\n記録は変更していません。'
+  );
+ }
+}
+
+/*
+ ボタンのクリックを先に受け取る。
+ 古いaddPractice処理の二重実行を防ぐ。
+*/
+document.addEventListener(
+ 'click',
+ function(event){
+  const button=event.target.closest('button');
+
+  if(!button)return;
+
+  const action=button.getAttribute('onclick')||'';
+
+  if(!/addPractice\s*\(/.test(action))return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+
+  rescuePractice();
+ },
+ true
+);
+
+})();
+</script>
+<!-- ===== 緊急復旧 v20 終了 ===== -->
+
 </body>
 </html>
