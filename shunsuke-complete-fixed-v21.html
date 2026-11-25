@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -15222,7 +15221,7 @@ if(
 }
 
 const VERSION='v176';
-const DAILY_LIMIT=60;
+const DAILY_LIMIT=Infinity;
 
 function num176(v){
   const n=Number(v);
@@ -15387,10 +15386,7 @@ function daily176(date){
   return {
     records,
     total,
-    remaining:Math.max(
-      0,
-      DAILY_LIMIT-total
-    )
+    remaining:"上限なし"
   };
 }
 
@@ -15474,7 +15470,7 @@ function render176(){
 
       <p>
         現在の1日上限：
-        ${DAILY_LIMIT} XP
+        上限なし
       </p>
 
       <p>
@@ -18026,7 +18022,7 @@ const number=(x,d=0)=>x==null||x===''||!Number.isFinite(Number(x))?d:Number(x);
 const menuFor=name=>TRAINING_MENU.find(x=>x[0]===name)||MENU.find(x=>x[0]===name);
 function xpFor(item,amount,minutes){
  const unit=String(item[4]||'');
- const quantity=unit==='分'?(minutes>0?minutes:amount):amount;
+ const quantity=unit==='分'?(minutes>0?minutes:amount):(amount>0?amount:minutes>0?minutes/20*(references[item[0]]||30):0);
  const base=number(item[3],10);
  const ref=references[item[0]]||(unit==='分'?20:30);
  return Math.max(1,Math.round(base*Math.sqrt(quantity/ref)));
@@ -18052,7 +18048,7 @@ function record(input){
   alert('日付・実施量・時間を確認してください。');return false;
  }
  const unit=item[4];
- const quantity=unit==='分'?(minutes>0?minutes:amount):amount;
+ const quantity=unit==='分'?(minutes>0?minutes:amount):(amount>0?amount:minutes>0?minutes/20*(references[item[0]]||30):0);
  if(!(quantity>0)){alert('練習の回数・球数・時間を入力してください。');return false;}
  const study=item[1]==='自主学習'||item[0].includes('研究')||item[0]==='野球ノート';
  const care=item[1]==='身体ケア'||item[2]==='ケア';
@@ -18065,7 +18061,7 @@ function record(input){
  const previousCount=db.practice.filter(x=>x.date===date&&x.name===item[0]).length;
  const entry={date,name:item[0],kind:item[1],amount,unit,minutes,
   note:String(input.note||''),source:input.source||'training',xp,
-  xpEngine:V21,sx19Calculated:true,xpFinalized:'v176',recordId:'v21-'+Date.now()+'-'+Math.random().toString(36).slice(2)};
+  nonPhysical:study||care,xpEngine:V21,sx19Calculated:true,xpFinalized:'v176',recordId:'v21-'+Date.now()+'-'+Math.random().toString(36).slice(2)};
  try{
   db.practice.push(entry);
   db.xp=number(db.xp)+xp;
@@ -18139,5 +18135,18 @@ el('success-v21-note')?.after(backup);
 })();
 </script>
 <!-- ===== 安定化 v21 終了 ===== -->
+<script>
+(function(){
+const panel=document.createElement('section');
+panel.style.cssText='margin:16px auto;padding:16px;max-width:650px;background:#fff;color:#173d60;border-radius:12px';
+panel.innerHTML='<h3>記録保護・復元 v22</h3><p>現在の記録をコピーしてメモ等に保存できます。復元は明示操作のみです。</p><button id="v22export">JSON表示・コピー</button><button id="v22restore">貼り付けたJSONを復元</button><button id="v22repair">確認済みの不足21XPを修復</button><textarea id="v22json" style="width:100%;height:150px" placeholder="バックアップJSON"></textarea>';
+document.body.appendChild(panel);
+const area=panel.querySelector('textarea');
+function backup(){const key=K4+'_backup_'+Date.now();localStorage.setItem(key,JSON.stringify(db));return key;}
+panel.querySelector('#v22export').onclick=async()=>{area.value=JSON.stringify(db,null,2);area.focus();area.select();try{await navigator.clipboard.writeText(area.value);alert('コピーしました');}catch(e){alert('表示された文字をすべて選択してコピーしてください');}};
+panel.querySelector('#v22restore').onclick=()=>{try{let raw=area.value.trim(),d;try{d=JSON.parse(raw);}catch(e){d=JSON.parse(raw+'}}');}d=d.mainData||d;if(d.version!==4||!Array.isArray(d.practice)||!Number.isFinite(d.xp)||!d.abilities||!d.pitch)throw Error('形式が不正です');if(!confirm('現在の記録を端末内に退避してから '+d.practice.length+'件、'+d.xp+' XP のデータに置き換えますか？'))return;const old=db;backup();db=normalizeData(d);if(!save()){db=old;throw Error('保存失敗');}location.reload();}catch(e){alert('復元失敗：'+e.message);}};
+panel.querySelector('#v22repair').onclick=()=>{const row=db.practice.find(x=>x.recordId==='774a630d-a6e2-4537-865e-8941df5dd9ee'&&x.xp===0&&x.xpCalculated===21&&x.xpLimited===true);if(!row){alert('対象なし、または修復済みです');return;}if(!confirm('11月22日のノックに21XPを追加します。能力値は変更しません。'))return;const old=JSON.stringify(db);try{backup();row.xp=21;row.xpLimited=false;row.xpRepair='v22';db.xp+=21;if(!save())throw Error('保存失敗');render();alert('修復完了：'+db.xp+' XP');}catch(e){db=JSON.parse(old);alert(e.message);}};
+})();
+</script>
 </body>
 </html>
