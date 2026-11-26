@@ -18148,5 +18148,290 @@ panel.querySelector('#v22restore').onclick=()=>{try{let raw=area.value.trim(),d;
 panel.querySelector('#v22repair').onclick=()=>{const row=db.practice.find(x=>x.recordId==='774a630d-a6e2-4537-865e-8941df5dd9ee'&&x.xp===0&&x.xpCalculated===21&&x.xpLimited===true);if(!row){alert('対象なし、または修復済みです');return;}if(!confirm('11月22日のノックに21XPを追加します。能力値は変更しません。'))return;const old=JSON.stringify(db);try{backup();row.xp=21;row.xpLimited=false;row.xpRepair='v22';db.xp+=21;if(!save())throw Error('保存失敗');render();alert('修復完了：'+db.xp+' XP');}catch(e){db=JSON.parse(old);alert(e.message);}};
 })();
 </script>
+<!-- ===== v23 球速連動 ===== -->
+<script>
+(function(){
+'use strict';
+
+const oldSave=save, oldRender=render, oldBar=statBar;
+
+const fiscal=d=>d.getFullYear()-(d.getMonth()<3?1:0);
+
+const grade=()=>4+fiscal(new Date())-2026;
+
+const rank23=n=>n>=90?'S':n>=80?'A':n>=70?'B':n>=60?'C':n>=50?'D':n>=40?'E':n>=20?'F':'G';
+
+function score(v,g){
+  const x=Math.floor(v)-(g-4)*10;
+  return Math.max(1,Math.min(100,
+    x>=50?x-10:
+    x>=40?20+(x-40)*2:
+    Math.floor(x/40*19)
+  ));
+}
+
+function rows(){
+  return [
+    ...(db.baseballNotebook11?.speeds||[])
+      .filter(x=>x.type==='ball'),
+    ...(db.success10?.speeds||[])
+      .filter(x=>x.type==='pitch')
+  ].filter(x=>
+    Number(x.value)>0&&
+    Number(x.value)<=250&&
+    /^\d{4}-\d{2}-\d{2}$/.test(x.date)
+  ).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function info(){
+  const r=rows(),g=grade();
+  const best=r.length?
+    Math.max(...r.map(x=>Number(x.value))):null;
+
+  return {
+    r,g,best,
+    n:best!==null&&g>=4&&g<=6?
+      score(best,g):null
+  };
+}
+
+// 既存の保存キー・XP処理は変更しない。
+// 球威だけを同一トランザクションで更新。
+
+save=function(){
+  const prev=db.pitch?.['球威'];
+  const a=info();
+
+  if(a.n!==null&&db.pitch)
+    db.pitch['球威']=a.n;
+
+  let ok=false;
+
+  try{
+    ok=oldSave();
+    return ok;
+  }finally{
+    if(!ok&&db.pitch)
+      db.pitch['球威']=prev;
+  }
+};
+
+statBar=function(name,value){
+  if(name!=='球威'||info().n===null)
+    return oldBar(name,value);
+
+  const n=info().n;
+
+  return `
+    <div class="stat">
+      <div class="row">
+        <span>球威（実測）</span>
+        <strong>${rank23(n)} ${n}</strong>
+      </div>
+      <div class="bar">
+        <span style="width:${n}%"></span>
+      </div>
+    </div>
+  `;
+};
+
+function panel(){
+
+  const a=info();
+  const p=document.createElement('section');
+
+  p.id='v23pitch';
+
+  p.style.cssText=
+    'background:#fff;'+
+    'color:#082954;'+
+    'padding:16px;'+
+    'border:2px solid #e8b63d;'+
+    'border-radius:14px;'+
+    'margin:12px 0';
+
+  const valid=a.g>=4&&a.g<=6;
+  const pts=a.r.slice(-30);
+
+  const lo=Math.min(
+    40,...pts.map(x=>Number(x.value))
+  );
+
+  const hi=Math.max(
+    120,...pts.map(x=>Number(x.value))
+  );
+
+  const xy=pts.map((x,i)=>[
+    20+i*280/Math.max(1,pts.length-1),
+    105-(Number(x.value)-lo)*85/(hi-lo)
+  ]);
+
+  p.innerHTML=`
+    <h3>⚾ 球威・実測成長 v23</h3>
+
+    <p>
+      ${valid?'小学'+a.g+'年生':
+      '小学生基準の対象外'}
+      （4月1日自動進級）
+    </p>
+
+    <h2>
+      ${a.n===null?'未評価':
+      rank23(a.n)+' '+a.n}
+    </h2>
+
+    <p>
+      自己最高球速：
+      ${a.best===null?'未測定':
+      a.best+' km/h'}
+    </p>
+
+    <p>
+      100 km/h目標：
+      ${a.best===null?'測定待ち':
+      a.best>=100?'達成！':
+      'あと '+(100-a.best).toFixed(1)+' km/h'}
+    </p>
+
+    ${pts.length?`
+      <svg viewBox="0 0 320 125"
+        width="100%"
+        role="img"
+        aria-label="球速推移">
+
+        <text x="2" y="12" font-size="10">
+          ${hi} km/h
+        </text>
+
+        <text x="2" y="120" font-size="10">
+          ${lo} km/h
+        </text>
+
+        <polyline
+          fill="none"
+          stroke="#1764b6"
+          stroke-width="3"
+          points="${xy.map(x=>x.join(',')).join(' ')}"
+        />
+
+        ${xy.map(x=>`
+          <circle
+            cx="${x[0]}"
+            cy="${x[1]}"
+            r="3"
+            fill="#e8a520"
+          />
+        `).join('')}
+
+      </svg>
+
+      <small>
+        ${pts[0].date} ～
+        ${pts[pts.length-1].date}
+        （直近30件）
+      </small>
+    `:''}
+
+    <p>
+      同じ測定条件の球速を記録してください。
+      疲労時・痛みがある時は測定しないでください。
+      学年別ランクはアプリ独自基準です。
+      進級時は相対評価が変わります。
+    </p>
+  `;
+
+  return p;
+}
+
+render=function(){
+
+  oldRender();
+
+  const view=document.getElementById('view');
+
+  if(!view)return;
+
+  const active=document.querySelector('#nav .active');
+
+  if(
+    tab==='profile'||
+    view.querySelector('#s11SpeedValue,#s10speedValue')||
+    /投手|速度|プロフィール/.test(active?.textContent||'')
+  ){
+    view.prepend(panel());
+  }
+
+  for(const id of [
+    's11SpeedValue',
+    's10speedValue'
+  ]){
+    const e=document.getElementById(id);
+
+    if(e){
+      const n=document.createElement('p');
+
+      n.textContent=
+        '球速を保存すると球威が自動更新されます。XPは増えません。';
+
+      e.after(n);
+    }
+  }
+};
+
+for(const key of [
+  's11SaveSpeed',
+  's10SaveSpeed',
+  's11EditSpeed'
+]){
+
+  const original=window[key];
+
+  if(typeof original!=='function')continue;
+
+  window[key]=function(...args){
+
+    const before=info();
+
+    const result=original.apply(this,args);
+
+    const after=info();
+
+    if(
+      after.n!==null&&
+      after.n===db.pitch?.['球威']&&
+      (before.n===null||after.n>before.n)&&
+      rank23(after.n)!==
+      (before.n===null?'':rank23(before.n))
+    ){
+      alert(
+        '球威ランク '+
+        rank23(after.n)+' '+
+        after.n+
+        '！ 成長記録を更新しました。'
+      );
+    }
+
+    return result;
+  };
+}
+
+// 既存測定がある場合のみ、
+// 初回・進級時の評価を同期。
+
+const a=info();
+
+if(
+  a.n!==null&&
+  db.pitch&&
+  db.pitch['球威']!==a.n
+){
+  save();
+}
+
+render();
+
+})();
+</script>
+<!-- ===== v23 終了 ===== -->
 </body>
 </html>
