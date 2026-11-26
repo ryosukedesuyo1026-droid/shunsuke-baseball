@@ -18433,5 +18433,869 @@ render();
 })();
 </script>
 <!-- ===== v23 終了 ===== -->
+<!-- ===== v24 MONTHLY BASEBALL TEST ===== -->
+<script>
+(function(){
+'use strict';
+
+if(document.getElementById('mbt24open'))return;
+
+const items=[
+ ['pitch','球速','km/h',false,true],
+ ['throw','遠投距離','m',false,true],
+ ['run50','50m走','秒',true,false],
+ ['first','一塁駆け抜け','秒',true,false],
+ ['second','二塁通過','秒',true,false],
+ ['third','三塁通過','秒',true,false],
+ ['home','本塁到達・一周','秒',true,false],
+ ['swing','スイングスピード','km/h',false,false],
+ ['run1500','1500m走','秒',true,false],
+ ['strike','ストライク率','%',false,true],
+ ['catch','捕球率','%',false,false],
+ ['send','送球成功率','%',false,true]
+];
+
+const $=id=>document.getElementById(id);
+
+const today=()=>{
+ const d=new Date();
+ return [
+  d.getFullYear(),
+  String(d.getMonth()+1).padStart(2,'0'),
+  String(d.getDate()).padStart(2,'0')
+ ].join('-');
+};
+
+const winter=d=>[12,1,2].includes(
+ Number(d.slice(5,7))
+);
+
+const grade=d=>{
+ const y=Number(d.slice(0,4));
+ const m=Number(d.slice(5,7));
+ return 4+y-2026-(m<4?1:0);
+};
+
+const esc=s=>String(s??'').replace(
+ /[&<>"']/g,
+ c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
+ '"':'&quot;',"'":'&#39;'}[c])
+);
+
+const num=s=>{
+ if(String(s).trim()==='')return NaN;
+ return Number(s);
+};
+
+const fmt=(v,k)=>{
+ if(!Number.isFinite(v))return '未測定';
+ if(k==='run1500'){
+  const t=Math.round(v);
+  return Math.floor(t/60)+'分'+
+   String(t%60).padStart(2,'0')+'秒';
+ }
+ return String(Math.round(v*100)/100);
+};
+
+function data(){
+ return db.measurement24||{
+  records:[],
+  goals:{pitch:{value:100,date:''}},
+  winterPlan:''
+ };
+}
+
+function copyData(){
+ return JSON.parse(JSON.stringify(data()));
+}
+
+// 既存の保存キーに追加データだけを保存。
+// 練習・試合・XP・生活記録は変更しない。
+
+function commit(next,extra){
+ const previous=db.measurement24;
+ const oldNotebook=db.baseballNotebook11;
+ const oldPitch=db.pitch;
+
+ try{
+  db.measurement24=next;
+
+  if(extra){
+   db.baseballNotebook11=extra;
+
+   const speeds=[
+    ...(extra.speeds||[])
+      .filter(r=>r.type==='ball'),
+    ...(db.success10?.speeds||[])
+      .filter(r=>r.type==='pitch')
+   ].map(r=>Number(r.value))
+    .filter(v=>v>0&&v<=250);
+
+   const g=grade(today());
+
+   if(speeds.length&&g>=4&&g<=6){
+    const x=Math.floor(Math.max(...speeds))
+     -(g-4)*10;
+
+    const n=Math.max(1,Math.min(100,
+     x>=50?x-10:
+     x>=40?20+(x-40)*2:
+     Math.floor(x/40*19)
+    ));
+
+    db.pitch={...db.pitch,'球威':n};
+   }
+  }
+
+  localStorage.setItem(K4,JSON.stringify(db));
+
+  return true;
+
+ }catch(e){
+  if(previous===undefined)
+   delete db.measurement24;
+  else db.measurement24=previous;
+
+  db.baseballNotebook11=oldNotebook;
+  db.pitch=oldPitch;
+
+  alert('保存できませんでした。'+e.message);
+  return false;
+ }
+}
+
+function records(k){
+ const own=(data().records||[])
+  .filter(r=>r.key===k);
+
+ if(k==='pitch'){
+  const legacy=[
+   ...(db.baseballNotebook11?.speeds||[])
+    .filter(r=>r.type==='ball'),
+   ...(db.success10?.speeds||[])
+    .filter(r=>r.type==='pitch')
+  ];
+
+  for(const r of legacy){
+   const v=Number(r.value);
+
+   if(v>0&&v<=250&&
+    /^\d{4}-\d{2}-\d{2}$/.test(r.date)&&
+    !own.some(x=>x.date===r.date&&x.value===v)){
+    own.push({
+     key:k,date:r.date,value:v,
+     note:'既存の球速記録',
+     legacy:true
+    });
+   }
+  }
+ }
+
+ return own.sort((a,b)=>
+  a.date.localeCompare(b.date)||
+  (a.created||0)-(b.created||0)
+ );
+}
+
+function best(k){
+ const a=records(k);
+ if(!a.length)return null;
+
+ const item=items.find(x=>x[0]===k);
+
+ return item[3]?
+  Math.min(...a.map(r=>r.value)):
+  Math.max(...a.map(r=>r.value));
+}
+
+let selected='pitch';
+let editing=null;
+
+const style=document.createElement('style');
+
+style.textContent=`
+#mbt24open{
+ position:fixed;right:12px;bottom:85px;
+ z-index:8000;background:#123d78;
+ color:white;border:2px solid #e9bc52;
+ padding:12px;border-radius:14px;
+ font-weight:bold;box-shadow:0 3px 12px #0004
+}
+#mbt24panel{
+ position:fixed;inset:0;z-index:9000;
+ overflow:auto;background:#edf2f9;
+ color:#102e55;padding:14px;
+ padding-bottom:100px;
+ box-sizing:border-box
+}
+#mbt24panel *{box-sizing:border-box}
+#mbt24panel .mbtcard{
+ background:white;color:#102e55;
+ border:1px solid #cad6e6;
+ border-radius:14px;padding:14px;
+ margin:12px 0
+}
+#mbt24panel input,
+#mbt24panel select,
+#mbt24panel textarea{
+ display:block;width:100%;
+ padding:10px;margin:6px 0 12px;
+ font-size:16px;color:#102e55;
+ background:white;border:1px solid #a9bcd4;
+ border-radius:8px
+}
+#mbt24panel button{
+ background:#164a96;color:white;
+ border:0;border-radius:9px;
+ padding:11px;margin:4px;
+ font-size:14px;font-weight:bold
+}
+#mbt24panel .mbtgrid{
+ display:grid;grid-template-columns:1fr 1fr;
+ gap:8px
+}
+#mbt24panel .mbtstat{
+ padding:12px;background:#eef4fc;
+ border-radius:10px
+}
+#mbt24panel .mbtbar{
+ height:10px;background:#dbe4ef;
+ border-radius:10px;overflow:hidden
+}
+#mbt24panel .mbtbar span{
+ display:block;height:100%;
+ background:#25855a;border-radius:10px
+}
+#mbt24panel small{color:#526984}
+#mbt24panel h2,#mbt24panel h3{
+ color:#123d78;margin:8px 0
+}
+`;
+
+document.head.appendChild(style);
+
+const open=document.createElement('button');
+open.id='mbt24open';
+open.textContent='📊 実測能力';
+document.body.appendChild(open);
+
+const panel=document.createElement('div');
+panel.id='mbt24panel';
+panel.hidden=true;
+document.body.appendChild(panel);
+
+function graph(k){
+ const a=records(k).slice(-24);
+ if(!a.length)return '<p>測定データがありません。</p>';
+
+ const goal=Number(data().goals?.[k]?.value);
+ const values=a.map(r=>r.value);
+
+ if(Number.isFinite(goal)&&goal>0)
+  values.push(goal);
+
+ let lo=Math.min(...values);
+ let hi=Math.max(...values);
+
+ const pad=Math.max((hi-lo)*0.12,0.1);
+
+ lo=Math.max(0,lo-pad);
+ hi+=pad;
+
+ const y=v=>125-(v-lo)*100/(hi-lo);
+ const x=i=>38+i*260/Math.max(1,a.length-1);
+
+ return `
+ <svg viewBox="0 0 320 165" width="100%">
+  ${[0,1,2,3].map(i=>{
+   const v=lo+(hi-lo)*i/3;
+   return '<line x1="38" x2="305" y1="'+y(v)+
+    '" y2="'+y(v)+'" stroke="#dbe4ef"/>'+
+    '<text x="34" y="'+(y(v)+4)+
+    '" font-size="9" text-anchor="end" fill="#526984">'+
+    Math.round(v*10)/10+'</text>';
+  }).join('')}
+
+  ${goal>0?`
+   <line x1="38" x2="305"
+    y1="${y(goal)}" y2="${y(goal)}"
+    stroke="#d2a52b" stroke-width="2"
+    stroke-dasharray="5 4"/>
+  `:''}
+
+  <polyline fill="none"
+   stroke="#2469bb" stroke-width="3"
+   points="${a.map((r,i)=>
+    x(i)+','+y(r.value)).join(' ')}"/>
+
+  ${a.map((r,i)=>`
+   <circle cx="${x(i)}" cy="${y(r.value)}"
+    r="4" fill="#2469bb"/>
+  `).join('')}
+
+  <text x="38" y="148" font-size="10"
+   fill="#526984">${a[0].date.slice(5)}</text>
+
+  <text x="305" y="148" font-size="10"
+   text-anchor="end" fill="#526984">
+   ${a[a.length-1].date.slice(5)}
+  </text>
+ </svg>
+ <small>青：実測値　金：目標値</small>`;
+}
+
+function overview(){
+ const month=today().slice(0,7);
+ const w=winter(today());
+ const active=items.filter(i=>!w||!i[4]);
+
+ const done=active.filter(i=>
+  records(i[0]).some(r=>r.date.startsWith(month))
+ ).length;
+
+ const pb=active.filter(i=>{
+  const a=records(i[0]);
+  const old=a.filter(r=>r.date.slice(0,7)<month);
+  const now=a.filter(r=>r.date.startsWith(month));
+  if(!old.length||!now.length)return false;
+
+  const f=i[3]?Math.min:Math.max;
+  const p=f(...old.map(r=>r.value));
+  const n=f(...now.map(r=>r.value));
+
+  return i[3]?n<p:n>p;
+ }).length;
+
+ return `
+ <div class="mbtcard">
+  <h2>🏆 MONTHLY BASEBALL TEST</h2>
+  <small>${month}・小学${grade(today())}年相当</small>
+
+  <div class="mbtgrid">
+   <div class="mbtstat">
+    今月の測定<br>
+    <strong>${done} / ${active.length}</strong>
+   </div>
+   <div class="mbtstat">
+    自己ベスト更新<br>
+    <strong>${pb}項目</strong>
+   </div>
+  </div>
+
+  <p>${w?'❄️ 冬季測定休止モード':
+   '⚾ 通常測定期間'}</p>
+
+  ${items.map(i=>{
+   const b=best(i[0]);
+   const g=Number(data().goals?.[i[0]]?.value);
+   const p=b!==null&&g>0?
+    Math.min(100,i[3]?g/b*100:b/g*100):0;
+
+   return `
+    <div style="padding:10px 0;
+     border-bottom:1px solid #dbe4ef">
+     <b>${i[1]}</b>
+     <span style="float:right">
+      ${b===null?'未測定':fmt(b,i[0])+
+       (i[0]==='run1500'?'':' '+i[2])}
+     </span>
+     <div class="mbtbar">
+      <span style="width:${p}%"></span>
+     </div>
+     <small>
+      ${w&&i[4]?'冬季測定休止・':''}
+      ${g>0?'目標 '+fmt(g,i[0])+
+       (i[0]==='run1500'?'':' '+i[2]):
+       '目標未設定'}
+     </small>
+    </div>`;
+  }).join('')}
+ </div>`;
+}
+
+function winterCard(){
+ return `
+ <div class="mbtcard">
+  <h3>❄️ WINTER TRAINING</h3>
+  <p>12月〜2月は投球・送球系の
+  定期能力測定を休止します。</p>
+
+  <p><b>投球練習そのものは禁止しません。</b></p>
+
+  <p>暖かい日や十分に身体が温まった状態で、
+  無理のないキャッチボールやフォーム確認を
+  行いましょう。</p>
+
+  <p>寒い日や疲労がある日は、
+  シャドーピッチング、柔軟性、
+  バランス、体幹、下半身、
+  打撃技術の練習などを検討しましょう。</p>
+
+  <p>肩や肘に痛みがある場合は投球を中止し、
+  保護者・指導者に相談してください。</p>
+
+  <p>春は段階的に投球強度を戻しましょう。
+  冬季測定休止によるXPや能力値の
+  ペナルティはありません。</p>
+
+  <label>自分で考える冬の育成目標</label>
+  <textarea id="mbtWinterPlan" rows="4"
+   placeholder="春までに何を伸ばしたい？">${esc(
+    data().winterPlan||''
+   )}</textarea>
+
+  <button id="mbtWinterSave">冬の目標を保存</button>
+ </div>`;
+}
+
+function draw(){
+ const i=items.find(x=>x[0]===selected);
+ const k=i[0];
+ const a=records(k);
+ const b=best(k);
+ const first=a[0];
+ const last=a[a.length-1];
+ const prev=a[a.length-2];
+ const goal=data().goals?.[k]||{};
+ const edit=(data().records||[])
+  .find(r=>r.id===editing);
+
+ const rate=i[2]==='%';
+ const lap=['second','third','home'].includes(k);
+
+ const improvement=first&&last?
+  (last.value-first.value)*(i[3]?-1:1):null;
+
+ const remain=b!==null&&Number(goal.value)>0?
+  Math.max(0,i[3]?
+   b-Number(goal.value):
+   Number(goal.value)-b):null;
+
+ panel.innerHTML=`
+ <button id="mbtClose">← 元のアプリに戻る</button>
+
+ ${overview()}
+
+ <div class="mbtcard">
+  <h3>📈 個別能力・成長分析</h3>
+
+  <select id="mbtSelect">
+   ${items.map(x=>`
+    <option value="${x[0]}"
+     ${x[0]===k?'selected':''}>${x[1]}</option>
+   `).join('')}
+  </select>
+
+  <div class="mbtgrid">
+   ${[
+    ['初回',first?.value],
+    ['前回',prev?.value],
+    ['最新',last?.value],
+    ['自己ベスト',b]
+   ].map(x=>`
+    <div class="mbtstat">
+     <small>${x[0]}</small><br>
+     <strong>${fmt(x[1],k)}</strong>
+    </div>`).join('')}
+  </div>
+
+  ${graph(k)}
+
+  <p>初回からの変化：
+   <b>${improvement===null?'測定待ち':
+    (improvement>=0?'+':'')+
+    (Math.round(improvement*100)/100)+
+    (rate?'ポイント':i[2])+
+    '（改善方向をプラス表示）'}</b>
+  </p>
+
+  <p>成長率：
+   ${first&&last&&first.value>0?
+    (improvement/first.value*100).toFixed(1)+'%':
+    '未算出'}
+  </p>
+
+  <p>目標まで：
+   <b>${remain===null?'目標を設定しよう':
+    remain===0?'🎉 達成！':
+    fmt(remain,k)+(rate?'ポイント':
+     k==='run1500'?'':i[2])}</b>
+  </p>
+ </div>
+
+ <div class="mbtcard">
+  <h3>🎯 短期目標設定</h3>
+  <label>目標値
+   （${k==='run1500'?'秒換算':i[2]}）</label>
+
+  <input id="mbtGoal" type="number"
+   step="0.01" min="0"
+   value="${esc(goal.value??'')}">
+
+  <label>目標達成予定日（任意）</label>
+  <input id="mbtGoalDate" type="date"
+   value="${esc(goal.date||'')}">
+
+  <button id="mbtGoalSave">目標を保存</button>
+ </div>
+
+ <div class="mbtcard">
+  <h3>${edit?'✏️ 測定記録を編集':'📝 測定記録'}</h3>
+
+  <label>測定日</label>
+  <input id="mbtDate" type="date"
+   max="${today()}"
+   value="${edit?.date||today()}">
+
+  ${rate?`
+   <label>試行回数</label>
+   <input id="mbtTotal" type="number"
+    min="1" step="1"
+    value="${edit?.total??''}">
+
+   <label>成功回数</label>
+   <input id="mbtSuccess" type="number"
+    min="0" step="1"
+    value="${edit?.success??''}">
+  `:k==='run1500'?`
+   <div class="mbtgrid">
+    <div>
+     <label>分</label>
+     <input id="mbtMin" type="number" min="0"
+      value="${edit?Math.floor(edit.value/60):''}">
+    </div>
+    <div>
+     <label>秒</label>
+     <input id="mbtSec" type="number" min="0"
+      max="59"
+      value="${edit?edit.value%60:''}">
+    </div>
+   </div>
+  `:`
+   <label>測定値（${i[2]}）</label>
+   <input id="mbtValue" type="number"
+    step="0.01" min="0"
+    value="${edit?.value??''}">
+  `}
+
+  ${lap&&!edit?`
+   <label>
+    <input id="mbtLap" type="checkbox"
+     style="width:auto;display:inline">
+    一周の通過タイムをまとめて記録
+   </label>
+   <div id="mbtLapFields" hidden>
+    ${[['second','二塁'],['third','三塁'],
+     ['home','本塁']].map(x=>`
+     <label>${x[1]}通過（累積秒）</label>
+     <input id="mbt_${x[0]}" type="number"
+      step="0.01" min="0">
+    `).join('')}
+   </div>
+  `:''}
+
+  <label>測定条件・メモ</label>
+  <textarea id="mbtNote" rows="3"
+   placeholder="場所、距離、計測方法、天候など">${esc(
+    edit?.note||''
+   )}</textarea>
+
+  <small>
+   ${k==='first'?'本塁から一塁まで駆け抜ける。':
+    lap?'本塁からの累積通過タイム。':
+    k==='catch'?'捕球のみで測定。':
+    '毎回できるだけ同じ条件で測定。'}
+  </small>
+
+  <p id="mbtWarning"></p>
+
+  <button id="mbtSave">測定記録を保存</button>
+
+  ${edit?'<button id="mbtCancel">編集取消</button>':''}
+ </div>
+
+ <div class="mbtcard">
+  <h3>📚 測定履歴</h3>
+
+  ${a.length?a.slice().reverse().map(r=>`
+   <div style="border-bottom:1px solid #dbe4ef;
+    padding:10px 0">
+    <b>${esc(r.date)}　${fmt(r.value,k)}
+     ${k==='run1500'?'':i[2]}</b>
+    <br><small>
+     小学${grade(r.date)}年相当
+     ${r.total?'・'+r.success+'/'+r.total:''}
+     ${esc(r.note||'')}
+    </small>
+
+    ${r.legacy?'<small>・既存記録</small>':`
+     <br>
+     <button data-edit="${esc(r.id)}">編集</button>
+     <button data-delete="${esc(r.id)}">削除</button>
+    `}
+   </div>
+  `).join(''):'まだ記録がありません。'}
+ </div>
+
+ ${winterCard()}
+
+ <small>MBT v24・実測値はXPとは別に管理します。
+ 測定のために無理な練習を増やさないでください。</small>
+ `;
+
+ $('mbtClose').onclick=()=>{
+  panel.hidden=true;
+  try{render();}catch(e){console.error(e);}
+ };
+
+ $('mbtSelect').onchange=e=>{
+  selected=e.target.value;
+  editing=null;
+  draw();
+ };
+
+ $('mbtGoalSave').onclick=()=>{
+  const v=num($('mbtGoal').value);
+
+  if(!Number.isFinite(v)||v<=0||
+   (rate&&v>100)){
+   alert('正しい目標値を入力してください。');
+   return;
+  }
+
+  const next=copyData();
+
+  next.goals[k]={
+   value:v,date:$('mbtGoalDate').value
+  };
+
+  if(commit(next)){
+   alert('目標を保存しました！');
+   draw();
+  }
+ };
+
+ $('mbtWinterSave').onclick=()=>{
+  const next=copyData();
+  next.winterPlan=$('mbtWinterPlan').value;
+
+  if(commit(next))alert('冬の目標を保存しました。');
+ };
+
+ function checkWinter(){
+  const stop=i[4]&&winter($('mbtDate').value);
+
+  $('mbtSave').disabled=stop;
+  $('mbtSave').style.opacity=stop?'0.5':'1';
+
+  $('mbtWarning').textContent=stop?
+   '❄️ 冬季はこの能力の定期測定を休止します。通常の練習記録は可能です。':
+   '疲労や痛みがあるときは測定を延期しましょう。';
+ }
+
+ $('mbtDate').onchange=checkWinter;
+ checkWinter();
+
+ if($('mbtLap')){
+  $('mbtLap').onchange=e=>{
+   $('mbtLapFields').hidden=!e.target.checked;
+   $('mbtValue').disabled=e.target.checked;
+  };
+ }
+
+ if($('mbtCancel')){
+  $('mbtCancel').onclick=()=>{
+   editing=null;
+   draw();
+  };
+ }
+
+ $('mbtSave').onclick=()=>{
+  const date=$('mbtDate').value;
+
+  if(!date||date>today()){
+   alert('測定日を確認してください。');
+   return;
+  }
+
+  if(i[4]&&winter(date)){
+   alert('冬季測定休止期間です。');
+   return;
+  }
+
+  const note=$('mbtNote').value.trim();
+  let value,total,success;
+
+  const multi=$('mbtLap')?.checked;
+
+  if(rate){
+   total=num($('mbtTotal').value);
+   success=num($('mbtSuccess').value);
+
+   if(!Number.isInteger(total)||total<=0||
+    !Number.isInteger(success)||success<0||
+    success>total){
+    alert('試行回数と成功回数を確認してください。');
+    return;
+   }
+
+   value=Math.round(success/total*10000)/100;
+
+  }else if(k==='run1500'){
+   const m=num($('mbtMin').value);
+   const s=num($('mbtSec').value);
+
+   if(!Number.isInteger(m)||m<0||
+    !Number.isInteger(s)||s<0||s>=60){
+    alert('分・秒を確認してください。');
+    return;
+   }
+
+   value=m*60+s;
+
+  }else if(!multi){
+   value=num($('mbtValue').value);
+  }
+
+  let entries;
+
+  if(multi){
+   const v=['second','third','home']
+    .map(x=>num($('mbt_'+x).value));
+
+   if(!v.every(x=>Number.isFinite(x)&&x>0)||
+    !(v[0]<v[1]&&v[1]<v[2])){
+    alert('二塁・三塁・本塁の累積タイムを順番に入力してください。');
+    return;
+   }
+
+   entries=['second','third','home']
+    .map((key,j)=>({key,value:v[j]}));
+
+  }else{
+   if(!Number.isFinite(value)||
+    (rate?value<0:value<=0)||
+    (k==='pitch'&&value>250)){
+    alert('測定値を確認してください。');
+    return;
+   }
+
+   entries=[{key:k,value,total,success}];
+  }
+
+  const next=copyData();
+
+  let notebook=null;
+
+  if(k==='pitch'){
+   notebook=JSON.parse(JSON.stringify(
+    db.baseballNotebook11||{notes:[],speeds:[]}
+   ));
+
+   notebook.speeds=notebook.speeds||[];
+
+   if(editing){
+    notebook.speeds=notebook.speeds.filter(
+     r=>r.mbt24Id!==editing
+    );
+   }
+  }
+
+  let newBest=0;
+
+  for(const e of entries){
+   const oldBest=best(e.key);
+   const item=items.find(x=>x[0]===e.key);
+
+   const id=editing||(
+    Date.now().toString(36)+'-'+
+    Math.random().toString(36).slice(2,10)
+   );
+
+   const r={
+    ...e,id,date,note,
+    grade:grade(date),
+    created:Date.now()
+   };
+
+   next.records=next.records.filter(x=>x.id!==id);
+   next.records.push(r);
+
+   if(!editing&&oldBest!==null&&
+    (item[3]?e.value<oldBest:e.value>oldBest)){
+    newBest++;
+   }
+
+   if(e.key==='pitch'&&notebook){
+    notebook.speeds.push({
+     date,type:'ball',
+     value:e.value,note,
+     mbt24Id:id
+    });
+   }
+  }
+
+  if(commit(next,notebook)){
+   editing=null;
+
+   alert(newBest>0?
+    '🏆 自己ベスト更新！ '+newBest+'項目':
+    '測定記録を保存しました！');
+
+   draw();
+  }
+ };
+
+ panel.querySelectorAll('[data-edit]').forEach(b=>{
+  b.onclick=()=>{
+   editing=b.dataset.edit;
+   draw();
+   $('mbtDate').scrollIntoView({block:'center'});
+  };
+ });
+
+ panel.querySelectorAll('[data-delete]').forEach(b=>{
+  b.onclick=()=>{
+   if(!confirm('この測定記録だけを削除しますか？'))
+    return;
+
+   const next=copyData();
+   const id=b.dataset.delete;
+
+   const r=next.records.find(x=>x.id===id);
+
+   next.records=next.records.filter(x=>x.id!==id);
+
+   let notebook=null;
+
+   if(r?.key==='pitch'){
+    notebook=JSON.parse(JSON.stringify(
+     db.baseballNotebook11||{notes:[],speeds:[]}
+    ));
+
+    notebook.speeds=(notebook.speeds||[])
+     .filter(x=>x.mbt24Id!==id);
+
+    // 最後の球速記録を削除した場合も
+    // 既存能力値を勝手に初期化しない。
+   }
+
+   if(commit(next,notebook)){
+    editing=null;
+    draw();
+   }
+  };
+ });
+}
+
+open.onclick=()=>{
+ editing=null;
+ panel.hidden=false;
+ draw();
+};
+
+})();
+</script>
+<!-- ===== v24 MONTHLY BASEBALL TEST END ===== -->
 </body>
 </html>
