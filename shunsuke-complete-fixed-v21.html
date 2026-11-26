@@ -19297,5 +19297,101 @@ open.onclick=()=>{
 })();
 </script>
 <!-- ===== v24 MONTHLY BASEBALL TEST END ===== -->
+<!-- ===== v24.1 ボタン配置修正 ===== -->
+<script>
+(function(){
+'use strict';
+
+function fixMeasurementButtons(){
+
+ const newButton =
+  document.getElementById('mbt24open');
+
+ if(!newButton)return;
+
+ const buttons =
+  document.querySelectorAll(
+   'button, a, [role="button"]'
+  );
+
+ buttons.forEach(function(b){
+
+  if(b===newButton)return;
+
+  const text=b.textContent.trim();
+
+  if(
+   text.length<20 &&
+   text.includes('実力測定')
+  ){
+
+   const css=getComputedStyle(b);
+
+   if(css.position==='fixed'){
+
+    const rect=b.getBoundingClientRect();
+
+    if(rect.width>0 && rect.height>0){
+
+     newButton.style.right=
+      Math.max(0,window.innerWidth-rect.right)+'px';
+
+     newButton.style.bottom=
+      Math.max(0,window.innerHeight-rect.bottom)+'px';
+
+    }
+
+   }
+
+   b.style.setProperty(
+    'display','none','important'
+   );
+
+  }
+
+ });
+
+ newButton.textContent='📊 実測能力';
+
+ newButton.style.setProperty(
+  'background','#087c50','important'
+ );
+
+ newButton.style.setProperty(
+  'border','2px solid #e9bc52','important'
+ );
+
+ newButton.style.setProperty(
+  'border-radius','30px','important'
+ );
+
+ newButton.style.setProperty(
+  'color','#ffffff','important'
+ );
+
+ newButton.style.setProperty(
+  'z-index','8000','important'
+ );
+
+ newButton.style.padding='12px 18px';
+ newButton.style.fontWeight='bold';
+
+}
+
+fixMeasurementButtons();
+
+window.addEventListener(
+ 'load',fixMeasurementButtons
+);
+
+window.addEventListener(
+ 'resize',fixMeasurementButtons
+);
+
+setInterval(fixMeasurementButtons,1500);
+
+})();
+</script>
+<!-- ===== v24.1 修正終了 ===== -->
 </body>
 </html>
